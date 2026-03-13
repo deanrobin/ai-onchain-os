@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('总览', ~{::main})}">
+<body><main>
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-label">聪明钱追踪</div>
+            <div class="stat-value text-info" th:text="${topWallets.size()} + ' 个'">0 个</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-label">今日信号</div>
+            <div class="stat-value text-success" th:text="${recentSignals.size()} + ' 条'">0 条</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-label">覆盖链</div>
+            <div class="stat-value">ETH · BSC · Base</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-label">数据来源</div>
+            <div class="stat-value text-warning" style="font-size:1rem">OKX OnChain OS</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- 聪明钱 Top 10 -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-trophy-fill text-warning me-2"></i>聪明钱 Top 10</span>
+                <a href="/smart-money" class="btn btn-sm btn-outline-secondary refresh-btn">查看全部</a>
+            </div>
+            <div class="card-body p-0">
+                <div th:if="${topWallets.isEmpty()}" class="p-4 text-center text-muted">
+                    暂无数据，请先运行 <code>python main.py all</code>
+                </div>
+                <table th:unless="${topWallets.isEmpty()}" class="table table-sm mb-0">
+                    <thead><tr>
+                        <th>#</th><th>地址</th><th>链</th>
+                        <th>评分</th><th>胜率</th><th>已实现PnL</th>
+                    </tr></thead>
+                    <tbody>
+                    <tr th:each="w, st : ${topWallets}">
+                        <td class="text-muted" th:text="${st.count}"></td>
+                        <td>
+                            <a th:href="'/smart-money/' + ${w.address} + '?chain=' + ${w.chainIndex}"
+                               class="text-info text-decoration-none font-monospace"
+                               style="font-size:0.8rem"
+                               th:text="${#strings.substring(w.address,0,8) + '...' + #strings.substring(w.address,w.address.length()-4)}">
+                            </a>
+                            <div class="text-muted" style="font-size:0.7rem" th:text="${w.label}"></div>
+                        </td>
+                        <td><span class="badge badge-chain" th:classappend="'chain-'+${w.chainIndex}"
+                                  th:text="${w.chainIndex == '1' ? 'ETH' : w.chainIndex == '56' ? 'BSC' : w.chainIndex == '8453' ? 'Base' : w.chainIndex}"></span></td>
+                        <td><span class="score-badge" th:text="${w.score}"></span></td>
+                        <td th:text="${#numbers.formatDecimal(w.winRate * 100, 1, 1) + '%'}"></td>
+                        <td th:class="${w.realizedPnlUsd >= 0 ? 'pnl-pos' : 'pnl-neg'}"
+                            th:text="${'$' + #numbers.formatDecimal(w.realizedPnlUsd, 1, 0)}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近信号 -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-lightning-fill text-success me-2"></i>最近聪明钱信号</span>
+                <button class="btn btn-sm btn-outline-secondary refresh-btn" onclick="loadSignals()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+            </div>
+            <div class="card-body p-0" id="signals-container">
+                <div th:if="${recentSignals.isEmpty()}" class="p-4 text-center text-muted">
+                    暂无信号数据
+                </div>
+                <table th:unless="${recentSignals.isEmpty()}" class="table table-sm mb-0">
+                    <thead><tr>
+                        <th>时间</th><th>代币</th><th>链</th><th>金额</th><th>钱包数</th>
+                    </tr></thead>
+                    <tbody>
+                    <tr th:each="s : ${recentSignals}" class="signal-row">
+                        <td style="font-size:0.75rem" th:text="${#temporals.format(s.signalTime,'MM-dd HH:mm')}"></td>
+                        <td>
+                            <div th:text="${s.tokenSymbol}" style="font-weight:600"></div>
+                            <div class="text-muted font-monospace" style="font-size:0.7rem"
+                                 th:text="${#strings.substring(s.tokenAddress,0,10) + '...'}"></div>
+                        </td>
+                        <td><span class="badge badge-chain" th:classappend="'chain-'+${s.chainIndex}"
+                                  th:text="${s.chainIndex}"></span></td>
+                        <td class="pnl-pos" th:text="${'$' + #numbers.formatDecimal(s.amountUsd, 1, 0)}"></td>
+                        <td th:text="${s.triggerWalletCount}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+async function loadSignals() {
+    const resp = await fetch('/api/signals?chain=1&walletType=1');
+    const data = await resp.json();
+    // Render live signals...
+    console.log('Live signals:', data.length);
+}
+</script>
+</main></body>
+</html>

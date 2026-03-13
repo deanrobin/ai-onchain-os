@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('聪明钱看板', ~{::main})}">
+<body><main>
+
+<!-- 过滤栏 -->
+<div class="row g-2 mb-3 align-items-center">
+    <div class="col-auto">
+        <select class="form-select form-select-sm bg-dark text-light border-secondary" id="chainSel" onchange="applyFilter()">
+            <option value="1"  th:selected="${chain=='1'}">ETH</option>
+            <option value="56" th:selected="${chain=='56'}">BSC</option>
+            <option value="8453" th:selected="${chain=='8453'}">Base</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <select class="form-select form-select-sm bg-dark text-light border-secondary" id="wtSel" onchange="applyFilter()">
+            <option value="1" th:selected="${walletType=='1'}">Smart Money</option>
+            <option value="2" th:selected="${walletType=='2'}">KOL</option>
+            <option value="3" th:selected="${walletType=='3'}">Whales</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-sm btn-outline-success" onclick="applyFilter()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新信号
+        </button>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- 实时信号 -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-lightning-fill text-success me-2"></i>实时买入信号</div>
+            <div class="card-body p-0" id="liveSignalsTable">
+                <table class="table table-sm mb-0">
+                    <thead><tr>
+                        <th>代币</th><th>市值</th><th>买入金额</th>
+                        <th>Smart Money数</th><th>当前卖出%</th><th>操作</th>
+                    </tr></thead>
+                    <tbody id="signalsTbody">
+                    <tr th:each="s : ${liveSignals}" class="signal-row">
+                        <td>
+                            <img th:if="${s.token?.logo}" th:src="${s.token.logo}"
+                                 width="20" height="20" class="rounded-circle me-1" onerror="this.style.display='none'">
+                            <strong th:text="${s.token?.symbol}"></strong>
+                            <div class="text-muted font-monospace" style="font-size:0.7rem"
+                                 th:text="${#strings.substring(s.token?.tokenAddress?:'',0,10) + '...'}"></div>
+                        </td>
+                        <td style="font-size:0.8rem" th:text="${s.token?.marketCapUsd != null ? '$'+#numbers.formatDecimal(s.token.marketCapUsd,1,0) : '-'}"></td>
+                        <td class="pnl-pos" th:text="${'$'+#numbers.formatDecimal(s.amountUsd,1,0)}"></td>
+                        <td>
+                            <span class="badge bg-info text-dark" th:text="${s.triggerWalletCount}"></span>
+                        </td>
+                        <td>
+                            <span th:if="${s.soldRatioPercent != null}"
+                                  th:class="${s.soldRatioPercent > 0.5 ? 'pnl-neg' : 'pnl-pos'}"
+                                  th:text="${#numbers.formatDecimal(s.soldRatioPercent*100,1,1)+'%'}"></span>
+                        </td>
+                        <td>
+                            <a th:href="'https://www.okx.com/web3/dex-swap#chainId='+${s.chainIndex}"
+                               class="btn btn-xs btn-outline-success" target="_blank"
+                               style="font-size:0.7rem;padding:2px 6px">跟单</a>
+                        </td>
+                    </tr>
+                    <tr th:if="${liveSignals.isEmpty()}">
+                        <td colspan="6" class="text-center text-muted py-3">暂无信号，点击刷新</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 聪明钱排行 -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bar-chart-fill text-warning me-2"></i>聪明钱排行</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr>
+                        <th>#</th><th>地址</th><th>评分</th><th>胜率</th><th>7D PnL</th>
+                    </tr></thead>
+                    <tbody>
+                    <tr th:each="w, st : ${topWallets}">
+                        <td class="text-muted" th:text="${st.count}"></td>
+                        <td>
+                            <a th:href="'/smart-money/'+${w.address}+'?chain='+${w.chainIndex}"
+                               class="text-info text-decoration-none font-monospace" style="font-size:0.78rem"
+                               th:text="${#strings.substring(w.address,0,6)+'...'+#strings.substring(w.address,w.address.length()-4)}"></a>
+                            <span class="badge badge-chain ms-1" th:classappend="'chain-'+${w.chainIndex}"
+                                  th:text="${w.chainIndex=='1'?'ETH':w.chainIndex=='56'?'BSC':w.chainIndex}"></span>
+                        </td>
+                        <td><span class="score-badge" th:text="${w.score}"></span></td>
+                        <td th:text="${#numbers.formatDecimal(w.winRate*100,1,1)+'%'}"></td>
+                        <td th:class="${w.realizedPnlUsd >= 0 ? 'pnl-pos' : 'pnl-neg'}"
+                            th:text="${(w.realizedPnlUsd >= 0 ? '+' : '') + '$' + #numbers.formatDecimal(w.realizedPnlUsd,1,0)}"></td>
+                    </tr>
+                    <tr th:if="${topWallets.isEmpty()}">
+                        <td colspan="5" class="text-center text-muted py-3">运行 python main.py all 生成数据</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function applyFilter() {
+    const c = document.getElementById('chainSel').value;
+    const w = document.getElementById('wtSel').value;
+    window.location.href = '/smart-money?chain='+c+'&walletType='+w;
+}
+</script>
+</main></body>
+</html>

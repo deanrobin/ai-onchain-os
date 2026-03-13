@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('钱包详情', ~{::main})}">
+<body><main>
+<div class="d-flex align-items-center gap-3 mb-3">
+    <a href="/smart-money" class="btn btn-sm btn-outline-secondary">← 返回</a>
+    <h5 class="mb-0 font-monospace text-info" th:text="${address}"></h5>
+    <span class="badge badge-chain" th:classappend="'chain-'+${chain}"
+          th:text="${chain=='1'?'ETH':chain=='56'?'BSC':chain=='8453'?'Base':chain}"></span>
+</div>
+
+<!-- 时间维度选择 -->
+<div class="mb-3">
+    <div class="btn-group btn-group-sm">
+        <a th:each="tf : ${{'1','2','3','4','5'}}"
+           th:href="'?chain='+${chain}+'&timeFrame='+${tf}"
+           th:class="${'btn btn-outline-secondary ' + (timeFrame == tf ? 'active' : '')}"
+           th:text="${tf=='1'?'1D':tf=='2'?'3D':tf=='3'?'7D':tf=='4'?'1M':'3M'}"></a>
+    </div>
+</div>
+
+<!-- 概览 Stats -->
+<div th:if="${overview != null and !overview.isEmpty()}" class="row g-3 mb-4">
+    <div class="col-md-2 col-6">
+        <div class="card stat-card text-center">
+            <div class="stat-label">胜率</div>
+            <div class="stat-value pnl-pos" th:text="${overview.winRate != null ? #numbers.formatDecimal(overview.winRate*100,1,1)+'%' : '-'}"></div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6">
+        <div class="card stat-card text-center">
+            <div class="stat-label">已实现盈亏</div>
+            <div th:class="${'stat-value ' + (overview.realizedPnlUsd != null and overview.realizedPnlUsd >= 0 ? 'pnl-pos' : 'pnl-neg')}"
+                 th:text="${overview.realizedPnlUsd != null ? '$'+#numbers.formatDecimal(overview.realizedPnlUsd,1,0) : '-'}"></div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6">
+        <div class="card stat-card text-center">
+            <div class="stat-label">买入/卖出</div>
+            <div class="stat-value" th:text="${(overview.buyTxCount?:0) + '/' + (overview.sellTxCount?:0)}"></div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6">
+        <div class="card stat-card text-center">
+            <div class="stat-label">Top3代币盈亏</div>
+            <div class="stat-value text-warning" th:text="${overview.top3PnlTokenSumUsd != null ? '$'+#numbers.formatDecimal(overview.top3PnlTokenSumUsd,1,0) : '-'}"></div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6">
+        <div class="card stat-card text-center">
+            <div class="stat-label">平均买入</div>
+            <div class="stat-value" th:text="${overview.avgBuyValueUsd != null ? '$'+#numbers.formatDecimal(overview.avgBuyValueUsd,1,0) : '-'}"></div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6">
+        <div class="card stat-card text-center">
+            <div class="stat-label">偏好市值</div>
+            <div class="stat-value text-info" style="font-size:0.9rem" th:text="${overview.preferredMarketCap ?: '-'}"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Top3 代币 -->
+<div th:if="${overview?.topPnlTokenList != null and !overview.topPnlTokenList.isEmpty()}" class="card mb-3">
+    <div class="card-header"><i class="bi bi-trophy text-warning me-2"></i>Top3 盈利代币</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4" th:each="t : ${overview.topPnlTokenList}">
+                <div class="card stat-card">
+                    <div class="fw-bold" th:text="${t.tokenSymbol}"></div>
+                    <div class="pnl-pos" th:text="${'$' + #numbers.formatDecimal(t.tokenPnLUsd, 1, 0)}"></div>
+                    <div class="text-muted" style="font-size:0.8rem"
+                         th:text="${#numbers.formatDecimal(t.tokenPnLPercent*100,1,1)+'%'}"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 近期 PnL 加载 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <span><i class="bi bi-graph-up me-2"></i>近期逐代币收益</span>
+        <button class="btn btn-sm btn-outline-success" onclick="loadRecentPnl()">加载</button>
+    </div>
+    <div id="recentPnlContainer" class="card-body p-0">
+        <div class="p-3 text-center text-muted">点击"加载"获取数据</div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+const ADDR = [[${address}]];
+const CHAIN = [[${chain}]];
+
+async function loadRecentPnl() {
+    const el = document.getElementById('recentPnlContainer');
+    el.innerHTML = '<div class="p-3 text-center text-muted">加载中...</div>';
+    const resp = await fetch(`/api/portfolio/pnl?address=${ADDR}&chain=${CHAIN}&limit=30`);
+    const data = await resp.json();
+    if (!data.length) { el.innerHTML = '<div class="p-3 text-center text-muted">暂无数据</div>'; return; }
+    let html = `<table class="table table-sm mb-0">
+        <thead><tr><th>代币</th><th>余额</th><th>仓位</th>
+        <th>浮盈/亏</th><th>已实现</th><th>总盈亏</th><th>买入均</th><th>卖出均</th></tr></thead><tbody>`;
+    for (const p of data) {
+        const un = p.unrealizedPnlUsd === 'SELL_ALL' ? '<span class="text-muted">清仓</span>'
+            : `<span class="${parseFloat(p.unrealizedPnlUsd||0)>=0?'pnl-pos':'pnl-neg'}">$${parseFloat(p.unrealizedPnlUsd||0).toFixed(2)}</span>`;
+        const re = `<span class="${parseFloat(p.realizedPnlUsd||0)>=0?'pnl-pos':'pnl-neg'}">$${parseFloat(p.realizedPnlUsd||0).toFixed(2)}</span>`;
+        const tot = `<span class="${parseFloat(p.totalPnlUsd||0)>=0?'pnl-pos fw-bold':'pnl-neg fw-bold'}">$${parseFloat(p.totalPnlUsd||0).toFixed(2)}</span>`;
+        html += `<tr><td><strong>${p.tokenSymbol||'-'}</strong></td>
+            <td>${parseFloat(p.tokenBalanceAmount||0).toFixed(4)}</td>
+            <td>$${parseFloat(p.tokenBalanceUsd||0).toFixed(2)}</td>
+            <td>${un}</td><td>${re}</td><td>${tot}</td>
+            <td class="text-muted">$${p.buyAvgPrice||'-'}</td>
+            <td class="text-muted">$${p.sellAvgPrice||'-'}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+</script>
+</main></body>
+</html>
