@@ -2,7 +2,7 @@ spring:
   application:
     name: aios-dashboard
   datasource:
-    url: jdbc:mysql://${DB_HOST:43.134.118.142}:${DB_PORT:33066}/aios?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    url: jdbc:mysql://${DB_HOST:43.134.118.142}:${DB_PORT:33066}/oc_os?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
     username: ${DB_USER:arb}
     password: ${DB_PASS:arb123456}
     driver-class-name: com.mysql.cj.jdbc.Driver

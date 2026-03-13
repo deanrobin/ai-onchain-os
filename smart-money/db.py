@@ -14,7 +14,7 @@ DB_HOST = os.getenv("DB_HOST", "43.134.118.142")
 DB_PORT = int(os.getenv("DB_PORT", "33066"))
 DB_USER = os.getenv("DB_USER", "arb")
 DB_PASS = os.getenv("DB_PASS", "arb123456")
-DB_NAME = os.getenv("DB_NAME", "aios")
+DB_NAME = os.getenv("DB_NAME", "oc_os")
 
 
 def _conn():

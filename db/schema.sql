@@ -1,5 +1,5 @@
 -- ai-onchain-os database schema
--- DB: aios  (create with: CREATE DATABASE aios DEFAULT CHARACTER SET utf8mb4;)
+-- DB: oc_os  (create with: CREATE DATABASE oc_os DEFAULT CHARACTER SET utf8mb4;)
 
 CREATE TABLE IF NOT EXISTS smart_money_wallet (
     id                BIGINT PRIMARY KEY AUTO_INCREMENT,
