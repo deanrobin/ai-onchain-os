@@ -46,7 +46,8 @@ def analyze_wallet(address: str, chain_index: str,
         # 1. Portfolio overview
         ov = okx.get_portfolio_overview(chain_index, address, time_frame)
         m.raw_overview = ov
-        m.win_rate = _safe_float(ov.get("winRate"))
+        # OKX 返回百分比 (80.0=80%)，转成小数 0-1
+        m.win_rate = _safe_float(ov.get("winRate")) / 100.0
         m.realized_pnl_usd = _safe_float(ov.get("realizedPnlUsd"))
         m.buy_tx_count = _safe_int(ov.get("buyTxCount"))
         m.sell_tx_count = _safe_int(ov.get("sellTxCount"))

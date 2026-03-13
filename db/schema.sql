@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS smart_money_wallet (
     chain_index       VARCHAR(10)  NOT NULL,
     label             VARCHAR(200),
     score             DECIMAL(10,4) DEFAULT 0,
-    win_rate          DECIMAL(6,4)  DEFAULT 0,    -- e.g. 0.7500 = 75%
+    win_rate          DECIMAL(10,4) DEFAULT 0,   -- e.g. 0.7500 = 75% (OKX raw /10000)
     realized_pnl_usd  DECIMAL(20,4) DEFAULT 0,
     buy_tx_count      INT           DEFAULT 0,
     sell_tx_count     INT           DEFAULT 0,
