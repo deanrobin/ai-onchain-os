@@ -5,270 +5,399 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${title} + ' · OnChain OS'">OnChain OS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-base:    #0b0e11;
-            --bg-card:    #161a1e;
-            --bg-hover:   #1e2329;
-            --bg-input:   #1e2329;
-            --border:     #2b3139;
-            --border-light: #363c45;
-            --text-primary:   #eaecef;
-            --text-secondary: #848e9c;
-            --text-muted:     #5e6673;
-            --green:    #0ecb81;
-            --green-dim: rgba(14,203,129,.15);
-            --red:      #f6465d;
-            --red-dim:  rgba(246,70,93,.15);
-            --yellow:   #f0b90b;
-            --yellow-dim: rgba(240,185,11,.12);
-            --blue:     #1890ff;
-            --blue-dim: rgba(24,144,255,.12);
-            --purple:   #9945ff;
-            --chain-eth:  #4e79ea;
-            --chain-bsc:  #f0b90b;
-            --chain-base: #0052ff;
-            --chain-sol:  #9945ff;
+            /* ── Base ── */
+            --bg-page:     #070d1b;
+            --bg-nav:      rgba(8,14,28,0.96);
+            --bg-card:     #0e1729;
+            --bg-card2:    #111f38;
+            --bg-hover:    #152040;
+            --bg-input:    #0d1832;
+            --border:      rgba(255,255,255,.07);
+            --border-m:    rgba(255,255,255,.12);
+
+            /* ── Text ── */
+            --t1: #e8f0ff;
+            --t2: #8ba3cc;
+            --t3: #4a6080;
+
+            /* ── Signal Colors ── */
+            --green:     #00d18c;
+            --green-d:   rgba(0,209,140,.12);
+            --green-b:   rgba(0,209,140,.25);
+            --red:       #ff4d6a;
+            --red-d:     rgba(255,77,106,.12);
+            --red-b:     rgba(255,77,106,.25);
+            --yellow:    #ffb800;
+            --yellow-d:  rgba(255,184,0,.12);
+            --blue:      #3b82f6;
+            --blue-d:    rgba(59,130,246,.12);
+            --cyan:      #06b6d4;
+            --cyan-d:    rgba(6,182,212,.12);
+            --purple:    #a855f7;
+            --purple-d:  rgba(168,85,247,.12);
+            --orange:    #f97316;
+            --orange-d:  rgba(249,115,22,.12);
+
+            /* ── Chain ── */
+            --c-eth:  #627eea;
+            --c-bsc:  #f0b90b;
+            --c-base: #2d5be3;
+            --c-sol:  #9945ff;
         }
         *, *::before, *::after { box-sizing: border-box; }
-        html, body { background: var(--bg-base); color: var(--text-primary);
-            font-family: 'Inter', -apple-system, sans-serif; font-size: 14px; min-height: 100vh; }
+        html, body {
+            background: var(--bg-page); color: var(--t1);
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-size: 14px; min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse 80% 40% at 10% 0%, rgba(59,130,246,.08) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 30% at 90% 100%, rgba(168,85,247,.06) 0%, transparent 55%);
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e3050; border-radius: 4px; }
 
-        /* ─── Scrollbar ─── */
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: var(--bg-base); }
-        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
-
-        /* ─── Navbar ─── */
+        /* ════ NAVBAR ════ */
         .topnav {
-            background: rgba(11,14,17,.9);
-            backdrop-filter: blur(12px);
+            background: var(--bg-nav);
+            backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border);
-            position: sticky; top: 0; z-index: 100;
-            padding: 0 24px; height: 56px;
-            display: flex; align-items: center; gap: 32px;
+            position: sticky; top: 0; z-index: 200;
+            padding: 0 32px; height: 58px;
+            display: flex; align-items: center; gap: 0;
         }
-        .topnav .brand {
-            font-size: 1.1rem; font-weight: 700; letter-spacing: -.3px;
-            background: linear-gradient(135deg, var(--yellow), #ff9900);
+        .brand {
+            font-size: 1.05rem; font-weight: 800; letter-spacing: -.5px;
+            background: linear-gradient(120deg, #60a5fa, #a78bfa, #34d399);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            white-space: nowrap; text-decoration: none;
+            text-decoration: none; white-space: nowrap; margin-right: 40px;
+            padding: 4px 0;
         }
-        .topnav .nav-items { display: flex; gap: 4px; }
-        .topnav .nav-link {
-            color: var(--text-secondary); padding: 6px 14px; border-radius: 6px;
-            font-weight: 500; font-size: .875rem; text-decoration: none; transition: all .15s;
+        .nav-links { display: flex; align-items: center; gap: 2px; flex: 1; }
+        .nav-link {
+            color: var(--t2); padding: 7px 16px; border-radius: 8px;
+            font-weight: 500; font-size: .875rem; text-decoration: none;
+            transition: all .18s; position: relative;
         }
-        .topnav .nav-link:hover { color: var(--text-primary); background: var(--bg-hover); }
-        .topnav .nav-link.active { color: var(--text-primary); background: var(--bg-hover); }
-        .topnav .clock { margin-left: auto; color: var(--text-muted); font-family: 'JetBrains Mono'; font-size: .78rem; }
+        .nav-link:hover { color: var(--t1); background: rgba(255,255,255,.05); }
+        .nav-link.active {
+            color: #60a5fa;
+            background: rgba(59,130,246,.1);
+        }
+        .nav-link.active::after {
+            content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 20px; height: 2px; background: #60a5fa; border-radius: 2px;
+        }
+        .nav-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+        .live-dot {
+            display: flex; align-items: center; gap: 6px;
+            font-size: .75rem; color: var(--t2);
+        }
+        .live-dot::before {
+            content: ''; width: 6px; height: 6px; border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 0 0 rgba(0,209,140,.5);
+            animation: livePulse 2s infinite;
+        }
+        @keyframes livePulse {
+            0%   { box-shadow: 0 0 0 0   rgba(0,209,140,.5) }
+            70%  { box-shadow: 0 0 0 6px rgba(0,209,140,0) }
+            100% { box-shadow: 0 0 0 0   rgba(0,209,140,0) }
+        }
+        .clock-badge {
+            font-family: 'JetBrains Mono'; font-size: .72rem;
+            color: var(--t3); background: rgba(255,255,255,.04);
+            border: 1px solid var(--border); border-radius: 6px;
+            padding: 3px 10px; white-space: nowrap;
+        }
 
-        /* ─── Cards ─── */
+        /* ════ CARDS ════ */
         .card {
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: 12px; overflow: hidden;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden;
         }
         .card-header {
-            background: transparent; border-bottom: 1px solid var(--border);
-            padding: 14px 18px; font-weight: 600; font-size: .875rem;
-            display: flex; align-items: center; gap: 8px;
+            background: linear-gradient(135deg, var(--bg-card2), var(--bg-card));
+            border-bottom: 1px solid var(--border);
+            padding: 13px 20px; font-weight: 600; font-size: .875rem;
+            display: flex; align-items: center; gap: 8px; color: var(--t1);
         }
-        .card-body { padding: 16px 18px; }
+        .card-body { padding: 18px 20px; }
         .card-body.p-0 { padding: 0; }
 
-        /* ─── Stat Cards ─── */
+        /* ── Gradient Stat Cards ── */
         .stat-card {
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: 12px; padding: 18px 20px; position: relative; overflow: hidden;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px; padding: 18px 20px;
+            position: relative; overflow: hidden;
+            transition: transform .2s, border-color .2s;
         }
-        .stat-card::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent, var(--blue)), transparent);
+        .stat-card:hover { transform: translateY(-2px); border-color: var(--border-m); }
+        .stat-card .sc-glow {
+            position: absolute; top: -20px; right: -20px;
+            width: 80px; height: 80px; border-radius: 50%;
+            background: var(--sc-color, #3b82f6);
+            opacity: .12; filter: blur(20px);
         }
-        .stat-card .stat-icon { font-size: 1.4rem; margin-bottom: 8px; display: block; }
-        .stat-card .stat-val { font-size: 1.4rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
-        .stat-card .stat-lbl { font-size: .75rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+        .stat-card .sc-icon {
+            font-size: 1.3rem; margin-bottom: 10px; display: block;
+        }
+        .stat-card .sc-val {
+            font-size: 1.5rem; font-weight: 800; line-height: 1.1;
+            margin-bottom: 4px; letter-spacing: -.5px;
+        }
+        .stat-card .sc-lbl {
+            font-size: .72rem; color: var(--t2); font-weight: 500;
+            text-transform: uppercase; letter-spacing: .6px;
+        }
+        .stat-card .sc-sub {
+            font-size: .75rem; color: var(--t3); margin-top: 6px;
+        }
 
-        /* ─── Tables ─── */
-        .table { color: var(--text-primary); margin: 0; }
+        /* ── Gradient colored stat card variants ── */
+        .sc-blue  { --sc-color: #3b82f6; border-color: rgba(59,130,246,.2); }
+        .sc-green { --sc-color: #00d18c; border-color: rgba(0,209,140,.2); }
+        .sc-purple{ --sc-color: #a855f7; border-color: rgba(168,85,247,.2); }
+        .sc-yellow{ --sc-color: #ffb800; border-color: rgba(255,184,0,.2); }
+        .sc-cyan  { --sc-color: #06b6d4; border-color: rgba(6,182,212,.2); }
+        .sc-orange{ --sc-color: #f97316; border-color: rgba(249,115,22,.2); }
+
+        .sc-blue  .sc-val { color: #60a5fa; }
+        .sc-green .sc-val { color: var(--green); }
+        .sc-purple .sc-val { color: #c084fc; }
+        .sc-yellow .sc-val { color: var(--yellow); }
+        .sc-cyan  .sc-val { color: #22d3ee; }
+        .sc-orange .sc-val { color: #fb923c; }
+
+        /* ════ TABLES ════ */
+        .table { color: var(--t1); margin: 0; }
         .table thead th {
-            background: var(--bg-base); color: var(--text-muted); font-size: .7rem;
-            font-weight: 600; text-transform: uppercase; letter-spacing: .6px;
-            border-bottom: 1px solid var(--border); padding: 10px 16px; white-space: nowrap;
+            background: rgba(255,255,255,.03);
+            color: var(--t3); font-size: .68rem;
+            font-weight: 700; text-transform: uppercase; letter-spacing: .8px;
+            border-bottom: 1px solid var(--border); padding: 10px 16px;
+            white-space: nowrap;
         }
-        .table tbody td { border-bottom: 1px solid var(--border); padding: 11px 16px; vertical-align: middle; }
+        .table tbody td {
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            padding: 11px 16px; vertical-align: middle;
+        }
         .table tbody tr:last-child td { border-bottom: none; }
-        .table tbody tr:hover td { background: var(--bg-hover); }
-        .table tbody tr { transition: background .1s; }
+        .table tbody tr { transition: background .12s; }
+        .table tbody tr:hover td { background: rgba(59,130,246,.04); }
 
-        /* ─── PnL Colors ─── */
-        .up, .pnl-pos, .text-green { color: var(--green) !important; }
-        .dn, .pnl-neg, .text-red   { color: var(--red) !important; }
-        .text-yellow { color: var(--yellow) !important; }
-        .text-blue   { color: var(--blue) !important; }
-        .text-muted-custom { color: var(--text-muted) !important; }
+        /* ════ PNL COLORS ════ */
+        .up   { color: var(--green) !important; }
+        .dn   { color: var(--red) !important; }
+        .t-yellow { color: var(--yellow) !important; }
+        .t-blue   { color: #60a5fa !important; }
+        .t-cyan   { color: #22d3ee !important; }
+        .t-purple { color: #c084fc !important; }
+        .t-muted  { color: var(--t2) !important; }
+        .t-dim    { color: var(--t3) !important; }
 
-        .up-bg { background: var(--green-dim); color: var(--green); padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: .8rem; }
-        .dn-bg { background: var(--red-dim); color: var(--red); padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: .8rem; }
+        .tag-up {
+            background: var(--green-d); color: var(--green);
+            border: 1px solid var(--green-b);
+            padding: 2px 9px; border-radius: 6px;
+            font-size: .78rem; font-weight: 600;
+        }
+        .tag-dn {
+            background: var(--red-d); color: var(--red);
+            border: 1px solid var(--red-b);
+            padding: 2px 9px; border-radius: 6px;
+            font-size: .78rem; font-weight: 600;
+        }
+        .tag-blue {
+            background: var(--blue-d); color: #60a5fa;
+            border: 1px solid rgba(59,130,246,.25);
+            padding: 2px 9px; border-radius: 6px;
+            font-size: .78rem; font-weight: 600;
+        }
+        .tag-yellow {
+            background: var(--yellow-d); color: var(--yellow);
+            border: 1px solid rgba(255,184,0,.25);
+            padding: 2px 9px; border-radius: 6px;
+            font-size: .78rem; font-weight: 600;
+        }
 
-        /* ─── Chain Badges ─── */
+        /* ════ CHAIN BADGES ════ */
         .chain-badge {
-            font-size: .65rem; font-weight: 700; padding: 2px 7px;
-            border-radius: 4px; white-space: nowrap; letter-spacing: .3px;
+            font-size: .65rem; font-weight: 700; padding: 2px 8px;
+            border-radius: 5px; white-space: nowrap; letter-spacing: .3px;
         }
-        .chain-1    { background: rgba(78,121,234,.2); color: #7aa4f7; border: 1px solid rgba(78,121,234,.3); }
-        .chain-56   { background: rgba(240,185,11,.15); color: var(--yellow); border: 1px solid rgba(240,185,11,.3); }
-        .chain-8453 { background: rgba(0,82,255,.2); color: #5c91ff; border: 1px solid rgba(0,82,255,.3); }
-        .chain-501  { background: rgba(153,69,255,.2); color: #b97cff; border: 1px solid rgba(153,69,255,.3); }
+        .c-1    { background: rgba(98,126,234,.18); color: #8fa8f5; border: 1px solid rgba(98,126,234,.35); }
+        .c-56   { background: rgba(240,185,11,.15); color: #ffd54f; border: 1px solid rgba(240,185,11,.35); }
+        .c-8453 { background: rgba(45,91,227,.2);  color: #6b9fff; border: 1px solid rgba(45,91,227,.35); }
+        .c-501  { background: rgba(153,69,255,.18); color: #c084fc; border: 1px solid rgba(153,69,255,.35); }
 
-        /* ─── Score Badge ─── */
-        .score-badge {
+        /* ════ SCORE ════ */
+        .score-pill {
             font-family: 'JetBrains Mono'; font-size: .8rem; font-weight: 700;
-            padding: 3px 9px; border-radius: 6px;
-            background: linear-gradient(135deg, #1a2a4a, #1890ff22);
-            border: 1px solid rgba(24,144,255,.3); color: #5ba3f5;
+            padding: 3px 10px; border-radius: 20px;
+            background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.25); color: #60a5fa;
         }
-        .score-high { background: linear-gradient(135deg, #0a2a1a, #0ecb8122); border-color: rgba(14,203,129,.3); color: var(--green); }
-
-        /* ─── Wallet Address ─── */
-        .addr { font-family: 'JetBrains Mono'; font-size: .78rem; color: #5ba3f5; cursor: pointer; }
-        .addr:hover { color: #89c4f4; text-decoration: underline; }
-
-        /* ─── Signal Row ─── */
-        .signal-new { border-left: 3px solid var(--green); }
-        .signal-old { border-left: 3px solid var(--border); }
-
-        /* ─── Buttons ─── */
-        .btn-primary-custom {
-            background: var(--yellow); color: #1a1200; font-weight: 600;
-            border: none; border-radius: 6px; padding: 6px 16px; font-size: .82rem; cursor: pointer;
-            transition: opacity .15s;
+        .score-pill.s-high {
+            background: rgba(0,209,140,.12); border-color: rgba(0,209,140,.3); color: var(--green);
         }
-        .btn-primary-custom:hover { opacity: .85; }
-        .btn-ghost {
-            background: transparent; color: var(--text-secondary); border: 1px solid var(--border);
-            border-radius: 6px; padding: 5px 12px; font-size: .78rem; cursor: pointer;
-            transition: all .15s;
+        .score-pill.s-med {
+            background: rgba(255,184,0,.1); border-color: rgba(255,184,0,.25); color: var(--yellow);
         }
-        .btn-ghost:hover { border-color: var(--border-light); color: var(--text-primary); background: var(--bg-hover); }
-        .btn-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(14,203,129,.3); border-radius: 6px; padding: 4px 10px; font-size: .75rem; cursor: pointer; transition: all .15s; }
-        .btn-green:hover { background: rgba(14,203,129,.25); }
 
-        /* ─── Select / Input ─── */
-        select.custom-select, input.custom-input {
-            background: var(--bg-input); color: var(--text-primary);
-            border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px;
-            font-size: .82rem; outline: none;
+        /* ════ RANK ════ */
+        .rank-1 td:first-child::before { content: '🥇 '; }
+        .rank-2 td:first-child::before { content: '🥈 '; }
+        .rank-3 td:first-child::before { content: '🥉 '; }
+
+        /* ════ ADDRESS ════ */
+        .addr {
+            font-family: 'JetBrains Mono'; font-size: .77rem;
+            color: #60a5fa; cursor: pointer;
+            text-decoration: none;
         }
-        select.custom-select:focus, input.custom-input:focus { border-color: var(--blue); }
+        .addr:hover { color: #93c5fd; text-decoration: underline; }
 
-        /* ─── Glow number ─── */
-        .glow-green { text-shadow: 0 0 12px rgba(14,203,129,.5); }
-        .glow-red   { text-shadow: 0 0 12px rgba(246,70,93,.5); }
+        /* ════ BUTTONS ════ */
+        .btn-primary-g {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: #fff; border: none; border-radius: 8px;
+            padding: 7px 18px; font-size: .82rem; font-weight: 600;
+            cursor: pointer; transition: opacity .15s; white-space: nowrap;
+        }
+        .btn-primary-g:hover { opacity: .85; }
+        .btn-outline {
+            background: transparent; color: var(--t2);
+            border: 1px solid var(--border-m);
+            border-radius: 7px; padding: 5px 13px;
+            font-size: .78rem; cursor: pointer; transition: all .15s;
+            white-space: nowrap; text-decoration: none; display: inline-block;
+        }
+        .btn-outline:hover { color: var(--t1); border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.05); }
+        .btn-green-o {
+            background: var(--green-d); color: var(--green);
+            border: 1px solid var(--green-b);
+            border-radius: 6px; padding: 4px 11px;
+            font-size: .75rem; font-weight: 600; cursor: pointer;
+            transition: all .15s; text-decoration: none; display: inline-block;
+        }
+        .btn-green-o:hover { background: rgba(0,209,140,.2); }
 
-        /* ─── Divider ─── */
+        /* ════ TABS ════ */
+        .tab-row {
+            display: inline-flex; gap: 2px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid var(--border); border-radius: 9px; padding: 3px;
+        }
+        .tab-item {
+            padding: 5px 15px; border-radius: 7px;
+            font-size: .8rem; font-weight: 500; color: var(--t2);
+            cursor: pointer; transition: all .15s; white-space: nowrap;
+        }
+        .tab-item:hover:not(.active) { color: var(--t1); }
+        .tab-item.active {
+            background: rgba(59,130,246,.2);
+            color: #60a5fa; font-weight: 600;
+        }
+
+        /* ════ PULSE ════ */
+        .pulse-dot {
+            display: inline-block; width: 7px; height: 7px;
+            border-radius: 50%; background: var(--green);
+            animation: livePulse 2s infinite;
+        }
+
+        /* ════ MINI BAR ════ */
+        .mini-bar { height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+        .mini-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--green), #06b6d4); }
+
+        /* ════ MISC ════ */
+        .section-hd {
+            font-size: .7rem; font-weight: 700; letter-spacing: 1.2px;
+            text-transform: uppercase; color: var(--t3); margin-bottom: 14px;
+        }
         .divider { border-top: 1px solid var(--border); margin: 0; }
+        .page-wrap { padding: 22px 28px; max-width: 1640px; margin: 0 auto; }
+        .mono { font-family: 'JetBrains Mono'; }
+        .fw-7 { font-weight: 700; }
+        .fw-8 { font-weight: 800; }
 
-        /* ─── Page layout ─── */
-        .page-wrap { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+        .empty-state { padding: 44px 20px; text-align: center; color: var(--t3); }
+        .empty-state .ei { font-size: 2.5rem; margin-bottom: 14px; }
 
-        /* ─── Section title ─── */
-        .section-title { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 12px; }
+        .token-logo { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border); }
 
-        /* ─── Token logo ─── */
-        .token-logo { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+        /* ── Row glow on hover for ranked items ── */
+        .rank-1 { background: linear-gradient(90deg, rgba(255,184,0,.04) 0%, transparent 100%); }
+        .rank-2 { background: linear-gradient(90deg, rgba(180,180,180,.03) 0%, transparent 100%); }
+        .rank-3 { background: linear-gradient(90deg, rgba(205,127,50,.03) 0%, transparent 100%); }
 
-        /* ─── Pulse dot ─── */
-        .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green);
-            box-shadow: 0 0 0 0 rgba(14,203,129,.5); animation: pulse 2s infinite; }
-        @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(14,203,129,.5)} 70%{box-shadow:0 0 0 6px transparent} 100%{box-shadow:0 0 0 0 transparent} }
+        /* ── Signal card highlight ── */
+        .sig-row td:first-child { border-left: 2px solid var(--green); }
 
-        /* ─── Rank number ─── */
-        .rank-num { font-family: 'JetBrains Mono'; font-size: .75rem; color: var(--text-muted); font-weight: 700; }
-        .rank-1 .rank-num { color: var(--yellow); }
-        .rank-2 .rank-num { color: #adb5bd; }
-        .rank-3 .rank-num { color: #cd7f32; }
-
-        /* ─── Progress bar ─── */
-        .mini-bar { height: 3px; border-radius: 2px; background: var(--border); overflow: hidden; }
-        .mini-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--green), #00e5a0); }
-
-        /* ─── Tabs ─── */
-        .tab-row { display: flex; gap: 2px; background: var(--bg-base); padding: 3px; border-radius: 8px; border: 1px solid var(--border); display: inline-flex; }
-        .tab-item { padding: 5px 14px; border-radius: 6px; font-size: .8rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all .15s; }
-        .tab-item.active { background: var(--bg-card); color: var(--text-primary); }
-        .tab-item:hover:not(.active) { color: var(--text-primary); }
-
-        /* ─── Empty state ─── */
-        .empty-state { padding: 40px 20px; text-align: center; color: var(--text-muted); }
-        .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
-
-        /* ─── Copy tooltip ─── */
-        .copied { color: var(--green) !important; }
+        /* ── Info pill ── */
+        .info-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: .72rem; color: var(--t2);
+            background: rgba(255,255,255,.04); border: 1px solid var(--border);
+            border-radius: 20px; padding: 3px 10px;
+        }
     </style>
 </head>
 <body>
-<!-- Navbar -->
+
 <nav class="topnav">
-    <a class="brand" href="/">⛓️ OnChain OS</a>
-    <div class="nav-items">
-        <a class="nav-link" th:classappend="${activePage == 'index' ? 'active' : ''}" href="/">
-            📊 总览
-        </a>
-        <a class="nav-link" th:classappend="${activePage == 'smart-money' ? 'active' : ''}" href="/smart-money">
-            🧠 聪明钱
-        </a>
-        <a class="nav-link" th:classappend="${activePage == 'portfolio' ? 'active' : ''}" href="/portfolio">
-            💼 我的持仓
-        </a>
+    <a class="brand" href="/">⛓ OnChain OS</a>
+    <div class="nav-links">
+        <a class="nav-link" th:classappend="${activePage=='index'?'active':''}" href="/">📊 总览</a>
+        <a class="nav-link" th:classappend="${activePage=='smart-money'?'active':''}" href="/smart-money">🧠 聪明钱</a>
+        <a class="nav-link" th:classappend="${activePage=='portfolio'?'active':''}" href="/portfolio">💼 我的持仓</a>
     </div>
-    <div class="clock" id="clock">--</div>
+    <div class="nav-right">
+        <span class="live-dot">实时</span>
+        <span class="clock-badge" id="clock">--</span>
+    </div>
 </nav>
 
-<!-- Page content -->
 <div class="page-wrap" th:insert="${content}"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 // Clock
-setInterval(() => {
-    document.getElementById('clock').textContent =
-        new Date().toLocaleString('zh-CN', {timeZone:'Asia/Shanghai',
-            year:'numeric',month:'2-digit',day:'2-digit',
-            hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}, 1000);
+const clockEl = document.getElementById('clock');
+function tick() {
+    clockEl.textContent = new Date().toLocaleString('zh-CN', {
+        timeZone:'Asia/Shanghai', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+}
+tick(); setInterval(tick, 1000);
 
-// Format helpers
+// Helpers
 const $ = s => document.querySelector(s);
-const $$ = s => document.querySelectorAll(s);
+const $$ = s => [...document.querySelectorAll(s)];
 
-function fmtUsd(v, decimals=2) {
-    const n = parseFloat(v) || 0;
-    const abs = Math.abs(n);
-    const sign = n < 0 ? '-' : '';
-    if (abs >= 1e6) return sign + '$' + (abs/1e6).toFixed(2) + 'M';
-    if (abs >= 1e3) return sign + '$' + (abs/1e3).toFixed(1) + 'K';
-    return sign + '$' + abs.toFixed(decimals);
-}
-function fmtPct(v) {
-    const n = parseFloat(v) || 0;
-    return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
-}
-function pnlClass(v) { return parseFloat(v) >= 0 ? 'up' : 'dn'; }
-function pnlBgClass(v) { return parseFloat(v) >= 0 ? 'up-bg' : 'dn-bg'; }
-function chainName(c) { return {1:'ETH',56:'BSC',8453:'Base',501:'SOL'}[c] || 'Chain'+c; }
-function chainClass(c) { return 'chain-badge chain-'+c; }
+function chainLabel(c) { return {1:'ETH',56:'BSC',8453:'Base',501:'SOL'}[+c] || 'C'+c; }
+function chainCls(c)   { return 'chain-badge c-'+c; }
+function scoreCls(s)   { return s >= 75 ? 's-high' : s >= 50 ? 's-med' : ''; }
 
-// Copy address
-function copyAddr(addr) {
-    navigator.clipboard.writeText(addr).catch(()=>{});
+function fmtUsd(v, d=0) {
+    const n = parseFloat(v)||0, a = Math.abs(n), sg = n<0?'-':'';
+    if (a>=1e6) return sg+'$'+(a/1e6).toFixed(2)+'M';
+    if (a>=1e3) return sg+'$'+(a/1e3).toFixed(1)+'K';
+    return sg+'$'+a.toFixed(d);
 }
-
-// Rank medal
-function rankEmoji(i) { return ['🥇','🥈','🥉'][i] || `#${i+1}`; }
+function pnlTag(v) {
+    const n = parseFloat(v)||0;
+    return n>=0
+        ? `<span class="tag-up">▲ ${fmtUsd(n)}</span>`
+        : `<span class="tag-dn">▼ ${fmtUsd(n)}</span>`;
+}
+function copyAddr(addr) { navigator.clipboard.writeText(addr).catch(()=>{}); }
 </script>
 </body>
 </html>

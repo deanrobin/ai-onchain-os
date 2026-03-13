@@ -4,176 +4,179 @@
 <body><main>
 
 <!-- Header -->
-<div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
-    <a href="/smart-money" class="btn-ghost" style="text-decoration:none">← 返回</a>
-    <span style="font-size:1.1rem">🧠</span>
-    <span class="addr" style="font-size:.9rem" onclick="copyAddr(this.dataset.addr)"
-          th:attr="data-addr=${address}"
+<div class="d-flex align-items-center flex-wrap gap-3 mb-4">
+    <a href="/smart-money" class="btn-outline">← 返回</a>
+    <span style="font-size:1rem">🧠</span>
+    <span class="addr" style="font-size:.88rem"
+          th:attr="onclick='copyAddr(\''+${address}+'\')'"
           th:text="${address}"></span>
-    <span class="chain-badge" th:classappend="'chain-'+${chain}"
+    <span class="chain-badge" th:classappend="'c-'+${chain}"
           th:text="${chain=='1'?'ETH':chain=='56'?'BSC':chain=='8453'?'Base':'SOL'}"></span>
-    <div class="tab-row ms-2" id="tfTabs">
+    <div class="tab-row">
         <div th:each="tf : ${{1,2,3,4,5}}" class="tab-item"
-             th:classappend="${timeFrame == tf ? 'active' : ''}"
+             th:classappend="${timeFrame == tf ? ' active' : ''}"
              th:text="${tf==1?'1D':tf==2?'3D':tf==3?'7D':tf==4?'1M':'3M'}"
              th:attr="data-href='?chain='+${chain}+'&amp;timeFrame='+${tf}"
-             onclick="window.location.href=this.dataset.href">7D</div>
+             onclick="window.location.href=this.dataset.href"></div>
     </div>
+    <button class="btn-primary-g ms-auto" onclick="loadPnl()">📊 加载持仓明细</button>
 </div>
 
-<!-- 概览 Stats -->
+<!-- Overview Stats -->
 <div th:if="${overview != null and !overview.isEmpty()}" class="row g-3 mb-4">
-    <div class="col-6 col-md-2">
-        <div class="stat-card" style="--accent:var(--green)">
-            <div class="stat-icon">🎯</div>
-            <div th:class="${'stat-val ' + (overview.winRate != null and overview.winRate > 0.5 ? 'up glow-green' : 'dn glow-red')}"
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="stat-card" th:classappend="${overview.winRate != null and overview.winRate > 0.5 ? 'sc-green' : 'sc-orange'}">
+            <div class="sc-glow"></div>
+            <div class="sc-icon">🎯</div>
+            <div th:class="${'sc-val ' + (overview.winRate > 0.5 ? 'up' : 'dn')}"
                  th:text="${overview.winRate != null ? #numbers.formatDecimal(overview.winRate*100,1,1)+'%' : '—'}"></div>
-            <div class="stat-lbl">胜率</div>
+            <div class="sc-lbl">胜率</div>
         </div>
     </div>
-    <div class="col-6 col-md-2">
-        <div class="stat-card" style="--accent:var(--blue)">
-            <div class="stat-icon">💰</div>
-            <div th:class="${'stat-val ' + (overview.realizedPnlUsd != null and overview.realizedPnlUsd >= 0 ? 'up glow-green' : 'dn glow-red')}"
-                 th:text="${overview.realizedPnlUsd != null ? (overview.realizedPnlUsd >= 0 ? '+' : '') + '$' + #numbers.formatDecimal(overview.realizedPnlUsd,1,0) : '—'}"></div>
-            <div class="stat-lbl">已实现盈亏</div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="stat-card" th:classappend="${overview.realizedPnlUsd != null and overview.realizedPnlUsd >= 0 ? 'sc-green' : 'sc-orange'}">
+            <div class="sc-glow"></div>
+            <div class="sc-icon">💰</div>
+            <div th:class="${'sc-val ' + (overview.realizedPnlUsd >= 0 ? 'up' : 'dn')}"
+                 th:text="${overview.realizedPnlUsd != null ? (overview.realizedPnlUsd >= 0 ? '+' : '') + '$' + #numbers.formatDecimal(overview.realizedPnlUsd < 0 ? -overview.realizedPnlUsd : overview.realizedPnlUsd,1,0) : '—'}"></div>
+            <div class="sc-lbl">已实现盈亏</div>
         </div>
     </div>
-    <div class="col-6 col-md-2">
-        <div class="stat-card" style="--accent:var(--yellow)">
-            <div class="stat-icon">📊</div>
-            <div class="stat-val text-blue"
-                 th:text="${(overview.buyTxCount?:0) + ' / ' + (overview.sellTxCount?:0)}"></div>
-            <div class="stat-lbl">买入 / 卖出</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-2">
-        <div class="stat-card" style="--accent:var(--yellow)">
-            <div class="stat-icon">🏆</div>
-            <div class="stat-val text-yellow"
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="stat-card sc-yellow">
+            <div class="sc-glow"></div>
+            <div class="sc-icon">🏆</div>
+            <div class="sc-val t-yellow"
                  th:text="${overview.top3PnlTokenSumUsd != null ? '$'+#numbers.formatDecimal(overview.top3PnlTokenSumUsd,1,0) : '—'}"></div>
-            <div class="stat-lbl">Top3 盈利</div>
+            <div class="sc-lbl">Top3 盈利</div>
         </div>
     </div>
-    <div class="col-6 col-md-2">
-        <div class="stat-card">
-            <div class="stat-icon">💵</div>
-            <div class="stat-val"
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="stat-card sc-blue">
+            <div class="sc-glow"></div>
+            <div class="sc-icon">📊</div>
+            <div class="sc-val t-blue"
+                 th:text="${(overview.buyTxCount?:0) + ' / ' + (overview.sellTxCount?:0)}"></div>
+            <div class="sc-lbl">买 / 卖次数</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="stat-card sc-cyan">
+            <div class="sc-glow"></div>
+            <div class="sc-icon">💵</div>
+            <div class="sc-val t-cyan"
                  th:text="${overview.avgBuyValueUsd != null ? '$'+#numbers.formatDecimal(overview.avgBuyValueUsd,1,0) : '—'}"></div>
-            <div class="stat-lbl">平均买入</div>
+            <div class="sc-lbl">平均买入</div>
         </div>
     </div>
-    <div class="col-6 col-md-2">
-        <div class="stat-card">
-            <div class="stat-icon">🎯</div>
-            <div class="stat-val" style="font-size:.9rem;color:var(--blue)"
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="stat-card sc-purple">
+            <div class="sc-glow"></div>
+            <div class="sc-icon">🎯</div>
+            <div class="sc-val t-purple" style="font-size:.9rem"
                  th:text="${overview.preferredMarketCap ?: '—'}"></div>
-            <div class="stat-lbl">偏好市值</div>
+            <div class="sc-lbl">偏好市值</div>
         </div>
     </div>
 </div>
 
-<!-- 代币分布 -->
-<div th:if="${overview?.tokenCountByPnlPercent != null}" class="card mb-3">
-    <div class="card-header">📊 代币盈亏分布</div>
-    <div class="card-body">
-        <div class="row g-3 text-center">
-            <div class="col-3">
-                <div style="font-size:1.4rem;font-weight:700;color:var(--green)"
-                     th:text="${overview.tokenCountByPnlPercent.over500Percent ?: 0}"></div>
-                <div style="font-size:.72rem;color:var(--text-muted)">🚀 超+500%</div>
-            </div>
-            <div class="col-3">
-                <div style="font-size:1.4rem;font-weight:700;color:#52c41a"
-                     th:text="${overview.tokenCountByPnlPercent.zeroTo500Percent ?: 0}"></div>
-                <div style="font-size:.72rem;color:var(--text-muted)">📈 0~+500%</div>
-            </div>
-            <div class="col-3">
-                <div style="font-size:1.4rem;font-weight:700;color:#fa8c16"
-                     th:text="${overview.tokenCountByPnlPercent.zeroToMinus50Percent ?: 0}"></div>
-                <div style="font-size:.72rem;color:var(--text-muted)">📉 -50%~0</div>
-            </div>
-            <div class="col-3">
-                <div style="font-size:1.4rem;font-weight:700;color:var(--red)"
-                     th:text="${overview.tokenCountByPnlPercent.overMinus50Percent ?: 0}"></div>
-                <div style="font-size:.72rem;color:var(--text-muted)">💥 超-50%</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Top3 盈利代币 -->
-<div th:if="${overview?.topPnlTokenList != null and !overview.topPnlTokenList.isEmpty()}" class="card mb-3">
-    <div class="card-header">🏆 Top3 盈利代币</div>
-    <div class="card-body">
-        <div class="row g-3">
-            <div class="col-md-4" th:each="t, tSt : ${overview.topPnlTokenList}">
-                <div class="stat-card" th:style="'--accent:' + (tSt.index == 0 ? 'var(--yellow)' : tSt.index == 1 ? '#adb5bd' : '#cd7f32')">
-                    <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:6px"
-                         th:text="${tSt.index == 0 ? '🥇 第一名' : tSt.index == 1 ? '🥈 第二名' : '🥉 第三名'}">🥇</div>
-                    <div class="fw-700" style="font-size:1rem" th:text="${t.tokenSymbol}"></div>
-                    <div class="up glow-green" style="font-size:1.1rem;font-weight:700"
-                         th:text="${'$'+#numbers.formatDecimal(t.tokenPnLUsd,1,0)}"></div>
-                    <div class="up" style="font-size:.8rem"
-                         th:text="${'+'+#numbers.formatDecimal(t.tokenPnLPercent*100,1,1)+'%'}"></div>
+<!-- 盈亏分布 -->
+<div th:if="${overview?.tokenCountByPnlPercent != null}" class="row g-3 mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">📊 代币盈亏分布</div>
+            <div class="card-body">
+                <div class="row g-3 text-center">
+                    <div class="col-3">
+                        <div class="sc-val up" style="font-size:1.6rem"
+                             th:text="${overview.tokenCountByPnlPercent.over500Percent ?: 0}"></div>
+                        <div style="font-size:.75rem;color:var(--green);margin-top:4px">🚀 超 +500%</div>
+                    </div>
+                    <div class="col-3">
+                        <div class="sc-val" style="font-size:1.6rem;color:#52c41a"
+                             th:text="${overview.tokenCountByPnlPercent.zeroTo500Percent ?: 0}"></div>
+                        <div style="font-size:.75rem;color:#52c41a;margin-top:4px">📈 0 ~ +500%</div>
+                    </div>
+                    <div class="col-3">
+                        <div class="sc-val dn" style="font-size:1.6rem;opacity:.7"
+                             th:text="${overview.tokenCountByPnlPercent.zeroToMinus50Percent ?: 0}"></div>
+                        <div style="font-size:.75rem;color:var(--orange);margin-top:4px">📉 -50% ~ 0</div>
+                    </div>
+                    <div class="col-3">
+                        <div class="sc-val dn" style="font-size:1.6rem"
+                             th:text="${overview.tokenCountByPnlPercent.overMinus50Percent ?: 0}"></div>
+                        <div style="font-size:.75rem;color:var(--red);margin-top:4px">💥 超 -50%</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 近期逐代币 PnL -->
-<div class="card">
-    <div class="card-header">
-        🪙 近期代币 PnL 明细
-        <button class="btn-ghost ms-auto" onclick="loadRecentPnl()">📊 加载 / 刷新</button>
+<!-- Top3 代币 -->
+<div th:if="${overview?.topPnlTokenList != null and !overview.topPnlTokenList.isEmpty()}" class="row g-3 mb-3">
+    <div class="col-md-4" th:each="t, tSt : ${overview.topPnlTokenList}">
+        <div class="stat-card" th:classappend="${tSt.index==0?'sc-yellow':tSt.index==1?'sc-blue':'sc-cyan'}">
+            <div class="sc-glow"></div>
+            <div style="font-size:.72rem;color:var(--t3);margin-bottom:6px"
+                 th:text="${tSt.index==0?'🥇 第一名':tSt.index==1?'🥈 第二名':'🥉 第三名'}"></div>
+            <div class="sc-val fw-8" style="font-size:1.1rem" th:text="${t.tokenSymbol}"></div>
+            <div class="up" style="font-size:1.2rem;font-weight:800"
+                 th:text="${'$'+#numbers.formatDecimal(t.tokenPnLUsd,1,0)}"></div>
+            <div class="up" style="font-size:.8rem"
+                 th:text="${'+'+#numbers.formatDecimal(t.tokenPnLPercent*100,1,1)+'%'}"></div>
+        </div>
     </div>
-    <div id="pnl-container" class="card-body p-0">
+</div>
+
+<!-- PnL Table -->
+<div class="card">
+    <div class="card-header">🪙 近期代币 PnL 明细</div>
+    <div id="pnl-wrap">
         <div class="empty-state">
-            <div class="empty-icon">🔍</div>
-            <div>点击「加载」获取持仓明细</div>
+            <div class="ei">📊</div><div>点击「加载持仓明细」</div>
         </div>
     </div>
 </div>
 
 <script th:inline="javascript">
-const ADDR = /*[[${address}]]*/ '';
+const ADDR  = /*[[${address}]]*/ '';
 const CHAIN = /*[[${chain}]]*/ '1';
 
-async function loadRecentPnl() {
-    const el = document.getElementById('pnl-container');
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div>加载中...</div></div>';
-    const resp = await fetch(`/api/portfolio/pnl?address=${ADDR}&chain=${CHAIN}&limit=50`);
-    const data = await resp.json();
+async function loadPnl() {
+    const wrap = document.getElementById('pnl-wrap');
+    wrap.innerHTML = '<div class="empty-state"><div class="ei">⏳</div><div>加载中...</div></div>';
+    const r = await fetch(`/api/portfolio/pnl?address=${ADDR}&chain=${CHAIN}&limit=50`);
+    const data = await r.json();
     if (!data.length) {
-        el.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>暂无数据</div></div>';
+        wrap.innerHTML = '<div class="empty-state"><div class="ei">📭</div><div>暂无数据</div></div>';
         return;
     }
-    el.innerHTML = `<table class="table"><thead><tr>
-        <th>代币</th><th>持仓价值</th><th>浮盈 / 亏</th><th>已实现</th><th>总盈亏</th>
-        <th>买入均</th><th>卖出均</th><th>买入次</th><th>状态</th>
+    wrap.innerHTML = `<table class="table"><thead><tr>
+        <th>代币</th><th>持仓价值</th><th>浮盈浮亏</th>
+        <th>已实现</th><th>总盈亏</th><th>买入均价</th><th>卖出均价</th><th>买次</th><th>状态</th>
     </tr></thead><tbody>${data.map(p => {
-        const un = p.unrealizedPnlUsd === 'SELL_ALL'
-            ? '<span style="color:var(--text-muted);font-size:.75rem">✅ 已清仓</span>'
+        const isClose = p.unrealizedPnlUsd === 'SELL_ALL';
+        const un = isClose
+            ? '<span class="t-dim" style="font-size:.72rem">✅ 已清仓</span>'
             : (() => {
                 const v = parseFloat(p.unrealizedPnlUsd||0);
                 const pct = parseFloat(p.unrealizedPnlPercent||0)*100;
-                return `<span class="${v>=0?'up fw-600':'dn fw-600'}">${v>=0?'▲ +$':'▼ $'}${Math.abs(v).toFixed(2)}</span>
-                        <div style="font-size:.7rem" class="${pct>=0?'up':'dn'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>`;
+                return `<span class="${v>=0?'up fw-7':'dn fw-7'}">${v>=0?'▲ +$':'▼ $'}${Math.abs(v).toFixed(2)}</span>
+                    <div style="font-size:.7rem" class="${pct>=0?'up':'dn'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>`;
               })();
         const re = parseFloat(p.realizedPnlUsd||0);
         const tot = parseFloat(p.totalPnlUsd||0);
-        const isOpen = p.unrealizedPnlUsd !== 'SELL_ALL';
         return `<tr>
-            <td><span class="fw-600">${p.tokenSymbol||'?'}</span></td>
-            <td>$${parseFloat(p.tokenBalanceUsd||0).toFixed(2)}</td>
+            <td class="fw-7">${p.tokenSymbol||'?'}</td>
+            <td class="mono t-muted" style="font-size:.8rem">$${parseFloat(p.tokenBalanceUsd||0).toFixed(2)}</td>
             <td>${un}</td>
-            <td class="${re>=0?'up':'dn'}">${re>=0?'+':''}\$${re.toFixed(2)}</td>
-            <td><span class="${tot>=0?'up-bg':'dn-bg'}">${tot>=0?'+':''}\$${tot.toFixed(2)}</span></td>
-            <td style="font-family:'JetBrains Mono';font-size:.78rem;color:var(--text-secondary)">$${p.buyAvgPrice||'—'}</td>
-            <td style="font-family:'JetBrains Mono';font-size:.78rem;color:var(--text-secondary)">$${p.sellAvgPrice||'—'}</td>
-            <td style="color:var(--text-secondary)">${p.buyTxCount||0}</td>
-            <td><span style="font-size:.72rem;${isOpen?'color:var(--green)':'color:var(--text-muted)'}">${isOpen?'● 持仓中':'已平仓'}</span></td>
+            <td class="${re>=0?'up':'dn'}">${re>=0?'+$':'-$'}${Math.abs(re).toFixed(2)}</td>
+            <td><span class="${tot>=0?'tag-up':'tag-dn'}">${tot>=0?'▲ +$':'▼ $'}${Math.abs(tot).toFixed(2)}</span></td>
+            <td class="mono t-dim" style="font-size:.77rem">$${p.buyAvgPrice||'—'}</td>
+            <td class="mono t-dim" style="font-size:.77rem">$${p.sellAvgPrice||'—'}</td>
+            <td class="t-muted">${p.buyTxCount||0}</td>
+            <td><span style="font-size:.72rem;${isClose?'color:var(--t3)':'color:var(--green)'}">${isClose?'已平仓':'● 持仓中'}</span></td>
         </tr>`;
     }).join('')}</tbody></table>`;
 }

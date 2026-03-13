@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("main")
 
-CHAINS = ["1", "56", "8453"]  # ETH, BSC, Base
+CHAINS = ["1", "56", "8453", "501"]  # ETH, BSC, Base, Solana
 SIGNAL_MIN_USD = "5000"
 SIGNAL_MIN_WALLETS = "1"
 
