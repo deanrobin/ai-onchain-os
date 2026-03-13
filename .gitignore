@@ -33,3 +33,7 @@ Thumbs.db
 
 # IDE
 .vscode/
+
+# Python sensitive
+.env
+smart-money/.env
