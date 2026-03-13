@@ -24,6 +24,7 @@ public class DashboardController {
     /** 首页：总览 */
     @GetMapping("/")
     public String index(Model model) {
+        model.addAttribute("activePage", "index");
         model.addAttribute("topWallets", smartMoneyService.getTopWallets(10));
         model.addAttribute("recentSignals", smartMoneyService.getRecentSignals(null, 20));
         return "index";
@@ -35,6 +36,7 @@ public class DashboardController {
             @RequestParam(defaultValue = "1") String chain,
             @RequestParam(defaultValue = "1") String walletType,
             Model model) {
+        model.addAttribute("activePage", "smart-money");
         model.addAttribute("topWallets", smartMoneyService.getTopWallets(50));
         model.addAttribute("liveSignals", smartMoneyService.fetchLiveSignals(chain, walletType));
         model.addAttribute("chain", chain);
@@ -49,6 +51,7 @@ public class DashboardController {
             @RequestParam(defaultValue = "1") String chain,
             @RequestParam(defaultValue = "3") String timeFrame,
             Model model) {
+        model.addAttribute("activePage", "smart-money");
         model.addAttribute("address", address);
         model.addAttribute("overview", smartMoneyService.getWalletOverview(chain, address, timeFrame));
         model.addAttribute("chain", chain);
@@ -59,6 +62,7 @@ public class DashboardController {
     /** 我的持仓看板 */
     @GetMapping("/portfolio")
     public String portfolio(Model model) {
+        model.addAttribute("activePage", "portfolio");
         List<MyAddress> addresses = myAddressRepo.findByIsActiveTrue();
         List<Map<String, Object>> portfolioData = new ArrayList<>();
 

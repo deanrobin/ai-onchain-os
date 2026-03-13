@@ -83,7 +83,7 @@
                     <exclusion>
                         <groupId>*</groupId>
                         <artifactId>*</artifactId>
-                    </execution>
+                    </exclusion>
                 </exclusions>
             </dependency>
         </dependencies>

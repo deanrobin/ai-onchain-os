@@ -27,7 +27,8 @@ public class PortfolioService {
                     "walletAddress", address,
                     "timeFrame", timeFrame
             ));
-            return extractData(resp);
+            Object data = extractData(resp);
+            return data instanceof Map<?, ?> m ? m : Map.of();
         } catch (Exception e) {
             log.warn("portfolio overview failed {}: {}", address, e.getMessage());
             return Map.of();
@@ -67,7 +68,8 @@ public class PortfolioService {
             params.put("limit", limit);
             Map<?, ?> resp = okx.getWeb3(
                     "/api/v6/dex/post-transaction/transactions-by-address", params);
-            return extractData(resp);
+            Object data = extractData(resp);
+            return data instanceof Map<?, ?> m ? m : Map.of();
         } catch (Exception e) {
             log.warn("tx history failed {}: {}", address, e.getMessage());
             return Map.of();
