@@ -3,16 +3,14 @@
       th:replace="~{layout :: page('聪明钱', ~{::main})}">
 <body><main>
 
-<!-- ── Filter Bar ── -->
+<!-- Filter bar -->
 <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
-    <!-- Chain -->
     <div class="tab-row" id="chainTabs">
         <div class="tab-item active" data-chain="1"    onclick="selChain(this)">🔷 ETH</div>
         <div class="tab-item"        data-chain="56"   onclick="selChain(this)">🟡 BSC</div>
         <div class="tab-item"        data-chain="8453" onclick="selChain(this)">🔵 Base</div>
         <div class="tab-item"        data-chain="501"  onclick="selChain(this)">🟣 SOL</div>
     </div>
-    <!-- Type -->
     <div class="tab-row" id="wtTabs">
         <div class="tab-item active" data-wt="1" onclick="selWt(this)">🧠 Smart Money</div>
         <div class="tab-item"        data-wt="2" onclick="selWt(this)">🎤 KOL</div>
@@ -22,7 +20,6 @@
     <span id="sig-status" class="info-pill" style="display:none"></span>
 </div>
 
-<!-- ── Grid ── -->
 <div class="row g-3">
 
     <!-- 实时信号 -->
@@ -31,13 +28,11 @@
             <div class="card-header">
                 <span class="pulse-dot"></span>
                 <span class="ms-2">实时买入信号</span>
-                <span class="t-dim ms-2" style="font-size:.72rem;font-weight:400" id="sig-chain-lbl">· ETH</span>
+                <span class="t-dim ms-1" style="font-size:.72rem;font-weight:400" id="sig-chain-lbl">· ETH</span>
             </div>
-            <div id="sig-wrap">
             <table class="table" id="sig-tbl">
                 <thead><tr>
-                    <th>代币</th><th>市值</th><th>买入额</th>
-                    <th>钱包数</th><th>已卖出%</th><th></th>
+                    <th>代币</th><th>市值</th><th>买入金额</th><th>触发钱包数</th><th>已卖出</th><th></th>
                 </tr></thead>
                 <tbody id="sig-body">
                 <tr th:each="s : ${liveSignals}" class="sig-row">
@@ -46,34 +41,31 @@
                             <img th:if="${s.token?.logo}" th:src="${s.token.logo}"
                                  class="token-logo" onerror="this.style.display='none'">
                             <div>
-                                <div class="fw-7" th:text="${s.token?.symbol ?: '?'}"></div>
+                                <div class="fw-7" th:text="${s.token?.symbol?:'?'}"></div>
                                 <div class="addr" style="font-size:.68rem"
                                      th:text="${#strings.substring(s.token?.tokenAddress?:'',0,10)+'...'}"></div>
                             </div>
                         </div>
                     </td>
-                    <td class="t-muted mono" style="font-size:.78rem"
-                        th:text="${s.token?.marketCapUsd != null ? '$'+#numbers.formatDecimal(s.token.marketCapUsd,1,0) : '—'}"></td>
+                    <td class="mono t-muted" style="font-size:.78rem"
+                        th:text="${s.token?.marketCapUsd!=null?'$'+#numbers.formatDecimal(s.token.marketCapUsd,1,0):'—'}"></td>
                     <td><span class="up fw-7" th:text="${'$'+#numbers.formatDecimal(s.amountUsd,1,0)}"></span></td>
-                    <td><span class="tag-blue" th:text="${(s.triggerWalletCount ?: 0) + ' 🧠'}"></span></td>
+                    <td><span class="tag-blue" th:text="${(s.triggerWalletCount?:0)+' 🧠'}"></span></td>
                     <td>
-                        <th:block th:if="${s.soldRatioPercent != null}">
-                            <span th:class="${s.soldRatioPercent > 0.5 ? 'dn' : 'up'}"
-                                  th:text="${#numbers.formatDecimal(s.soldRatioPercent*100,1,1)+'%'}"></span>
-                        </th:block>
-                        <span th:unless="${s.soldRatioPercent != null}" class="t-dim">—</span>
+                        <span th:if="${s.soldRatioPercent!=null}"
+                              th:class="${s.soldRatioPercent>0.5?'dn':'up'}"
+                              th:text="${#numbers.formatDecimal(s.soldRatioPercent*100,1,1)+'%'}"></span>
+                        <span th:unless="${s.soldRatioPercent!=null}" class="t-dim">—</span>
                     </td>
                     <td><a href="https://www.okx.com/zh-hans/web3/dex/swap" class="btn-green-o" target="_blank">跟单 ↗</a></td>
                 </tr>
                 <tr th:if="${liveSignals.isEmpty()}" id="no-sig">
                     <td colspan="6" class="empty-state">
-                        <div class="ei">🔭</div>
-                        <div>选择链 + 点击「获取信号」</div>
+                        <div class="ei">🔭</div><div>点击「获取信号」</div>
                     </td>
                 </tr>
                 </tbody>
             </table>
-            </div>
         </div>
     </div>
 
@@ -83,20 +75,18 @@
             <div class="card-header">🏆 聪明钱排行榜</div>
             <div th:if="${topWallets.isEmpty()}" class="empty-state">
                 <div class="ei">📋</div>
-                <div>运行 <code style="color:#60a5fa">python main.py all</code></div>
+                <div>运行 <code style="color:var(--blue)">python main.py all</code></div>
             </div>
             <table th:unless="${topWallets.isEmpty()}" class="table">
                 <thead><tr>
-                    <th style="width:50px">#</th>
-                    <th>地址</th>
-                    <th>分</th>
-                    <th>胜率</th>
-                    <th>PnL</th>
+                    <th style="width:44px">#</th>
+                    <th>地址</th><th>评分</th><th>胜率</th><th>PnL</th>
                 </tr></thead>
                 <tbody>
                 <tr th:each="w, st : ${topWallets}"
-                    th:class="${'rank-' + (st.count <= 3 ? st.count : '')}">
-                    <td class="mono fw-7 t-dim" th:text="${st.count}"></td>
+                    th:class="${st.count<=3?'rank-'+st.count:''}">
+                    <td class="mono fw-7 t-dim"
+                        th:text="${st.count==1?'🥇':st.count==2?'🥈':st.count==3?'🥉':'#'+st.count}"></td>
                     <td>
                         <a th:href="'/smart-money/'+${w.address}+'?chain='+${w.chainIndex}"
                            class="addr"
@@ -104,17 +94,13 @@
                         <span class="chain-badge ms-1" th:classappend="'c-'+${w.chainIndex}"
                               th:text="${w.chainIndex=='1'?'ETH':w.chainIndex=='56'?'BSC':w.chainIndex=='8453'?'Base':'SOL'}"></span>
                     </td>
-                    <td>
-                        <span class="score-pill"
-                              th:classappend="${w.score >= 75 ? 's-high' : w.score >= 50 ? 's-med' : ''}"
-                              th:text="${w.score}"></span>
-                    </td>
-                    <td th:class="${w.winRate >= 0.5 ? 'up fw-7' : 'dn'}"
+                    <td><span class="score-pill"
+                              th:classappend="${w.score>=75?' s-high':w.score>=50?' s-med':''}"
+                              th:text="${w.score}"></span></td>
+                    <td th:class="${w.winRate>=0.5?'up fw-7':'dn'}"
                         th:text="${#numbers.formatDecimal(w.winRate*100,1,1)+'%'}"></td>
-                    <td>
-                        <span th:class="${w.realizedPnlUsd >= 0 ? 'tag-up' : 'tag-dn'}"
-                              th:text="${(w.realizedPnlUsd >= 0 ? '▲ +$' : '▼ $') + #numbers.formatDecimal(w.realizedPnlUsd < 0 ? -w.realizedPnlUsd : w.realizedPnlUsd, 1, 0)}"></span>
-                    </td>
+                    <td><span th:class="${w.realizedPnlUsd>=0?'tag-up':'tag-dn'}"
+                              th:text="${(w.realizedPnlUsd>=0?'▲ +$':'▼ $')+#numbers.formatDecimal(w.realizedPnlUsd<0?-w.realizedPnlUsd:w.realizedPnlUsd,1,0)}"></span></td>
                 </tr>
                 </tbody>
             </table>
@@ -123,58 +109,49 @@
 </div>
 
 <script>
-let curChain = '1', curWt = '1';
-
-function selChain(el) {
-    $$('#chainTabs .tab-item').forEach(e => e.classList.remove('active'));
-    el.classList.add('active');
-    curChain = el.dataset.chain;
-    const lbl = {'1':'ETH','56':'BSC','8453':'Base','501':'SOL'}[curChain] || curChain;
-    document.getElementById('sig-chain-lbl').textContent = '· ' + lbl;
+let curChain='1', curWt='1';
+function selChain(el){
+    $$('#chainTabs .tab-item').forEach(e=>e.classList.remove('active'));
+    el.classList.add('active'); curChain=el.dataset.chain;
+    const m={'1':'ETH','56':'BSC','8453':'Base','501':'SOL'};
+    document.getElementById('sig-chain-lbl').textContent='· '+(m[curChain]||curChain);
 }
-function selWt(el) {
-    $$('#wtTabs .tab-item').forEach(e => e.classList.remove('active'));
-    el.classList.add('active');
-    curWt = el.dataset.wt;
+function selWt(el){
+    $$('#wtTabs .tab-item').forEach(e=>e.classList.remove('active'));
+    el.classList.add('active'); curWt=el.dataset.wt;
 }
-
-async function fetchSignals() {
-    const status = document.getElementById('sig-status');
-    status.style.display = 'inline-flex';
-    status.textContent = '⏳ 加载中...';
-    try {
-        const r = await fetch(`/api/signals?chain=${curChain}&walletType=${curWt}`);
-        const sigs = await r.json();
-        const tbody = document.getElementById('sig-body');
-        if (!sigs.length) {
-            tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="ei">🔭</div><div>暂无信号</div></td></tr>`;
-            status.textContent = '— 暂无信号';
-            return;
+async function fetchSignals(){
+    const st=document.getElementById('sig-status');
+    st.style.display='inline-flex'; st.textContent='⏳ 加载中...';
+    try{
+        const r=await fetch(`/api/signals?chain=${curChain}&walletType=${curWt}`);
+        const sigs=await r.json();
+        const tbody=document.getElementById('sig-body');
+        if(!sigs.length){
+            tbody.innerHTML='<tr><td colspan="6" class="empty-state"><div class="ei">🔭</div><div>暂无信号</div></td></tr>';
+            st.textContent='— 暂无信号'; return;
         }
-        tbody.innerHTML = sigs.map(s => {
-            const t = s.token||{};
-            const mc = t.marketCapUsd ? fmtUsd(t.marketCapUsd) : '—';
-            const amt = fmtUsd(s.amountUsd||0);
-            const sold = s.soldRatioPercent != null
-                ? `<span class="${parseFloat(s.soldRatioPercent)>.5?'dn':'up'}">${(parseFloat(s.soldRatioPercent)*100).toFixed(1)}%</span>`
-                : '<span class="t-dim">—</span>';
+        tbody.innerHTML=sigs.map(s=>{
+            const t=s.token||{};
+            const mc=t.marketCapUsd?fmtUsd(t.marketCapUsd):'—';
+            const sold=s.soldRatioPercent!=null
+                ?`<span class="${parseFloat(s.soldRatioPercent)>.5?'dn':'up'}">${(parseFloat(s.soldRatioPercent)*100).toFixed(1)}%</span>`
+                :'<span class="t-dim">—</span>';
             return `<tr class="sig-row">
                 <td><div class="d-flex align-items-center gap-2">
-                    ${t.logo?`<img src="${t.logo}" class="token-logo" onerror="this.style.display='none'">` : ''}
+                    ${t.logo?`<img src="${t.logo}" class="token-logo" onerror="this.style.display='none'">` :''}
                     <div><div class="fw-7">${t.symbol||'?'}</div>
-                         <div class="addr" style="font-size:.68rem">${(t.tokenAddress||'').substring(0,10)}...</div>
-                    </div></div></td>
-                <td class="t-muted mono" style="font-size:.78rem">${mc}</td>
-                <td><span class="up fw-7">${amt}</span></td>
+                    <div class="addr" style="font-size:.68rem">${(t.tokenAddress||'').substring(0,10)}...</div></div>
+                </div></td>
+                <td class="mono t-muted" style="font-size:.78rem">${mc}</td>
+                <td><span class="up fw-7">${fmtUsd(s.amountUsd||0)}</span></td>
                 <td><span class="tag-blue">${s.triggerWalletCount||0} 🧠</span></td>
                 <td>${sold}</td>
                 <td><a href="https://www.okx.com/zh-hans/web3/dex/swap" class="btn-green-o" target="_blank">跟单 ↗</a></td>
             </tr>`;
         }).join('');
-        status.textContent = `✅ ${sigs.length} 条 · ${new Date().toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai'})}`;
-    } catch(e) {
-        status.textContent = '❌ 加载失败';
-    }
+        st.textContent=`✅ ${sigs.length} 条 · ${new Date().toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai'})}`;
+    }catch(e){st.textContent='❌ 加载失败';}
 }
 </script>
 </main></body>

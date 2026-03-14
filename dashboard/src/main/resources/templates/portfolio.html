@@ -3,38 +3,33 @@
       th:replace="~{layout :: page('我的持仓', ~{::main})}">
 <body><main>
 
-<!-- 无地址提示 -->
 <div th:if="${!hasAddresses}" class="card">
-    <div class="card-body" style="padding:36px;text-align:center">
+    <div class="card-body" style="padding:40px;text-align:center">
         <div style="font-size:3rem;margin-bottom:16px">💼</div>
-        <h5 style="color:var(--t1);font-weight:700;margin-bottom:8px">还没有绑定钱包地址</h5>
-        <p class="t-muted">在数据库添加你的链上地址，即可查看持仓、浮盈浮亏。</p>
-        <div style="background:rgba(0,0,0,.25);border:1px solid var(--border-m);border-radius:10px;padding:14px 18px;font-family:'JetBrains Mono';font-size:.83rem;color:var(--green);text-align:left;display:inline-block;margin-top:8px">
+        <h5 style="font-weight:700;margin-bottom:8px">还没有绑定钱包地址</h5>
+        <p class="t-muted">在数据库添加你的链上地址，即可查看持仓和盈亏。</p>
+        <div style="background:#f8faff;border:1px solid var(--border-m);border-radius:10px;padding:14px 18px;font-family:'JetBrains Mono';font-size:.83rem;color:var(--blue);text-align:left;display:inline-block;margin-top:8px">
             INSERT INTO my_address (address, chain_index, label)<br>
             VALUES ('0xYourAddress', '1', 'Main Wallet');
         </div>
     </div>
 </div>
 
-<!-- 每个地址 -->
 <div th:each="entry, eIdx : ${portfolioData}" class="mb-5">
 
-    <!-- 地址标题 -->
+    <!-- 地址 Header -->
     <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
-        <span style="font-size:1rem">💼</span>
-        <span class="fw-7" style="font-size:.95rem" th:text="${entry.label ?: '我的钱包'}"></span>
+        <span style="font-size:1.05rem">💼</span>
+        <span class="fw-7" style="font-size:.95rem" th:text="${entry.label?:'我的钱包'}"></span>
         <span class="addr" th:attr="onclick='copyAddr(\''+${entry.address}+'\')'"
               th:text="${#strings.substring(entry.address,0,8)+'...'+#strings.substring(entry.address,entry.address.length()-6)}"></span>
         <span class="chain-badge" th:classappend="'c-'+${entry.chainIndex}"
               th:text="${entry.chainIndex=='1'?'ETH':entry.chainIndex=='56'?'BSC':entry.chainIndex=='8453'?'Base':'SOL'}"></span>
-
-        <!-- Time frame -->
         <div class="tab-row" th:attr="id='tf-'+${eIdx.index}">
             <div th:each="tf : ${{1,2,3,4,5}}" class="tab-item"
-                 th:classappend="${tf == 3 ? ' active' : ''}"
+                 th:classappend="${tf==3?' active':''}"
                  th:text="${tf==1?'1D':tf==2?'3D':tf==3?'7D':tf==4?'1M':'3M'}"
-                 th:attr="data-tf=${tf},data-addr=${entry.address},data-chain=${entry.chainIndex}"
-                 onclick="switchTf(this)"></div>
+                 th:attr="data-tf=${tf}" onclick="switchTf(this)"></div>
         </div>
         <button class="btn-outline ms-auto"
                 th:onclick="'toggleTx(\''+${entry.address}+'\',\''+${entry.chainIndex}+'\',\'tx-'+${eIdx.index}+'\')'">
@@ -42,75 +37,61 @@
         </button>
     </div>
 
-    <!-- 概览 Stat Cards -->
-    <div th:if="${entry.overview != null and !entry.overview.isEmpty()}" class="row g-2 mb-3">
-        <!-- 胜率 -->
+    <!-- Stats -->
+    <div th:if="${entry.overview!=null and !entry.overview.isEmpty()}" class="row g-2 mb-3">
         <div class="col-6 col-md-4 col-xl-2">
-            <div class="stat-card" th:classappend="${entry.overview.winRate != null and entry.overview.winRate > 0.5 ? 'sc-green' : 'sc-orange'}">
-                <div class="sc-glow"></div>
+            <div class="stat-card" th:classappend="${entry.overview.winRate!=null and entry.overview.winRate>0.5?'sc-green':'sc-red'}">
                 <div class="sc-icon">🎯</div>
-                <div th:class="${'sc-val ' + (entry.overview.winRate != null and entry.overview.winRate > 0.5 ? 'up' : 'dn')}"
-                     th:text="${entry.overview.winRate != null ? #numbers.formatDecimal(entry.overview.winRate*100,1,1)+'%' : '—'}"></div>
+                <div th:class="${'sc-val '+(entry.overview.winRate!=null and entry.overview.winRate>0.5?'up':'dn')}"
+                     th:text="${entry.overview.winRate!=null?#numbers.formatDecimal(entry.overview.winRate*100,1,1)+'%':'—'}"></div>
                 <div class="sc-lbl">胜率</div>
             </div>
         </div>
-        <!-- 已实现盈亏 -->
         <div class="col-6 col-md-4 col-xl-2">
-            <div class="stat-card" th:classappend="${entry.overview.realizedPnlUsd != null and entry.overview.realizedPnlUsd >= 0 ? 'sc-green' : 'sc-orange'}">
-                <div class="sc-glow"></div>
+            <div class="stat-card" th:classappend="${entry.overview.realizedPnlUsd!=null and entry.overview.realizedPnlUsd>=0?'sc-green':'sc-red'}">
                 <div class="sc-icon">💰</div>
-                <div th:class="${'sc-val ' + (entry.overview.realizedPnlUsd != null and entry.overview.realizedPnlUsd >= 0 ? 'up' : 'dn')}"
-                     th:text="${entry.overview.realizedPnlUsd != null ? (entry.overview.realizedPnlUsd >= 0 ? '+' : '') + '$' + #numbers.formatDecimal(entry.overview.realizedPnlUsd < 0 ? -entry.overview.realizedPnlUsd : entry.overview.realizedPnlUsd, 1, 0) : '—'}"></div>
+                <div th:class="${'sc-val '+(entry.overview.realizedPnlUsd!=null and entry.overview.realizedPnlUsd>=0?'up':'dn')}"
+                     th:text="${entry.overview.realizedPnlUsd!=null?(entry.overview.realizedPnlUsd>=0?'+':'')+'\$'+#numbers.formatDecimal(entry.overview.realizedPnlUsd<0?-entry.overview.realizedPnlUsd:entry.overview.realizedPnlUsd,1,0):'—'}"></div>
                 <div class="sc-lbl">已实现盈亏</div>
             </div>
         </div>
-        <!-- Top3 -->
         <div class="col-6 col-md-4 col-xl-2">
             <div class="stat-card sc-yellow">
-                <div class="sc-glow"></div>
                 <div class="sc-icon">🏆</div>
                 <div class="sc-val t-yellow"
-                     th:text="${entry.overview.top3PnlTokenSumUsd != null ? '$'+#numbers.formatDecimal(entry.overview.top3PnlTokenSumUsd,1,0) : '—'}"></div>
-                <div class="sc-lbl">Top3 代币盈利</div>
+                     th:text="${entry.overview.top3PnlTokenSumUsd!=null?'\$'+#numbers.formatDecimal(entry.overview.top3PnlTokenSumUsd,1,0):'—'}"></div>
+                <div class="sc-lbl">Top3 盈利</div>
             </div>
         </div>
-        <!-- 买入次数 -->
         <div class="col-6 col-md-4 col-xl-2">
             <div class="stat-card sc-blue">
-                <div class="sc-glow"></div>
                 <div class="sc-icon">📈</div>
-                <div class="sc-val t-blue"
-                     th:text="${(entry.overview.buyTxCount?:0) + ' 次'}"></div>
+                <div class="sc-val t-blue" th:text="${(entry.overview.buyTxCount?:0)+' 次'}"></div>
                 <div class="sc-lbl">买入次数</div>
             </div>
         </div>
-        <!-- 卖出次数 -->
         <div class="col-6 col-md-4 col-xl-2">
             <div class="stat-card sc-purple">
-                <div class="sc-glow"></div>
                 <div class="sc-icon">📉</div>
-                <div class="sc-val t-purple"
-                     th:text="${(entry.overview.sellTxCount?:0) + ' 次'}"></div>
+                <div class="sc-val t-purple" th:text="${(entry.overview.sellTxCount?:0)+' 次'}"></div>
                 <div class="sc-lbl">卖出次数</div>
             </div>
         </div>
-        <!-- 平均买入 -->
         <div class="col-6 col-md-4 col-xl-2">
             <div class="stat-card sc-cyan">
-                <div class="sc-glow"></div>
                 <div class="sc-icon">💵</div>
                 <div class="sc-val t-cyan"
-                     th:text="${entry.overview.avgBuyValueUsd != null ? '$'+#numbers.formatDecimal(entry.overview.avgBuyValueUsd,1,0) : '—'}"></div>
+                     th:text="${entry.overview.avgBuyValueUsd!=null?'\$'+#numbers.formatDecimal(entry.overview.avgBuyValueUsd,1,0):'—'}"></div>
                 <div class="sc-lbl">平均买入</div>
             </div>
         </div>
     </div>
 
-    <!-- PnL 表 -->
+    <!-- PnL Table -->
     <div class="card mb-2">
         <div class="card-header">
-            🪙 持仓 &amp; 盈亏明细
-            <span class="info-pill ms-2">按已实现盈亏排序</span>
+            🪙 持仓代币 &amp; 盈亏明细
+            <span class="info-pill ms-2">已实现盈亏排序</span>
             <button class="btn-outline ms-auto"
                     th:onclick="'reloadPnl(\''+${entry.address}+'\',\''+${entry.chainIndex}+'\','+${eIdx.index}+')'">
                 🔄 刷新
@@ -122,51 +103,46 @@
         <table th:unless="${entry.pnlList.isEmpty()}" class="table" th:id="'pnl-tbl-'+${eIdx.index}">
             <thead><tr>
                 <th>代币</th><th>持仓价值</th>
-                <th>浮盈浮亏</th><th>已实现</th><th>总盈亏</th>
+                <th>浮盈 / 浮亏</th><th>已实现</th><th>总盈亏</th>
                 <th>买入均价</th><th>卖出均价</th><th>状态</th>
             </tr></thead>
             <tbody>
             <tr th:each="p : ${entry.pnlList}">
-                <td><span class="fw-7" th:text="${p.tokenSymbol ?: '?'}"></span></td>
+                <td class="fw-7" th:text="${p.tokenSymbol?:'?'}"></td>
                 <td class="mono t-muted" style="font-size:.8rem"
-                    th:text="${p.tokenBalanceUsd != null ? '$'+#numbers.formatDecimal(p.tokenBalanceUsd,1,2) : '—'}"></td>
-                <!-- 浮盈 -->
+                    th:text="${p.tokenBalanceUsd!=null?'\$'+#numbers.formatDecimal(p.tokenBalanceUsd,1,2):'—'}"></td>
                 <td>
-                    <th:block th:if="${p.unrealizedPnlUsd == 'SELL_ALL'}">
-                        <span class="t-dim" style="font-size:.72rem">✅ 已清仓</span>
+                    <th:block th:if="${p.unrealizedPnlUsd=='SELL_ALL'}">
+                        <span class="tag-gray">✅ 已清仓</span>
                     </th:block>
-                    <th:block th:unless="${p.unrealizedPnlUsd == 'SELL_ALL'}">
-                        <span th:class="${p.unrealizedPnlUsd >= 0 ? 'up fw-7' : 'dn fw-7'}"
-                              th:text="${(p.unrealizedPnlUsd >= 0 ? '▲ +$' : '▼ $') + #numbers.formatDecimal(p.unrealizedPnlUsd < 0 ? -p.unrealizedPnlUsd : p.unrealizedPnlUsd, 1, 2)}"></span>
-                        <div th:if="${p.unrealizedPnlPercent != null}" style="font-size:.7rem"
-                             th:class="${p.unrealizedPnlPercent >= 0 ? 'up' : 'dn'}"
-                             th:text="${(p.unrealizedPnlPercent >= 0 ? '+' : '') + #numbers.formatDecimal(p.unrealizedPnlPercent*100,1,1) + '%'}"></div>
+                    <th:block th:unless="${p.unrealizedPnlUsd=='SELL_ALL'}">
+                        <span th:class="${p.unrealizedPnlUsd>=0?'up fw-7':'dn fw-7'}"
+                              th:text="${(p.unrealizedPnlUsd>=0?'▲ +$':'▼ $')+#numbers.formatDecimal(p.unrealizedPnlUsd<0?-p.unrealizedPnlUsd:p.unrealizedPnlUsd,1,2)}"></span>
+                        <div style="font-size:.7rem" th:if="${p.unrealizedPnlPercent!=null}"
+                             th:class="${p.unrealizedPnlPercent>=0?'up':'dn'}"
+                             th:text="${(p.unrealizedPnlPercent>=0?'+':'')+#numbers.formatDecimal(p.unrealizedPnlPercent*100,1,1)+'%'}"></div>
                     </th:block>
                 </td>
-                <!-- 已实现 -->
-                <td th:class="${p.realizedPnlUsd >= 0 ? 'up' : 'dn'}"
-                    th:text="${(p.realizedPnlUsd >= 0 ? '+$' : '-$') + #numbers.formatDecimal(p.realizedPnlUsd < 0 ? -p.realizedPnlUsd : p.realizedPnlUsd, 1, 2)}"></td>
-                <!-- 总盈亏 -->
+                <td th:class="${p.realizedPnlUsd>=0?'up':'dn'}"
+                    th:text="${(p.realizedPnlUsd>=0?'+$':'-$')+#numbers.formatDecimal(p.realizedPnlUsd<0?-p.realizedPnlUsd:p.realizedPnlUsd,1,2)}"></td>
+                <td><span th:class="${p.totalPnlUsd>=0?'tag-up':'tag-dn'}"
+                          th:text="${(p.totalPnlUsd>=0?'▲ +$':'▼ $')+#numbers.formatDecimal(p.totalPnlUsd<0?-p.totalPnlUsd:p.totalPnlUsd,1,2)}"></span></td>
+                <td class="mono t-dim" style="font-size:.77rem" th:text="${p.buyAvgPrice!=null?'\$'+p.buyAvgPrice:'—'}"></td>
+                <td class="mono t-dim" style="font-size:.77rem" th:text="${p.sellAvgPrice!=null?'\$'+p.sellAvgPrice:'—'}"></td>
                 <td>
-                    <span th:class="${p.totalPnlUsd >= 0 ? 'tag-up' : 'tag-dn'}"
-                          th:text="${(p.totalPnlUsd >= 0 ? '▲ +$' : '▼ $') + #numbers.formatDecimal(p.totalPnlUsd < 0 ? -p.totalPnlUsd : p.totalPnlUsd, 1, 2)}"></span>
-                </td>
-                <td class="mono t-dim" style="font-size:.77rem" th:text="${p.buyAvgPrice != null ? '$'+p.buyAvgPrice : '—'}"></td>
-                <td class="mono t-dim" style="font-size:.77rem" th:text="${p.sellAvgPrice != null ? '$'+p.sellAvgPrice : '—'}"></td>
-                <td>
-                    <span th:if="${p.unrealizedPnlUsd == 'SELL_ALL'}" class="t-dim" style="font-size:.72rem">已平仓</span>
-                    <span th:unless="${p.unrealizedPnlUsd == 'SELL_ALL'}" class="up" style="font-size:.72rem">● 持仓中</span>
+                    <span th:if="${p.unrealizedPnlUsd=='SELL_ALL'}" class="t-dim" style="font-size:.72rem">已平仓</span>
+                    <span th:unless="${p.unrealizedPnlUsd=='SELL_ALL'}" class="up" style="font-size:.72rem">● 持仓中</span>
                 </td>
             </tr>
             </tbody>
         </table>
     </div>
 
-    <!-- 交易记录（折叠） -->
+    <!-- 交易记录 -->
     <div th:id="'tx-'+${eIdx.index}" style="display:none">
         <div class="card">
-            <div class="card-header">📋 交易记录</div>
-            <div th:id="'tx-body-'+${eIdx.index}" class="card-body p-0">
+            <div class="card-header">📋 链上交易记录</div>
+            <div th:id="'tx-body-'+${eIdx.index}">
                 <div class="empty-state"><div class="ei">⏳</div><div>加载中...</div></div>
             </div>
         </div>
@@ -174,22 +150,22 @@
 </div>
 
 <script>
-async function toggleTx(addr, chain, panelId) {
-    const panel = document.getElementById(panelId);
-    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-    panel.style.display = 'block';
-    const bodyId = panelId.replace('tx-', 'tx-body-');
-    const body = document.getElementById(bodyId);
-    const r = await fetch(`/api/portfolio/txs?address=${addr}&chains=${chain}&limit=30`);
-    const d = await r.json();
-    const txs = d.transactions || [];
-    if (!txs.length) { body.innerHTML = '<div class="empty-state"><div class="ei">📭</div><div>暂无交易记录</div></div>'; return; }
-    body.innerHTML = `<table class="table"><thead><tr>
+async function toggleTx(addr,chain,panelId){
+    const panel=document.getElementById(panelId);
+    if(panel.style.display!=='none'){panel.style.display='none';return;}
+    panel.style.display='block';
+    const bodyId=panelId.replace('tx-','tx-body-');
+    const body=document.getElementById(bodyId);
+    const r=await fetch(`/api/portfolio/txs?address=${addr}&chains=${chain}&limit=30`);
+    const d=await r.json();
+    const txs=d.transactions||[];
+    if(!txs.length){body.innerHTML='<div class="empty-state"><div class="ei">📭</div><div>暂无交易记录</div></div>';return;}
+    body.innerHTML=`<table class="table"><thead><tr>
         <th>时间</th><th>代币</th><th>数量</th><th>类型</th><th>状态</th><th>TxHash</th>
-    </tr></thead><tbody>${txs.map(tx => {
-        const ts = new Date(parseInt(tx.txTime)).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-        const sc = tx.txStatus==='success' ? '<span class="up">✅ 成功</span>' : '<span class="dn">❌ 失败</span>';
-        const type = tx.itype=='2' ? 'Token转账' : tx.itype=='0' ? '主链币' : '合约调用';
+    </tr></thead><tbody>${txs.map(tx=>{
+        const ts=new Date(parseInt(tx.txTime)).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        const sc=tx.txStatus==='success'?'<span class="up">✅ 成功</span>':'<span class="dn">❌ 失败</span>';
+        const type=tx.itype=='2'?'Token转账':tx.itype=='0'?'主链币':'合约调用';
         return `<tr><td class="mono t-dim" style="font-size:.72rem">${ts}</td>
             <td class="fw-7">${tx.symbol||'—'}</td>
             <td class="mono" style="font-size:.78rem">${tx.amount||'—'}</td>
@@ -200,25 +176,19 @@ async function toggleTx(addr, chain, panelId) {
     }).join('')}</tbody></table>`;
 }
 
-async function reloadPnl(addr, chain, idx) {
-    const r = await fetch(`/api/portfolio/pnl?address=${addr}&chain=${chain}&limit=30`);
-    const data = await r.json();
-    if (!data.length) return;
-    const tbl = document.getElementById('pnl-tbl-'+idx);
-    if (!tbl) return;
-    const tbody = tbl.querySelector('tbody');
-    tbody.innerHTML = data.map(p => {
-        const isClose = p.unrealizedPnlUsd === 'SELL_ALL';
-        const un = isClose
-            ? '<span class="t-dim" style="font-size:.72rem">✅ 已清仓</span>'
-            : (() => {
-                const v = parseFloat(p.unrealizedPnlUsd||0);
-                const pct = parseFloat(p.unrealizedPnlPercent||0)*100;
+async function reloadPnl(addr,chain,idx){
+    const r=await fetch(`/api/portfolio/pnl?address=${addr}&chain=${chain}&limit=30`);
+    const data=await r.json();
+    if(!data.length)return;
+    const tbl=document.getElementById('pnl-tbl-'+idx);
+    if(!tbl)return;
+    tbl.querySelector('tbody').innerHTML=data.map(p=>{
+        const isClose=p.unrealizedPnlUsd==='SELL_ALL';
+        const un=isClose?'<span class="tag-gray">✅ 已清仓</span>':
+            (()=>{const v=parseFloat(p.unrealizedPnlUsd||0),pct=parseFloat(p.unrealizedPnlPercent||0)*100;
                 return `<span class="${v>=0?'up fw-7':'dn fw-7'}">${v>=0?'▲ +$':'▼ $'}${Math.abs(v).toFixed(2)}</span>
-                    <div style="font-size:.7rem" class="${pct>=0?'up':'dn'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>`;
-              })();
-        const re = parseFloat(p.realizedPnlUsd||0);
-        const tot = parseFloat(p.totalPnlUsd||0);
+                    <div style="font-size:.7rem" class="${pct>=0?'up':'dn'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>`;})();
+        const re=parseFloat(p.realizedPnlUsd||0),tot=parseFloat(p.totalPnlUsd||0);
         return `<tr>
             <td class="fw-7">${p.tokenSymbol||'?'}</td>
             <td class="mono t-muted" style="font-size:.8rem">$${parseFloat(p.tokenBalanceUsd||0).toFixed(2)}</td>
@@ -232,8 +202,8 @@ async function reloadPnl(addr, chain, idx) {
     }).join('');
 }
 
-function switchTf(el) {
-    el.closest('.tab-row').querySelectorAll('.tab-item').forEach(e => e.classList.remove('active'));
+function switchTf(el){
+    el.closest('.tab-row').querySelectorAll('.tab-item').forEach(e=>e.classList.remove('active'));
     el.classList.add('active');
 }
 </script>
