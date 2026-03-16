@@ -38,51 +38,42 @@
         </button>
     </div>
 
-    <!-- Stats -->
-    <div th:if="${entry.overview!=null and !entry.overview.isEmpty()}" class="row g-2 mb-3">
+    <!-- Stats (entry.ov is OverviewVO, pure display) -->
+    <div th:if="${entry.ov != null}" class="row g-2 mb-3">
         <div class="col-6 col-md-4 col-xl-2">
-            <div class="stat-card" th:classappend="${entry.overview.winRate!=null and entry.overview.winRate>0.5?'sc-green':'sc-red'}">
+            <div class="stat-card" th:classappend="${entry.ov.winRateGood?'sc-green':'sc-red'}">
                 <div class="sc-icon">🎯</div>
-                <div th:class="${'sc-val '+(entry.overview.winRate!=null and entry.overview.winRate>0.5?'up':'dn')}"
-                     th:text="${entry.overview.winRate!=null?#numbers.formatDecimal(entry.overview.winRate*100,1,1)+'%':'—'}"></div>
+                <div th:class="${'sc-val '+(entry.ov.winRateGood?'up':'dn')}"
+                     th:text="${entry.ov.winRatePct}"></div>
                 <div class="sc-lbl">胜率</div>
             </div>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
-            <div class="stat-card" th:classappend="${entry.overview.realizedPnlUsd!=null and entry.overview.realizedPnlUsd>=0?'sc-green':'sc-red'}">
+            <div class="stat-card" th:classappend="${entry.ov.pnlPositive?'sc-green':'sc-red'}">
                 <div class="sc-icon">💰</div>
-                <div th:class="${'sc-val '+(entry.overview.realizedPnlUsd!=null and entry.overview.realizedPnlUsd>=0?'up':'dn')}"
-                     th:text="${entry.overview.realizedPnlUsd!=null?(entry.overview.realizedPnlUsd>=0?'+':'')+'\$'+#numbers.formatDecimal(entry.overview.realizedPnlUsd<0?-entry.overview.realizedPnlUsd:entry.overview.realizedPnlUsd,1,0):'—'}"></div>
+                <div th:class="${'sc-val '+(entry.ov.pnlPositive?'up':'dn')}"
+                     th:text="${entry.ov.pnlDisplay}"></div>
                 <div class="sc-lbl">已实现盈亏</div>
             </div>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
             <div class="stat-card sc-yellow">
                 <div class="sc-icon">🏆</div>
-                <div class="sc-val t-yellow"
-                     th:text="${entry.overview.top3PnlTokenSumUsd!=null?'\$'+#numbers.formatDecimal(entry.overview.top3PnlTokenSumUsd,1,0):'—'}"></div>
+                <div class="sc-val t-yellow" th:text="${entry.ov.top3Display}"></div>
                 <div class="sc-lbl">Top3 盈利</div>
             </div>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
             <div class="stat-card sc-blue">
                 <div class="sc-icon">📈</div>
-                <div class="sc-val t-blue" th:text="${(entry.overview.buyTxCount?:0)+' 次'}"></div>
-                <div class="sc-lbl">买入次数</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-4 col-xl-2">
-            <div class="stat-card sc-purple">
-                <div class="sc-icon">📉</div>
-                <div class="sc-val t-purple" th:text="${(entry.overview.sellTxCount?:0)+' 次'}"></div>
-                <div class="sc-lbl">卖出次数</div>
+                <div class="sc-val t-blue" th:text="${entry.ov.txCountDisplay}"></div>
+                <div class="sc-lbl">买 / 卖次数</div>
             </div>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
             <div class="stat-card sc-cyan">
                 <div class="sc-icon">💵</div>
-                <div class="sc-val t-cyan"
-                     th:text="${entry.overview.avgBuyValueUsd!=null?'\$'+#numbers.formatDecimal(entry.overview.avgBuyValueUsd,1,0):'—'}"></div>
+                <div class="sc-val t-cyan" th:text="${entry.ov.avgBuyDisplay}"></div>
                 <div class="sc-lbl">平均买入</div>
             </div>
         </div>

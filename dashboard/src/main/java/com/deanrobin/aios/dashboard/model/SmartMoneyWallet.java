@@ -21,6 +21,11 @@ public class SmartMoneyWallet {
     private Integer sellTxCount;
     private BigDecimal avgBuyValueUsd;
     private String source;
+
+    /** OKX portfolio overview 原始 JSON，供 Web 层直接读取，避免重复调用 API */
+    @Column(name = "overview_json", columnDefinition = "TEXT")
+    private String overviewJson;
+
     private LocalDateTime lastAnalyzedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

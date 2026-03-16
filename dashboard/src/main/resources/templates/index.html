@@ -82,14 +82,16 @@
                     </td>
                     <td>
                         <span class="score-pill"
-                              th:classappend="${w.score>=75?' s-high':w.score>=50?' s-med':''}"
-                              th:text="${w.score}"></span>
+                              th:with="sc=${w.score!=null?w.score.doubleValue():0}"
+                              th:classappend="${sc>=75?' s-high':sc>=50?' s-med':''}"
+                              th:text="${w.score?:0}"></span>
                     </td>
-                    <td th:class="${w.winRate>=0.5?'up fw-7':'dn'}"
-                        th:text="${#numbers.formatDecimal(w.winRate*100,1,1)+'%'}"></td>
-                    <td>
-                        <span th:class="${w.realizedPnlUsd>=0?'tag-up':'tag-dn'}"
-                              th:text="${(w.realizedPnlUsd>=0?'▲ +$':'▼ $')+#numbers.formatDecimal(w.realizedPnlUsd<0?-w.realizedPnlUsd:w.realizedPnlUsd,1,0)}"></span>
+                    <td th:with="wr=${w.winRate!=null?w.winRate.doubleValue():0}"
+                        th:class="${wr>=0.5?'up fw-7':'dn'}"
+                        th:text="${#numbers.formatDecimal(wr*100,1,1)+'%'}"></td>
+                    <td th:with="pnl=${w.realizedPnlUsd!=null?w.realizedPnlUsd.doubleValue():0}">
+                        <span th:class="${pnl>=0?'tag-up':'tag-dn'}"
+                              th:text="${(pnl>=0?'▲ +$':'▼ $')+#numbers.formatDecimal(pnl<0?-pnl:pnl,1,0)}"></span>
                     </td>
                 </tr>
                 </tbody>

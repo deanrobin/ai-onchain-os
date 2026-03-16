@@ -1,9 +1,15 @@
 package com.deanrobin.aios.dashboard.controller;
 
 import com.deanrobin.aios.dashboard.model.MyAddress;
+import com.deanrobin.aios.dashboard.model.SmartMoneyWallet;
+import com.deanrobin.aios.dashboard.model.WalletTxCache;
 import com.deanrobin.aios.dashboard.repository.MyAddressRepository;
+import com.deanrobin.aios.dashboard.repository.SmartMoneyWalletRepository;
+import com.deanrobin.aios.dashboard.repository.WalletTxCacheRepository;
 import com.deanrobin.aios.dashboard.service.PortfolioService;
 import com.deanrobin.aios.dashboard.service.SmartMoneyService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.deanrobin.aios.dashboard.vo.OverviewVO;
 import com.deanrobin.aios.dashboard.vo.TxRowVO;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +31,9 @@ public class DashboardController {
     private final SmartMoneyService smartMoneyService;
     private final PortfolioService portfolioService;
     private final MyAddressRepository myAddressRepo;
+    private final SmartMoneyWalletRepository walletRepo;
+    private final WalletTxCacheRepository txCacheRepo;
+    private final ObjectMapper objectMapper;
 
     /** 首页：总览 */
     @GetMapping("/")
@@ -65,15 +74,36 @@ public class DashboardController {
         model.addAttribute("timeFrame", timeFrame);
         model.addAttribute("chainName", chain.equals("56") ? "BSC" : chain.equals("501") ? "SOL" : "ETH");
 
-        // 概览 VO（所有类型转换在 Java 层完成）
-        Map<String, Object> rawOverview = smartMoneyService.getWalletOverview(chain, address, timeFrame);
+        // 概览：从 DB 读 overview_json，不调 OKX
+        SmartMoneyWallet wallet = walletRepo
+            .findByAddressAndChainIndex(address, chain).orElse(null);
+        Map<String, Object> rawOverview = Map.of();
+        if (wallet != null && wallet.getOverviewJson() != null) {
+            try {
+                rawOverview = objectMapper.readValue(wallet.getOverviewJson(),
+                    new TypeReference<Map<String, Object>>() {});
+            } catch (Exception ignored) {}
+        }
         model.addAttribute("ov", OverviewVO.from(rawOverview));
         model.addAttribute("hasOverview", !rawOverview.isEmpty());
 
-        // 交易记录转换为展示 VO
-        Map<?, ?> txData = portfolioService.getTxHistory(address, chain, "30");
-        Object txRaw = txData.get("transactions");
-        List<TxRowVO> txRows = buildTxRows(txRaw, address.toLowerCase(), chain);
+        // 交易记录：从 DB 缓存读，不调 OKX
+        List<WalletTxCache> cachedTxs = txCacheRepo
+            .findByAddressAndChainIndexOrderByTxTimeDesc(address, chain);
+        List<TxRowVO> txRows = cachedTxs.stream().map(tx -> {
+            TxRowVO row = new TxRowVO();
+            row.setDisplayTime(tx.getDisplayTime() != null ? tx.getDisplayTime() : "—");
+            row.setTypeLabel(tx.getTypeLabel() != null ? tx.getTypeLabel() : "—");
+            row.setSymbol(tx.getSymbol() != null ? tx.getSymbol() : "—");
+            row.setAmount(tx.getAmount() != null ? tx.getAmount() : "—");
+            row.setIncoming(Boolean.TRUE.equals(tx.getIncoming()));
+            row.setSuccess(Boolean.TRUE.equals(tx.getSuccess()));
+            String hash = tx.getTxHash() != null ? tx.getTxHash() : "";
+            row.setTxHash(hash);
+            row.setTxHashShort(hash.length() > 12 ? hash.substring(0, 12) + "..." : hash);
+            row.setExplorerUrl(tx.getExplorerUrl() != null ? tx.getExplorerUrl() : "#");
+            return row;
+        }).collect(java.util.stream.Collectors.toList());
         model.addAttribute("txList", txRows);
 
         // 浏览器链接前缀
@@ -156,10 +186,11 @@ public class DashboardController {
             entry.put("label", addr.getLabel());
             entry.put("chainIndex", addr.getChainIndex());
 
-            // 7D 概览
-            Map<?, ?> overview = portfolioService.getOverview(
+            // 7D 概览 → 转 VO，模板只做展示
+            @SuppressWarnings("unchecked")
+            Map<String, Object> overviewRaw = (Map<String, Object>) (Map<?,?>) portfolioService.getOverview(
                     addr.getChainIndex(), addr.getAddress(), "3");
-            entry.put("overview", overview);
+            entry.put("ov", OverviewVO.from(overviewRaw));
 
             // 近期 PnL（前5）
             List<?> pnl = portfolioService.getRecentPnl(

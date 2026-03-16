@@ -21,4 +21,7 @@ public interface SmartMoneyWalletRepository extends JpaRepository<SmartMoneyWall
     /** 最久未分析优先：按 lastAnalyzedAt asc（null 排最前） */
     @Query("SELECT w FROM SmartMoneyWallet w ORDER BY COALESCE(w.lastAnalyzedAt, '1970-01-01') ASC")
     List<SmartMoneyWallet> findAllByOrderByLastAnalyzedAtAsc(Pageable pageable);
+
+    /** 按地址+链查单条记录 */
+    java.util.Optional<SmartMoneyWallet> findByAddressAndChainIndex(String address, String chainIndex);
 }
