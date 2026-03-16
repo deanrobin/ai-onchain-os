@@ -227,11 +227,14 @@ async function loadPnl() {
     wrap.innerHTML = '<div class="empty-state"><div class="ei">⏳</div><div>加载中...</div></div>';
     const r = await fetch(`/api/portfolio/pnl?address=${ADDR}&chain=${CHAIN}&limit=50`);
     const data = await r.json();
-    if (!data.length) { wrap.innerHTML='<div class="empty-state"><div class="ei">📭</div><div>暂无数据</div></div>'; return; }
+    // 过滤掉持仓价值 < 1U 的代币（垃圾仓/灰尘）
+    const filtered = data.filter(p => parseFloat(p.tokenBalanceUsd || 0) >= 1);
+    if (!filtered.length) { wrap.innerHTML='<div class="empty-state"><div class="ei">📭</div><div>暂无数据</div></div>'; return; }
+    const data_= filtered;
     wrap.innerHTML = `<table class="table"><thead><tr>
         <th>代币</th><th>持仓价值</th><th>浮盈浮亏</th><th>已实现</th>
         <th>总盈亏</th><th>买入均价</th><th>卖出均价</th><th>买次</th><th>状态</th>
-    </tr></thead><tbody>${data.map(p => {
+    </tr></thead><tbody>${data_.map(p => {
         const isClosed = p.unrealizedPnlUsd === 'SELL_ALL' || p.unrealizedPnlUsd === null;
         const un = isClosed ? '<span class="tag-gray">✅ 已清仓</span>'
             : (() => { const v=parseFloat(p.unrealizedPnlUsd||0), pct=parseFloat(p.unrealizedPnlPercent||0)*100;
