@@ -10,10 +10,10 @@ import java.util.List;
 
 public interface SmartMoneySignalRepository extends JpaRepository<SmartMoneySignal, Long> {
 
-    @Query(value = "SELECT * FROM smart_money_signal WHERE (market_cap_usd IS NULL OR market_cap_usd=0 OR market_cap_usd>=10000) ORDER BY signal_time DESC LIMIT :limit", nativeQuery = true)
+    @Query(value = "SELECT * FROM smart_money_signal WHERE (market_cap_usd IS NULL OR market_cap_usd=0 OR (market_cap_usd>=10000 AND amount_usd/market_cap_usd<=0.5)) ORDER BY signal_time DESC LIMIT :limit", nativeQuery = true)
     List<SmartMoneySignal> findRecent(@Param("limit") int limit);
 
-    @Query(value = "SELECT * FROM smart_money_signal WHERE chain_index=:chain AND (market_cap_usd IS NULL OR market_cap_usd=0 OR market_cap_usd>=10000) ORDER BY signal_time DESC LIMIT :limit", nativeQuery = true)
+    @Query(value = "SELECT * FROM smart_money_signal WHERE chain_index=:chain AND (market_cap_usd IS NULL OR market_cap_usd=0 OR (market_cap_usd>=10000 AND amount_usd/market_cap_usd<=0.5)) ORDER BY signal_time DESC LIMIT :limit", nativeQuery = true)
     List<SmartMoneySignal> findRecentByChain(@Param("chain") String chain, @Param("limit") int limit);
 
     /** 查最近一条同链同 token 记录（用于判断是否需要更新） */

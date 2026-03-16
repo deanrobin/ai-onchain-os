@@ -131,12 +131,21 @@ public class SignalFetchJob {
         if (tokenAddr.isBlank()) return 0;
 
         // 市值过滤：市值已知但低于门槛（默认 10K），直接跳过
-        BigDecimal mcap = toBd(token.getOrDefault("marketCapUsd", "0"));
+        BigDecimal mcap   = toBd(token.getOrDefault("marketCapUsd", "0"));
+        BigDecimal amtRaw = toBd(sig.getOrDefault("amountUsd", "0"));
         double minMcap = jobConfig.getSignalFetch().getMinMarketCapUsd();
-        if (mcap != null && mcap.compareTo(BigDecimal.ZERO) > 0
-                && mcap.doubleValue() < minMcap) {
-            log.debug("⏭️ 市值过低跳过 {} mcap={} threshold={}", tokenAddr, mcap, minMcap);
-            return 0;
+        if (mcap != null && mcap.compareTo(BigDecimal.ZERO) > 0) {
+            if (mcap.doubleValue() < minMcap) {
+                log.debug("⏭️ 市值过低跳过 {} mcap={}", tokenAddr, mcap);
+                return 0;
+            }
+            // 买入额 / 市值 > 50% → 数据异常（买入不可能超过总市值一半）
+            if (amtRaw != null && amtRaw.compareTo(BigDecimal.ZERO) > 0
+                    && amtRaw.divide(mcap, 4, java.math.RoundingMode.HALF_UP)
+                              .compareTo(new BigDecimal("0.5")) > 0) {
+                log.debug("⏭️ 买入/市值比异常跳过 {} amt={} mcap={}", tokenAddr, amtRaw, mcap);
+                return 0;
+            }
         }
 
         // 构建最新数据
