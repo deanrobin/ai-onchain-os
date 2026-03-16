@@ -61,11 +61,16 @@ public class PortfolioService {
      * 交易历史
      */
     public Map<?, ?> getTxHistory(String address, String chains, String limit) {
+        return getTxHistory(address, chains, limit, "0");
+    }
+
+    public Map<?, ?> getTxHistory(String address, String chains, String limit, String offset) {
         try {
             Map<String, String> params = new LinkedHashMap<>();
             params.put("address", address);
             params.put("chains", chains);
             params.put("limit", limit);
+            if (!"0".equals(offset)) params.put("offset", offset);
             Map<?, ?> resp = okx.getWeb3(
                     "/api/v6/dex/post-transaction/transactions-by-address", params);
             Object data = extractData(resp);

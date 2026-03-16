@@ -25,7 +25,7 @@ public class DashboardController {
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("activePage", "index");
-        model.addAttribute("topWallets", smartMoneyService.getTopWallets(10));
+        model.addAttribute("topWallets", smartMoneyService.getTopWallets(30));
         model.addAttribute("recentSignals", smartMoneyService.getRecentSignals(null, 20));
         return "index";
     }
@@ -53,9 +53,13 @@ public class DashboardController {
             Model model) {
         model.addAttribute("activePage", "smart-money");
         model.addAttribute("address", address);
-        model.addAttribute("overview", smartMoneyService.getWalletOverview(chain, address, timeFrame));
         model.addAttribute("chain", chain);
         model.addAttribute("timeFrame", timeFrame);
+        model.addAttribute("overview", smartMoneyService.getWalletOverview(chain, address, timeFrame));
+        // 交易记录（默认 30 条，倒序）
+        Map<?, ?> txData = portfolioService.getTxHistory(address, chain, "30");
+        Object txRaw = txData.get("transactions");
+        model.addAttribute("txList", txRaw instanceof List<?> ? txRaw : List.of());
         return "wallet-detail";
     }
 

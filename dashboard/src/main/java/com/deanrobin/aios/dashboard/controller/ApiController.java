@@ -49,8 +49,9 @@ public class ApiController {
     public Map<?, ?> portfolioTxs(
             @RequestParam String address,
             @RequestParam(defaultValue = "1") String chains,
-            @RequestParam(defaultValue = "20") String limit) {
-        return portfolioService.getTxHistory(address, chains, limit);
+            @RequestParam(defaultValue = "30") String limit,
+            @RequestParam(defaultValue = "0") String offset) {
+        return portfolioService.getTxHistory(address, chains, limit, offset);
     }
 
     @GetMapping("/wallet/overview")

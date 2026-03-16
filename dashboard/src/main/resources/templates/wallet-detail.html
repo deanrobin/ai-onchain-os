@@ -10,8 +10,11 @@
     <span class="addr" style="font-size:.88rem"
           th:attr="onclick='copyAddr(\''+${address}+'\')'"
           th:text="${address}"></span>
+    <button class="btn-outline" style="font-size:.72rem;padding:3px 8px"
+            th:attr="onclick='copyAddr(\''+${address}+'\')'">📋 复制</button>
     <span class="chain-badge" th:classappend="'c-'+${chain}"
           th:text="${chain=='1'?'ETH':chain=='56'?'BSC':chain=='8453'?'Base':'SOL'}"></span>
+    <!-- Time Frame -->
     <div class="tab-row">
         <div th:each="tf : ${{1,2,3,4,5}}" class="tab-item"
              th:classappend="${timeFrame==tf?' active':''}"
@@ -19,7 +22,6 @@
              th:attr="data-href='?chain='+${chain}+'&amp;timeFrame='+${tf}"
              onclick="window.location.href=this.dataset.href"></div>
     </div>
-    <button class="btn-primary-g ms-auto" onclick="loadPnl()">📊 加载持仓</button>
 </div>
 
 <!-- Overview Stats -->
@@ -27,7 +29,7 @@
     <div class="col-6 col-md-4 col-xl-2">
         <div class="stat-card" th:classappend="${overview.winRate!=null and overview.winRate>0.5?'sc-green':'sc-red'}">
             <div class="sc-icon">🎯</div>
-            <div th:class="${'sc-val '+(overview.winRate!=null and overview.winRate>0.5?'up':'dn')}"
+            <div th:class="${'sc-val '+(overview.winRate>0.5?'up':'dn')}"
                  th:text="${overview.winRate!=null?#numbers.formatDecimal(overview.winRate*100,1,1)+'%':'—'}"></div>
             <div class="sc-lbl">胜率</div>
         </div>
@@ -75,33 +77,29 @@
 </div>
 
 <!-- 盈亏分布 -->
-<div th:if="${overview?.tokenCountByPnlPercent!=null}" class="row g-3 mb-3">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">📊 代币盈亏分布</div>
-            <div class="card-body">
-                <div class="row g-3 text-center">
-                    <div class="col-3">
-                        <div style="font-size:1.8rem;font-weight:800;color:var(--green)"
-                             th:text="${overview.tokenCountByPnlPercent.over500Percent?:0}"></div>
-                        <div class="tag-up" style="display:inline-block;margin-top:6px">🚀 超+500%</div>
-                    </div>
-                    <div class="col-3">
-                        <div style="font-size:1.8rem;font-weight:800;color:#10b981"
-                             th:text="${overview.tokenCountByPnlPercent.zeroTo500Percent?:0}"></div>
-                        <div class="tag-up" style="display:inline-block;margin-top:6px">📈 0~+500%</div>
-                    </div>
-                    <div class="col-3">
-                        <div style="font-size:1.8rem;font-weight:800;color:var(--orange)"
-                             th:text="${overview.tokenCountByPnlPercent.zeroToMinus50Percent?:0}"></div>
-                        <div style="display:inline-block;margin-top:6px;background:var(--orange-l);color:var(--orange);border:1px solid rgba(249,115,22,.2);padding:2px 10px;border-radius:20px;font-size:.78rem;font-weight:700">📉 -50%~0</div>
-                    </div>
-                    <div class="col-3">
-                        <div style="font-size:1.8rem;font-weight:800;color:var(--red)"
-                             th:text="${overview.tokenCountByPnlPercent.overMinus50Percent?:0}"></div>
-                        <div class="tag-dn" style="display:inline-block;margin-top:6px">💥 超-50%</div>
-                    </div>
-                </div>
+<div th:if="${overview?.tokenCountByPnlPercent!=null}" class="card mb-3">
+    <div class="card-header">📊 代币盈亏分布</div>
+    <div class="card-body">
+        <div class="row g-3 text-center">
+            <div class="col-3">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--green)"
+                     th:text="${overview.tokenCountByPnlPercent.over500Percent?:0}"></div>
+                <div class="tag-up" style="display:inline-block;margin-top:6px">🚀 超+500%</div>
+            </div>
+            <div class="col-3">
+                <div style="font-size:1.8rem;font-weight:800;color:#10b981"
+                     th:text="${overview.tokenCountByPnlPercent.zeroTo500Percent?:0}"></div>
+                <div class="tag-up" style="display:inline-block;margin-top:6px">📈 0~+500%</div>
+            </div>
+            <div class="col-3">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--orange)"
+                     th:text="${overview.tokenCountByPnlPercent.zeroToMinus50Percent?:0}"></div>
+                <div style="display:inline-block;margin-top:6px;background:var(--orange-l);color:var(--orange);border:1px solid rgba(249,115,22,.2);padding:2px 10px;border-radius:20px;font-size:.78rem;font-weight:700">📉 -50%~0</div>
+            </div>
+            <div class="col-3">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--red)"
+                     th:text="${overview.tokenCountByPnlPercent.overMinus50Percent?:0}"></div>
+                <div class="tag-dn" style="display:inline-block;margin-top:6px">💥 超-50%</div>
             </div>
         </div>
     </div>
@@ -120,33 +118,160 @@
     </div>
 </div>
 
-<!-- PnL 表 -->
+<!-- 最近交易记录（倒序，服务端直接渲染） -->
+<div class="card mb-3">
+    <div class="card-header">
+        📋 最近交易记录
+        <span class="info-pill ms-2">倒序排列 · 最近 30 笔</span>
+        <button class="btn-outline ms-auto" onclick="loadMoreTx()" id="load-more-btn">
+            ⬇ 加载更多
+        </button>
+    </div>
+    <!-- 无数据 -->
+    <div th:if="${txList==null or #lists.isEmpty(txList)}" class="empty-state">
+        <div class="ei">📭</div>
+        <div>暂无交易记录</div>
+    </div>
+    <!-- 有数据直接渲染 -->
+    <table th:unless="${txList==null or #lists.isEmpty(txList)}" class="table" id="tx-table">
+        <thead>
+            <tr>
+                <th>时间 (UTC+8)</th>
+                <th>类型</th>
+                <th>代币</th>
+                <th>数量</th>
+                <th>方向</th>
+                <th>状态</th>
+                <th>TxHash</th>
+            </tr>
+        </thead>
+        <tbody id="tx-tbody">
+            <tr th:each="tx : ${txList}">
+                <!-- 时间 -->
+                <td class="mono t-dim" style="font-size:.72rem;white-space:nowrap"
+                    th:text="${tx['txTime'] != null ? #dates.format(new java.util.Date(#numbers.formatDecimal(tx['txTime'],1,0).replace(',','')?:0 as long * 1),'MM-dd HH:mm:ss') : '—'}"
+                    th:attr="data-ts=${tx['txTime']}">—</td>
+                <!-- 类型 -->
+                <td>
+                    <span class="tag-gray" style="font-size:.72rem"
+                          th:text="${tx['itype']=='2'?'Token转账':tx['itype']=='0'?'主链币':'合约调用'}"></span>
+                </td>
+                <!-- 代币 -->
+                <td class="fw-7" th:text="${tx['symbol']?:tx['tokenContractAddress']?:'—'}"></td>
+                <!-- 数量 -->
+                <td class="mono" style="font-size:.78rem" th:text="${tx['amount']?:'—'}"></td>
+                <!-- 方向：判断 to/from 是否为本地址 -->
+                <td>
+                    <span th:if="${tx['to']!=null}"
+                          th:with="toAddr=${tx['to'] instanceof T(java.util.List) ? tx['to'][0]['address'] : ''}"
+                          th:class="${#strings.toLowerCase(toAddr).contains(#strings.toLowerCase(address))?'tag-up':'tag-dn'}"
+                          th:text="${#strings.toLowerCase(toAddr).contains(#strings.toLowerCase(address))?'📥 收入':'📤 支出'}">—</span>
+                    <span th:unless="${tx['to']!=null}" class="t-dim" style="font-size:.72rem">—</span>
+                </td>
+                <!-- 状态 -->
+                <td>
+                    <span th:if="${tx['txStatus']=='success'}" class="up">✅ 成功</span>
+                    <span th:unless="${tx['txStatus']=='success'}" class="dn">❌ 失败</span>
+                </td>
+                <!-- TxHash -->
+                <td>
+                    <a th:with="explorer=${chain=='56'?'https://bscscan.com/tx/':chain=='501'?'https://solscan.io/tx/':'https://etherscan.io/tx/'}"
+                       th:href="${explorer}+${tx['txHash']}"
+                       th:text="${tx['txHash']!=null?#strings.substring(tx['txHash'],0,12)+'...':'—'}"
+                       class="addr" target="_blank"></a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- PnL 明细（懒加载） -->
 <div class="card">
-    <div class="card-header">🪙 近期代币 PnL 明细</div>
+    <div class="card-header">
+        🪙 代币 PnL 明细
+        <button class="btn-primary-g ms-auto" onclick="loadPnl()" style="padding:5px 14px;font-size:.78rem">
+            📊 加载 PnL
+        </button>
+    </div>
     <div id="pnl-wrap">
-        <div class="empty-state"><div class="ei">📊</div><div>点击「加载持仓」</div></div>
+        <div class="empty-state"><div class="ei">📊</div><div>点击「加载 PnL」</div></div>
     </div>
 </div>
 
 <script th:inline="javascript">
 const ADDR  = /*[[${address}]]*/ '';
-const CHAIN = /*[[${chain}]]*/ '1';
-async function loadPnl(){
-    const wrap=document.getElementById('pnl-wrap');
-    wrap.innerHTML='<div class="empty-state"><div class="ei">⏳</div><div>加载中...</div></div>';
-    const r=await fetch(`/api/portfolio/pnl?address=${ADDR}&chain=${CHAIN}&limit=50`);
-    const data=await r.json();
-    if(!data.length){wrap.innerHTML='<div class="empty-state"><div class="ei">📭</div><div>暂无数据</div></div>';return;}
-    wrap.innerHTML=`<table class="table"><thead><tr>
+const CHAIN = /*[[${chain}]]*/ '56';
+const EXPLORER = CHAIN==='56' ? 'https://bscscan.com/tx/'
+               : CHAIN==='501'? 'https://solscan.io/tx/'
+               : 'https://etherscan.io/tx/';
+
+// 格式化时间戳
+function fmtTs(ts) {
+    if (!ts) return '—';
+    return new Date(parseInt(ts)).toLocaleString('zh-CN', {
+        timeZone:'Asia/Shanghai', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+}
+// 修正页面渲染的时间列（Thymeleaf 处理时间戳有限制，用 JS 修正）
+document.querySelectorAll('#tx-tbody td[data-ts]').forEach(td => {
+    const ts = td.dataset.ts;
+    if (ts && ts !== 'null') td.textContent = fmtTs(ts);
+});
+
+// 加载更多（offset 方式）
+let txOffset = 30;
+async function loadMoreTx() {
+    const btn = document.getElementById('load-more-btn');
+    btn.textContent = '⏳ 加载中...';
+    try {
+        const r = await fetch(`/api/portfolio/txs?address=${ADDR}&chains=${CHAIN}&limit=30&offset=${txOffset}`);
+        const d = await r.json();
+        const txs = d.transactions || [];
+        if (!txs.length) { btn.textContent = '✅ 没有更多了'; btn.disabled = true; return; }
+        const tbody = document.getElementById('tx-tbody');
+        txs.forEach(tx => {
+            const toList = Array.isArray(tx.to) ? tx.to : [];
+            const toAddr = toList[0]?.address || '';
+            const isIn = toAddr.toLowerCase().includes(ADDR.toLowerCase());
+            const dirTag = isIn
+                ? '<span class="tag-up">📥 收入</span>'
+                : '<span class="tag-dn">📤 支出</span>';
+            const typeLbl = tx.itype==='2'?'Token转账':tx.itype==='0'?'主链币':'合约调用';
+            const sc = tx.txStatus==='success'?'<span class="up">✅ 成功</span>':'<span class="dn">❌ 失败</span>';
+            const hash = tx.txHash||'';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="mono t-dim" style="font-size:.72rem;white-space:nowrap">${fmtTs(tx.txTime)}</td>
+                <td><span class="tag-gray" style="font-size:.72rem">${typeLbl}</span></td>
+                <td class="fw-7">${tx.symbol||'—'}</td>
+                <td class="mono" style="font-size:.78rem">${tx.amount||'—'}</td>
+                <td>${dirTag}</td>
+                <td>${sc}</td>
+                <td><a href="${EXPLORER}${hash}" class="addr" target="_blank">${hash.substring(0,12)}...</a></td>`;
+            tbody.appendChild(tr);
+        });
+        txOffset += txs.length;
+        btn.textContent = '⬇ 加载更多';
+    } catch(e) { btn.textContent = '❌ 失败，重试'; }
+}
+
+async function loadPnl() {
+    const wrap = document.getElementById('pnl-wrap');
+    wrap.innerHTML = '<div class="empty-state"><div class="ei">⏳</div><div>加载中...</div></div>';
+    const r = await fetch(`/api/portfolio/pnl?address=${ADDR}&chain=${CHAIN}&limit=50`);
+    const data = await r.json();
+    if (!data.length) { wrap.innerHTML='<div class="empty-state"><div class="ei">📭</div><div>暂无数据</div></div>'; return; }
+    wrap.innerHTML = `<table class="table"><thead><tr>
         <th>代币</th><th>持仓价值</th><th>浮盈浮亏</th>
         <th>已实现</th><th>总盈亏</th><th>买入均价</th><th>卖出均价</th><th>买次</th><th>状态</th>
-    </tr></thead><tbody>${data.map(p=>{
-        const isClose=p.unrealizedPnlUsd==='SELL_ALL';
-        const un=isClose?'<span class="tag-gray">✅ 已清仓</span>':
-            (()=>{const v=parseFloat(p.unrealizedPnlUsd||0),pct=parseFloat(p.unrealizedPnlPercent||0)*100;
+    </tr></thead><tbody>${data.map(p => {
+        const isClose = p.unrealizedPnlUsd === 'SELL_ALL';
+        const un = isClose ? '<span class="tag-gray">✅ 已清仓</span>'
+            : (() => { const v=parseFloat(p.unrealizedPnlUsd||0), pct=parseFloat(p.unrealizedPnlPercent||0)*100;
                 return `<span class="${v>=0?'up fw-7':'dn fw-7'}">${v>=0?'▲ +$':'▼ $'}${Math.abs(v).toFixed(2)}</span>
-                    <div style="font-size:.7rem" class="${pct>=0?'up':'dn'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>`;})();
-        const re=parseFloat(p.realizedPnlUsd||0),tot=parseFloat(p.totalPnlUsd||0);
+                    <div style="font-size:.7rem" class="${pct>=0?'up':'dn'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>`; })();
+        const re=parseFloat(p.realizedPnlUsd||0), tot=parseFloat(p.totalPnlUsd||0);
         return `<tr>
             <td class="fw-7">${p.tokenSymbol||'?'}</td>
             <td class="mono t-muted" style="font-size:.8rem">$${parseFloat(p.tokenBalanceUsd||0).toFixed(2)}</td>
