@@ -49,7 +49,7 @@ public class SmartMoneyService {
     }
 
     /** 单个钱包画像（实时）*/
-    public Map<?, ?> getWalletOverview(String chainIndex, String address, String timeFrame) {
+    public Map<String, Object> getWalletOverview(String chainIndex, String address, String timeFrame) {
         try {
             Map<?, ?> resp = okx.getWeb3("/api/v6/dex/market/portfolio/overview", Map.of(
                     "chainIndex", chainIndex,
@@ -57,11 +57,37 @@ public class SmartMoneyService {
                     "timeFrame", timeFrame
             ));
             Object data = resp.get("data");
-            if (data instanceof List<?> l && !l.isEmpty()) return (Map<?, ?>) l.get(0);
-            return data instanceof Map<?, ?> m ? m : Map.of();
+            Map<?, ?> raw = null;
+            if (data instanceof List<?> l && !l.isEmpty()) raw = (Map<?, ?>) l.get(0);
+            else if (data instanceof Map<?, ?> m) raw = m;
+            return raw != null ? toTyped(raw) : Map.of();
         } catch (Exception e) {
             log.warn("walletOverview failed: {}", e.getMessage());
             return Map.of();
         }
+    }
+
+    /** 把 OKX 原始 Map 中的数值字段从 String 转成 Double，方便模板直接做数值比较 */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> toTyped(Map<?, ?> raw) {
+        Set<String> numericKeys = Set.of(
+            "winRate","realizedPnlUsd","unrealizedPnlUsd","totalPnlUsd",
+            "top3PnlTokenSumUsd","avgBuyValueUsd","buyTxCount","sellTxCount",
+            "avgHoldingPeriod","top3PnlTokenAvgPnlPercent"
+        );
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        raw.forEach((k, v) -> {
+            String key = String.valueOf(k);
+            if (numericKeys.contains(key) && v != null) {
+                try {
+                    result.put(key, Double.parseDouble(String.valueOf(v)));
+                } catch (NumberFormatException e) {
+                    result.put(key, v);
+                }
+            } else {
+                result.put(key, v);
+            }
+        });
+        return result;
     }
 }

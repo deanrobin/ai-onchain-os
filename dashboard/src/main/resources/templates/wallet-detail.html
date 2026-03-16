@@ -35,20 +35,27 @@
 </div>
 
 <!-- Overview Stats -->
-<div th:if="${overview!=null and !overview.isEmpty()}" class="row g-3 mb-4">
+<div th:if="${overview!=null and !overview.isEmpty()}"
+     th:with="wr=${overview['winRate']!=null?overview['winRate']:0},
+              pnl=${overview['realizedPnlUsd']!=null?overview['realizedPnlUsd']:0},
+              top3=${overview['top3PnlTokenSumUsd']!=null?overview['top3PnlTokenSumUsd']:0},
+              buyCnt=${overview['buyTxCount']!=null?overview['buyTxCount']:0},
+              sellCnt=${overview['sellTxCount']!=null?overview['sellTxCount']:0},
+              avgBuy=${overview['avgBuyValueUsd']!=null?overview['avgBuyValueUsd']:0}"
+     class="row g-3 mb-4">
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="stat-card" th:classappend="${overview.winRate!=null and overview.winRate>0.5?'sc-green':'sc-red'}">
+        <div class="stat-card" th:classappend="${wr>0.5?'sc-green':'sc-red'}">
             <div class="sc-icon">🎯</div>
-            <div th:class="${'sc-val '+(overview.winRate>0.5?'up':'dn')}"
-                 th:text="${overview.winRate!=null?#numbers.formatDecimal(overview.winRate*100,1,1)+'%':'—'}"></div>
+            <div th:class="${'sc-val '+(wr>0.5?'up':'dn')}"
+                 th:text="${#numbers.formatDecimal(wr*100,1,1)+'%'}"></div>
             <div class="sc-lbl">胜率</div>
         </div>
     </div>
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="stat-card" th:classappend="${overview.realizedPnlUsd!=null and overview.realizedPnlUsd>=0?'sc-green':'sc-red'}">
+        <div class="stat-card" th:classappend="${pnl>=0?'sc-green':'sc-red'}">
             <div class="sc-icon">💰</div>
-            <div th:class="${'sc-val '+(overview.realizedPnlUsd>=0?'up':'dn')}"
-                 th:text="${overview.realizedPnlUsd!=null?(overview.realizedPnlUsd>=0?'+':'')+'\$'+#numbers.formatDecimal(overview.realizedPnlUsd<0?-overview.realizedPnlUsd:overview.realizedPnlUsd,1,0):'—'}"></div>
+            <div th:class="${'sc-val '+(pnl>=0?'up':'dn')}"
+                 th:text="${(pnl>=0?'+':'')+'\$'+#numbers.formatDecimal(pnl<0?-pnl:pnl,1,0)}"></div>
             <div class="sc-lbl">已实现盈亏</div>
         </div>
     </div>
@@ -56,7 +63,7 @@
         <div class="stat-card sc-yellow">
             <div class="sc-icon">🏆</div>
             <div class="sc-val t-yellow"
-                 th:text="${overview.top3PnlTokenSumUsd!=null?'\$'+#numbers.formatDecimal(overview.top3PnlTokenSumUsd,1,0):'—'}"></div>
+                 th:text="${'\$'+#numbers.formatDecimal(top3,1,0)}"></div>
             <div class="sc-lbl">Top3 盈利</div>
         </div>
     </div>
@@ -64,7 +71,7 @@
         <div class="stat-card sc-blue">
             <div class="sc-icon">📊</div>
             <div class="sc-val t-blue"
-                 th:text="${(overview.buyTxCount?:0)+' / '+(overview.sellTxCount?:0)}"></div>
+                 th:text="${buyCnt+' / '+sellCnt}"></div>
             <div class="sc-lbl">买 / 卖次数</div>
         </div>
     </div>
@@ -72,7 +79,7 @@
         <div class="stat-card sc-cyan">
             <div class="sc-icon">💵</div>
             <div class="sc-val t-cyan"
-                 th:text="${overview.avgBuyValueUsd!=null?'\$'+#numbers.formatDecimal(overview.avgBuyValueUsd,1,0):'—'}"></div>
+                 th:text="${'\$'+#numbers.formatDecimal(avgBuy,1,0)}"></div>
             <div class="sc-lbl">平均买入</div>
         </div>
     </div>
@@ -80,35 +87,37 @@
         <div class="stat-card sc-purple">
             <div class="sc-icon">📌</div>
             <div class="sc-val t-purple" style="font-size:.9rem"
-                 th:text="${overview.preferredMarketCap?:'—'}"></div>
+                 th:text="${overview['preferredMarketCap']?:'—'}"></div>
             <div class="sc-lbl">偏好市值</div>
         </div>
     </div>
 </div>
 
 <!-- 盈亏分布 -->
-<div th:if="${overview?.tokenCountByPnlPercent!=null}" class="card mb-3">
+<div th:if="${overview['tokenCountByPnlPercent']!=null}"
+     th:with="dist=${overview['tokenCountByPnlPercent']}"
+     class="card mb-3">
     <div class="card-header">📊 代币盈亏分布</div>
     <div class="card-body">
         <div class="row g-3 text-center">
             <div class="col-3">
                 <div style="font-size:1.8rem;font-weight:800;color:var(--green)"
-                     th:text="${overview.tokenCountByPnlPercent.over500Percent?:0}"></div>
+                     th:text="${dist instanceof T(java.util.Map)?dist['over500Percent']:0}"></div>
                 <div class="tag-up" style="display:inline-block;margin-top:6px">🚀 超+500%</div>
             </div>
             <div class="col-3">
                 <div style="font-size:1.8rem;font-weight:800;color:#10b981"
-                     th:text="${overview.tokenCountByPnlPercent.zeroTo500Percent?:0}"></div>
+                     th:text="${dist instanceof T(java.util.Map)?dist['zeroTo500Percent']:0}"></div>
                 <div class="tag-up" style="display:inline-block;margin-top:6px">📈 0~+500%</div>
             </div>
             <div class="col-3">
                 <div style="font-size:1.8rem;font-weight:800;color:var(--orange)"
-                     th:text="${overview.tokenCountByPnlPercent.zeroToMinus50Percent?:0}"></div>
+                     th:text="${dist instanceof T(java.util.Map)?dist['zeroToMinus50Percent']:0}"></div>
                 <div style="display:inline-block;margin-top:6px;background:var(--orange-l);color:var(--orange);border:1px solid rgba(249,115,22,.2);padding:2px 10px;border-radius:20px;font-size:.78rem;font-weight:700">📉 -50%~0</div>
             </div>
             <div class="col-3">
                 <div style="font-size:1.8rem;font-weight:800;color:var(--red)"
-                     th:text="${overview.tokenCountByPnlPercent.overMinus50Percent?:0}"></div>
+                     th:text="${dist instanceof T(java.util.Map)?dist['overMinus50Percent']:0}"></div>
                 <div class="tag-dn" style="display:inline-block;margin-top:6px">💥 超-50%</div>
             </div>
         </div>
@@ -116,14 +125,23 @@
 </div>
 
 <!-- Top3 代币 -->
-<div th:if="${overview?.topPnlTokenList!=null and !overview.topPnlTokenList.isEmpty()}" class="row g-3 mb-3">
-    <div class="col-md-4" th:each="t,tSt : ${overview.topPnlTokenList}">
-        <div class="stat-card" th:classappend="${tSt.index==0?'sc-yellow':tSt.index==1?'sc-blue':'sc-cyan'}">
+<div th:if="${overview['topPnlTokenList']!=null}"
+     th:with="topList=${overview['topPnlTokenList']}"
+     class="row g-3 mb-3">
+    <div th:if="${topList instanceof T(java.util.List) and !topList.isEmpty()}"
+         th:each="t,tSt : ${topList}"
+         class="col-md-4"
+         th:with="tMap=${t instanceof T(java.util.Map)?t:null}">
+        <div th:if="${tMap!=null}" class="stat-card"
+             th:classappend="${tSt.index==0?'sc-yellow':tSt.index==1?'sc-blue':'sc-cyan'}">
             <div style="font-size:.72rem;color:var(--t3);margin-bottom:6px"
                  th:text="${tSt.index==0?'🥇 第一名':tSt.index==1?'🥈 第二名':'🥉 第三名'}"></div>
-            <div class="fw-8" style="font-size:1.1rem;margin-bottom:4px" th:text="${t.tokenSymbol}"></div>
-            <div class="up fw-8" style="font-size:1.25rem" th:text="${'\$'+#numbers.formatDecimal(t.tokenPnLUsd,1,0)}"></div>
-            <div class="up" style="font-size:.8rem" th:text="${'+'+#numbers.formatDecimal(t.tokenPnLPercent*100,1,1)+'%'}"></div>
+            <div class="fw-8" style="font-size:1.1rem;margin-bottom:4px"
+                 th:text="${tMap['tokenSymbol']?:tMap['symbol']?:'?'}"></div>
+            <div class="up fw-8" style="font-size:1.25rem"
+                 th:text="${'\$'+#numbers.formatDecimal(tMap['tokenPnLUsd']!=null?T(java.lang.Double).parseDouble(tMap['tokenPnLUsd'].toString()):0,1,0)}"></div>
+            <div class="up" style="font-size:.8rem"
+                 th:text="${'+'+#numbers.formatDecimal((tMap['tokenPnLPercent']!=null?T(java.lang.Double).parseDouble(tMap['tokenPnLPercent'].toString()):0)*100,1,1)+'%'}"></div>
         </div>
     </div>
 </div>
