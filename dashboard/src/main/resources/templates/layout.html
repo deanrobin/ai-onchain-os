@@ -418,9 +418,19 @@ const $$ = s => [...document.querySelectorAll(s)];
 
 function fmtUsd(v,d=0){
     const n=parseFloat(v)||0,a=Math.abs(n),sg=n<0?'-':'';
-    if(a>=1e6) return sg+'$'+(a/1e6).toFixed(2)+'M';
+    if(a>=1e9) return sg+'$'+(a/1e9).toFixed(1)+'B';
+    if(a>=1e6) return sg+'$'+(a/1e6).toFixed(1)+'M';
     if(a>=1e3) return sg+'$'+(a/1e3).toFixed(1)+'K';
     return sg+'$'+a.toFixed(d);
+}
+/** 市值专用：B/M/K 各保留1位小数，最小显示 0.1K */
+function fmtMcap(v){
+    const n = parseFloat(v)||0;
+    if(n<=0)   return '—';
+    if(n>=1e9) return '$'+(n/1e9).toFixed(1)+'B';
+    if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M';
+    if(n>=100) return '$'+(n/1e3).toFixed(1)+'K';
+    return '$0.1K';  // < $100 显示最小值
 }
 function copyAddr(addr){
     if(navigator.clipboard && window.isSecureContext){

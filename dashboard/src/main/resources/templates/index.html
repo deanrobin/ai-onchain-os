@@ -178,10 +178,9 @@
                               th:text="${s.chainIndex=='56'?'BSC':s.chainIndex=='501'?'SOL':s.chainIndex}"></span></td>
                     <td><span class="up fw-7" style="font-size:.82rem"
                               th:text="${'$'+#numbers.formatDecimal(s.amountUsd,1,0)}"></span></td>
-                    <!-- 市值 -->
-                    <td class="mono t-dim" style="font-size:.76rem"
-                        th:with="mc=${s.marketCapUsd!=null?s.marketCapUsd.doubleValue():0}"
-                        th:text="${mc>=1e9?'$'+(mc/1e9).toString().substring(0,4)+'B':mc>=1e6?'$'+(mc/1e6).toString().substring(0,5)+'M':mc>0?'$'+#numbers.formatDecimal(mc,1,0):'—'}">
+                    <!-- 市值：data-mc 存 raw 值，页面加载后 JS 格式化 -->
+                    <td class="mono t-dim mc-cell" style="font-size:.76rem"
+                        th:attr="data-mc=${s.marketCapUsd!=null?s.marketCapUsd:0}">
                     </td>
                     <!-- 信号时价格 -->
                     <td class="mono" style="font-size:.76rem"
@@ -252,10 +251,7 @@ async function refreshSignals() {
             const addr = s.tokenAddress || '';
             const chain = s.chainIndex==='56'?'BSC':s.chainIndex==='501'?'SOL':s.chainIndex;
             const ts = s.signalTimeStr || '';
-            const mc  = parseFloat(s.marketCapUsd||0);
-            const mcStr = mc>=1e9 ? '$'+(mc/1e9).toFixed(2)+'B'
-                        : mc>=1e6 ? '$'+(mc/1e6).toFixed(2)+'M'
-                        : mc>0    ? '$'+mc.toLocaleString('en',{maximumFractionDigits:0}) : '—';
+            const mcStr = fmtMcap(s.marketCapUsd);
             const pr  = parseFloat(s.priceAtSignal||0);
             const prStr = pr>0 ? (pr>=1 ? '$'+pr.toFixed(4) : '$'+pr.toPrecision(4)) : '—';
             return `<tr class="sig-row">
@@ -275,6 +271,11 @@ async function refreshSignals() {
         }).join('');
     } catch(e){ console.warn('refreshSignals', e); }
 }
+
+// 服务端渲染的 mc-cell 格式化（Thymeleaf 输出 raw 数值）
+document.querySelectorAll('.mc-cell[data-mc]').forEach(td => {
+    td.textContent = fmtMcap(td.dataset.mc);
+});
 
 // ───────────── 价格展示 ─────────────
 
