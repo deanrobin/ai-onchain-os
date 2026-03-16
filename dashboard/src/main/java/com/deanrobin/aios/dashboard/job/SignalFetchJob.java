@@ -55,8 +55,8 @@ public class SignalFetchJob {
         for (String chain : cfg.chainArray()) {
             for (String wt : cfg.walletTypeArray()) {
                 try {
-                    totalNew += fetchChain(chain.trim(), wt.trim(), cfg, newWallets);
-                    Thread.sleep(500); // 限速，避免频率过快
+                    totalNew += fetchChainWithRetry(chain.trim(), wt.trim(), cfg, newWallets);
+                    Thread.sleep(2000); // 链间间隔 2s，避免 429
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     return;
@@ -67,6 +67,20 @@ public class SignalFetchJob {
         }
 
         log.info("✅ SignalFetchJob 完成 新信号={} 新钱包={}", totalNew, newWallets.size());
+    }
+
+    /** 带 429 退让重试，最多重试 2 次 */
+    private int fetchChainWithRetry(String chain, String walletType,
+                                    SmartMoneyJobConfig.SignalFetch cfg,
+                                    Set<String> newWallets) throws InterruptedException {
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            int result = fetchChain(chain, walletType, cfg, newWallets);
+            if (result >= 0) return result;  // -1 表示 429，需重试
+            long wait = 5000L * attempt;     // 5s / 10s / 15s
+            log.warn("⚠️ 429 限速 chain={} 等待 {}ms 后重试 ({}/3)", chain, wait, attempt);
+            Thread.sleep(wait);
+        }
+        return 0;
     }
 
     @SuppressWarnings("unchecked")
@@ -82,7 +96,11 @@ public class SignalFetchJob {
         );
 
         Map<?, ?> resp = okxClient.postWeb3(SIGNAL_PATH, body);
-        if (resp == null || !"0".equals(String.valueOf(resp.get("code")))) {
+        if (resp == null) return 0;
+        String code = String.valueOf(resp.get("code"));
+        // 429 → 返回 -1 触发重试
+        if ("-1".equals(code) && String.valueOf(resp.get("msg")).contains("429")) return -1;
+        if (!"0".equals(code)) {
             log.warn("⚠️ OKX 信号 API 异常 chain={} resp={}", chain, resp);
             return 0;
         }
@@ -130,7 +148,12 @@ public class SignalFetchJob {
         s.setPriceAtSignal(toBd(token.getOrDefault("price", "0")));
         s.setMarketCapUsd(toBd(token.getOrDefault("marketCapUsd", "0")));
         s.setTriggerWalletCount(toInt(sig.getOrDefault("triggerWalletCount", "0")));
-        s.setSoldRatioPercent(toBd(sig.getOrDefault("soldRatioPercent", null)));
+        // OKX soldRatioPercent 有时超出范围，截断到 [0, 9999]
+        BigDecimal soldRatio = toBd(sig.get("soldRatioPercent"));
+        if (soldRatio != null) {
+            soldRatio = soldRatio.min(new BigDecimal("9999")).max(BigDecimal.ZERO);
+        }
+        s.setSoldRatioPercent(soldRatio);
         s.setSignalTime(LocalDateTime.now());
         s.setCreatedAt(LocalDateTime.now());
 
