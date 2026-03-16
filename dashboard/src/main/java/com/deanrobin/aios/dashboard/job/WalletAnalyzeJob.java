@@ -61,12 +61,12 @@ public class WalletAnalyzeJob {
                 PageRequest.of(0, cfg.getMaxWallets()));
 
         // 过滤掉 2 小时内已分析过的（防止重复打 API）
-        LocalDateTime freshCutoff = LocalDateTime.now().minusMinutes(30); // 30分钟内分析过的跳过
+        LocalDateTime freshCutoff = LocalDateTime.now().minusMinutes(15); // 15分钟内分析过的跳过
         long skip = wallets.stream().filter(w -> w.getLastAnalyzedAt() != null && w.getLastAnalyzedAt().isAfter(freshCutoff)).count();
         wallets = wallets.stream().filter(w -> w.getLastAnalyzedAt() == null || w.getLastAnalyzedAt().isBefore(freshCutoff))
                          .collect(java.util.stream.Collectors.toList());
 
-        log.info("🧠 WalletAnalyzeJob 开始 待分析={} 跳过(30min内已分析)={}", wallets.size(), skip);
+        log.info("🧠 WalletAnalyzeJob 开始 待分析={} 跳过(15min内已分析)={}", wallets.size(), skip);
         int ok = 0, fail = 0;
 
         for (SmartMoneyWallet w : wallets) {

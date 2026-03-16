@@ -139,7 +139,7 @@ public class SignalFetchJob {
         // 查最近一条同 token 记录
         var latest = signalRepo.findLatest(chain, tokenAddr, walletType);
         boolean withinWindow = latest.isPresent()
-            && latest.get().getSignalTime().isAfter(LocalDateTime.now().minusMinutes(15));
+            && latest.get().getSignalTime().isAfter(LocalDateTime.now().minusMinutes(2)); // 2分钟窗口
 
         if (withinWindow) {
             // 15 分钟内已有记录 → 检查是否有数据变化（买入额增加 or 钱包数增加）
