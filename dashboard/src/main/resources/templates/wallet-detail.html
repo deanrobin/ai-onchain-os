@@ -23,12 +23,7 @@
         <div class="tab-item" th:classappend="${timeFrame=='3'?' active':''}"
              th:attr="data-href='?chain='+${chain}+'&amp;timeFrame=3'"
              onclick="window.location.href=this.dataset.href">7D</div>
-        <div class="tab-item" th:classappend="${timeFrame=='4'?' active':''}"
-             th:attr="data-href='?chain='+${chain}+'&amp;timeFrame=4'"
-             onclick="window.location.href=this.dataset.href">1M</div>
-        <div class="tab-item" th:classappend="${timeFrame=='5'?' active':''}"
-             th:attr="data-href='?chain='+${chain}+'&amp;timeFrame=5'"
-             onclick="window.location.href=this.dataset.href">3M</div>
+
     </div>
 </div>
 
@@ -87,24 +82,24 @@
     <div class="card-body">
         <div class="row g-3 text-center">
             <div class="col-3">
+                <div class="tag-up" style="display:inline-block;margin-bottom:8px">🚀 超+500%</div>
                 <div style="font-size:1.8rem;font-weight:800;color:var(--green)"
                      th:text="${ov.over500}"></div>
-                <div class="tag-up" style="display:inline-block;margin-top:6px">🚀 超+500%</div>
             </div>
             <div class="col-3">
+                <div class="tag-up" style="display:inline-block;margin-bottom:8px">📈 0~+500%</div>
                 <div style="font-size:1.8rem;font-weight:800;color:#10b981"
                      th:text="${ov.zero500}"></div>
-                <div class="tag-up" style="display:inline-block;margin-top:6px">📈 0~+500%</div>
             </div>
             <div class="col-3">
+                <div style="display:inline-block;margin-bottom:8px;background:var(--orange-l);color:var(--orange);border:1px solid rgba(249,115,22,.2);padding:2px 10px;border-radius:20px;font-size:.78rem;font-weight:700">📉 -50%~0</div>
                 <div style="font-size:1.8rem;font-weight:800;color:var(--orange)"
                      th:text="${ov.zeroMinus50}"></div>
-                <div style="display:inline-block;margin-top:6px;background:var(--orange-l);color:var(--orange);border:1px solid rgba(249,115,22,.2);padding:2px 10px;border-radius:20px;font-size:.78rem;font-weight:700">📉 -50%~0</div>
             </div>
             <div class="col-3">
+                <div class="tag-dn" style="display:inline-block;margin-bottom:8px">💥 超-50%</div>
                 <div style="font-size:1.8rem;font-weight:800;color:var(--red)"
                      th:text="${ov.overMinus50}"></div>
-                <div class="tag-dn" style="display:inline-block;margin-top:6px">💥 超-50%</div>
             </div>
         </div>
     </div>
