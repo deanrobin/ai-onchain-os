@@ -22,6 +22,7 @@ public class SmartMoneyJobConfig {
         private String chains = "1,56,8453,501";
         private String walletTypes = "1";
         private String minAmountUsd = "5000";
+        private double minMarketCapUsd = 10000; // 市值低于此值的信号直接过滤
 
         public String[] chainArray() {
             return chains.split(",");

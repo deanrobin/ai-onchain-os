@@ -130,6 +130,15 @@ public class SignalFetchJob {
                            sig.getOrDefault("tokenAddress", "")));
         if (tokenAddr.isBlank()) return 0;
 
+        // 市值过滤：市值已知但低于门槛（默认 10K），直接跳过
+        BigDecimal mcap = toBd(token.getOrDefault("marketCapUsd", "0"));
+        double minMcap = jobConfig.getSignalFetch().getMinMarketCapUsd();
+        if (mcap != null && mcap.compareTo(BigDecimal.ZERO) > 0
+                && mcap.doubleValue() < minMcap) {
+            log.debug("⏭️ 市值过低跳过 {} mcap={} threshold={}", tokenAddr, mcap, minMcap);
+            return 0;
+        }
+
         // 构建最新数据
         BigDecimal newAmtUsd    = toBd(sig.getOrDefault("amountUsd", "0"));
         int        newWalletCnt = toInt(sig.getOrDefault("triggerWalletCount", "0"));

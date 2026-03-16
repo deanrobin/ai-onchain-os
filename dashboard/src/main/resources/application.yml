@@ -41,6 +41,7 @@ smart-money:
       chains: "56,501"             # BSC,SOL
       wallet-types: "1"            # 1=Smart Money 2=KOL 3=Whale
       min-amount-usd: "5000"       # 最小买入金额过滤
+      min-market-cap-usd: 10000   # 市值低于 10K 的信号过滤（避免数据异常/垃圾币）
     # 钱包分析 Job（仅更新评分/胜率/PnL，不抓 overview/tx）
     wallet-analyze:
       enabled: true
