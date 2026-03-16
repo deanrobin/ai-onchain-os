@@ -41,9 +41,15 @@ smart-money:
       chains: "56,501"             # BSC,SOL
       wallet-types: "1"            # 1=Smart Money 2=KOL 3=Whale
       min-amount-usd: "5000"       # 最小买入金额过滤
-    # 钱包分析 Job（更新评分/胜率/PnL）
+    # 钱包分析 Job（仅更新评分/胜率/PnL，不抓 overview/tx）
     wallet-analyze:
       enabled: true
       interval-minutes: 60         # 每 60 分钟分析一次
-      time-frame: "3"              # 1=1D 2=3D 3=7D 4=1M 5=3M
-      max-wallets: 30              # 每次最多分析 30 个钱包（2 API×30 = 60次/小时）
+      time-frame: "3"
+      max-wallets: 30
+
+  # ── 详情页缓存配置（Web 触发，缓存过期才打 OKX API）──────────
+  cache:
+    overview-ttl-seconds: 300      # overview 缓存 5 分钟
+    tx-history-ttl-seconds: 30     # tx_history 缓存 30 秒
+    tx-history-limit: 50           # 每次拉取最近多少笔交易
