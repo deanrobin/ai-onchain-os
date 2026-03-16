@@ -112,12 +112,14 @@ public class SignalFetchJob {
         for (Object item : dataList) {
             try {
                 Map<String, Object> sig = (Map<String, Object>) item;
+                // 不管信号是否重复，钱包地址都要提取
+                extractWallets(sig, chain, newWallets);
                 saved += saveSignal(sig, chain, walletType, newWallets);
             } catch (Exception e) {
                 log.warn("⚠️ 解析信号失败: {}", e.getMessage());
             }
         }
-        log.info("  📡 chain={} wt={} 获取={} 保存={}", chain, walletType, dataList.size(), saved);
+        log.info("  📡 chain={} wt={} 获取={} 保存={} 新钱包={}", chain, walletType, dataList.size(), saved, newWallets.size());
         return saved;
     }
 
@@ -157,26 +159,31 @@ public class SignalFetchJob {
         s.setSignalTime(LocalDateTime.now());
         s.setCreatedAt(LocalDateTime.now());
 
-        // 提取触发钱包地址
-        List<?> wallets = (List<?>) sig.get("triggerWallets");
-        if (wallets != null && !wallets.isEmpty()) {
-            try {
-                s.setTriggerWallets(mapper.writeValueAsString(wallets));
-                wallets.forEach(w -> {
-                    try {
-                        Map<?, ?> wm = (Map<?, ?>) w;
-                        String addr = String.valueOf(wm.get("address") != null ? wm.get("address") : "");
-                        if (!addr.isBlank()) {
-                            newWallets.add(chain + ":" + addr);
-                            saveWalletIfAbsent(addr, chain);
-                        }
-                    } catch (Exception ignored) {}
-                });
-            } catch (Exception ignored) {}
-        }
+        // 保存钱包地址原始值（仅记录）
+        Object twRaw = sig.get("triggerWalletAddress");
+        if (twRaw != null) s.setTriggerWallets(String.valueOf(twRaw));
 
         signalRepo.save(s);
         return 1;
+    }
+
+    /**
+     * 从信号里提取钱包地址，无论信号是否已存在都执行。
+     * OKX 返回格式：triggerWalletAddress = "0xaaa,0xbbb,..."（逗号分隔字符串）
+     */
+    private void extractWallets(Map<String, Object> sig, String chain, Set<String> newWallets) {
+        Object raw = sig.get("triggerWalletAddress");
+        if (raw == null) return;
+        String[] parts = String.valueOf(raw).split(",");
+        for (String addr : parts) {
+            addr = addr.strip();
+            if (addr.length() >= 20) { // SOL 地址 ~44 字符, EVM ~42
+                String key = chain + ":" + addr.toLowerCase();
+                if (newWallets.add(key)) {
+                    saveWalletIfAbsent(addr, chain);
+                }
+            }
+        }
     }
 
     private void saveWalletIfAbsent(String address, String chain) {
