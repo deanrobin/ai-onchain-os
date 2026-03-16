@@ -16,7 +16,7 @@ public interface SmartMoneySignalRepository extends JpaRepository<SmartMoneySign
     @Query(value = "SELECT * FROM smart_money_signal WHERE chain_index=:chain ORDER BY signal_time DESC LIMIT :limit", nativeQuery = true)
     List<SmartMoneySignal> findRecentByChain(@Param("chain") String chain, @Param("limit") int limit);
 
-    /** 去重检查：1h 内同链同 token 同类型不重复存 */
-    boolean existsByChainIndexAndTokenAddressAndWalletTypeAndSignalTimeAfter(
-            String chainIndex, String tokenAddress, String walletType, LocalDateTime signalTime);
+    /** 查最近一条同链同 token 记录（用于判断是否需要更新） */
+    @Query(value = "SELECT * FROM smart_money_signal WHERE chain_index=:chain AND token_address=:addr AND wallet_type=:wt ORDER BY signal_time DESC LIMIT 1", nativeQuery = true)
+    java.util.Optional<SmartMoneySignal> findLatest(@Param("chain") String chain, @Param("addr") String addr, @Param("wt") String wt);
 }

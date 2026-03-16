@@ -44,9 +44,9 @@ smart-money:
     # 钱包分析 Job（仅更新评分/胜率/PnL，不抓 overview/tx）
     wallet-analyze:
       enabled: true
-      interval-minutes: 60         # 每 60 分钟分析一次
+      interval-minutes: 15         # 每 15 分钟分析一批
       time-frame: "3"
-      max-wallets: 30
+      max-wallets: 20              # 每次最多 20 个，避免限速
 
   # ── 详情页缓存配置（Web 触发，缓存过期才打 OKX API）──────────
   cache:

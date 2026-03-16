@@ -130,12 +130,37 @@ public class SignalFetchJob {
                            sig.getOrDefault("tokenAddress", "")));
         if (tokenAddr.isBlank()) return 0;
 
-        // 去重：同链同 token 同 walletType 最近 1h 内不重复保存
-        LocalDateTime since = LocalDateTime.now().minusHours(1);
-        boolean exists = signalRepo.existsByChainIndexAndTokenAddressAndWalletTypeAndSignalTimeAfter(
-                chain, tokenAddr, walletType, since);
-        if (exists) return 0;
+        // 构建最新数据
+        BigDecimal newAmtUsd    = toBd(sig.getOrDefault("amountUsd", "0"));
+        int        newWalletCnt = toInt(sig.getOrDefault("triggerWalletCount", "0"));
+        BigDecimal soldRatio    = toBd(sig.get("soldRatioPercent"));
+        if (soldRatio != null) soldRatio = soldRatio.min(new BigDecimal("9999")).max(BigDecimal.ZERO);
 
+        // 查最近一条同 token 记录
+        var latest = signalRepo.findLatest(chain, tokenAddr, walletType);
+        boolean withinWindow = latest.isPresent()
+            && latest.get().getSignalTime().isAfter(LocalDateTime.now().minusMinutes(15));
+
+        if (withinWindow) {
+            // 15 分钟内已有记录 → 检查是否有数据变化（买入额增加 or 钱包数增加）
+            SmartMoneySignal existing = latest.get();
+            boolean amtGrew = newAmtUsd != null && existing.getAmountUsd() != null
+                    && newAmtUsd.compareTo(existing.getAmountUsd()) > 0;
+            boolean cntGrew = newWalletCnt > (existing.getTriggerWalletCount() == null ? 0 : existing.getTriggerWalletCount());
+            if (!amtGrew && !cntGrew) return 0; // 没变化，跳过
+            // 有变化 → 更新现有记录
+            existing.setAmountUsd(newAmtUsd);
+            existing.setTriggerWalletCount(newWalletCnt);
+            existing.setSoldRatioPercent(soldRatio);
+            existing.setSignalTime(LocalDateTime.now());
+            Object twRaw = sig.get("triggerWalletAddress");
+            if (twRaw != null) existing.setTriggerWallets(String.valueOf(twRaw));
+            signalRepo.save(existing);
+            log.info("🔄 信号更新 {} chain={} amt={} wallets={}", tokenAddr.substring(0, Math.min(10, tokenAddr.length())), chain, newAmtUsd, newWalletCnt);
+            return 1;
+        }
+
+        // 超过 15 分钟 or 全新 token → 新增记录
         SmartMoneySignal s = new SmartMoneySignal();
         s.setChainIndex(chain);
         s.setWalletType(walletType);
@@ -143,23 +168,15 @@ public class SignalFetchJob {
         s.setTokenSymbol(String.valueOf(token.getOrDefault("symbol", "?")));
         s.setTokenName(String.valueOf(token.getOrDefault("tokenName", "")));
         s.setTokenLogo(String.valueOf(token.getOrDefault("logo", "")));
-        s.setAmountUsd(toBd(sig.getOrDefault("amountUsd", "0")));
+        s.setAmountUsd(newAmtUsd);
         s.setPriceAtSignal(toBd(token.getOrDefault("price", "0")));
         s.setMarketCapUsd(toBd(token.getOrDefault("marketCapUsd", "0")));
-        s.setTriggerWalletCount(toInt(sig.getOrDefault("triggerWalletCount", "0")));
-        // OKX soldRatioPercent 有时超出范围，截断到 [0, 9999]
-        BigDecimal soldRatio = toBd(sig.get("soldRatioPercent"));
-        if (soldRatio != null) {
-            soldRatio = soldRatio.min(new BigDecimal("9999")).max(BigDecimal.ZERO);
-        }
+        s.setTriggerWalletCount(newWalletCnt);
         s.setSoldRatioPercent(soldRatio);
         s.setSignalTime(LocalDateTime.now());
         s.setCreatedAt(LocalDateTime.now());
-
-        // 保存钱包地址原始值（仅记录）
         Object twRaw = sig.get("triggerWalletAddress");
         if (twRaw != null) s.setTriggerWallets(String.valueOf(twRaw));
-
         signalRepo.save(s);
         return 1;
     }
