@@ -4,12 +4,17 @@ import com.deanrobin.aios.dashboard.model.MyAddress;
 import com.deanrobin.aios.dashboard.repository.MyAddressRepository;
 import com.deanrobin.aios.dashboard.service.PortfolioService;
 import com.deanrobin.aios.dashboard.service.SmartMoneyService;
+import com.deanrobin.aios.dashboard.vo.OverviewVO;
+import com.deanrobin.aios.dashboard.vo.TxRowVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Log4j2
@@ -44,6 +49,9 @@ public class DashboardController {
         return "smart-money";
     }
 
+    private static final DateTimeFormatter TX_FMT =
+        DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(ZoneId.of("Asia/Shanghai"));
+
     /** 单个聪明钱详情 */
     @GetMapping("/smart-money/{address}")
     public String walletDetail(
@@ -55,12 +63,84 @@ public class DashboardController {
         model.addAttribute("address", address);
         model.addAttribute("chain", chain);
         model.addAttribute("timeFrame", timeFrame);
-        model.addAttribute("overview", smartMoneyService.getWalletOverview(chain, address, timeFrame));
-        // 交易记录（默认 30 条，倒序）
+        model.addAttribute("chainName", chain.equals("56") ? "BSC" : chain.equals("501") ? "SOL" : "ETH");
+
+        // 概览 VO（所有类型转换在 Java 层完成）
+        Map<String, Object> rawOverview = smartMoneyService.getWalletOverview(chain, address, timeFrame);
+        model.addAttribute("ov", OverviewVO.from(rawOverview));
+        model.addAttribute("hasOverview", !rawOverview.isEmpty());
+
+        // 交易记录转换为展示 VO
         Map<?, ?> txData = portfolioService.getTxHistory(address, chain, "30");
         Object txRaw = txData.get("transactions");
-        model.addAttribute("txList", txRaw instanceof List<?> ? txRaw : List.of());
+        List<TxRowVO> txRows = buildTxRows(txRaw, address.toLowerCase(), chain);
+        model.addAttribute("txList", txRows);
+
+        // 浏览器链接前缀
+        String explorer = chain.equals("56") ? "https://bscscan.com/tx/"
+                        : chain.equals("501") ? "https://solscan.io/tx/"
+                        : "https://etherscan.io/tx/";
+        model.addAttribute("explorer", explorer);
+
         return "wallet-detail";
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<TxRowVO> buildTxRows(Object txRaw, String addrLower, String chain) {
+        if (!(txRaw instanceof List<?> list)) return List.of();
+        String explorer = chain.equals("56") ? "https://bscscan.com/tx/"
+                        : chain.equals("501") ? "https://solscan.io/tx/"
+                        : "https://etherscan.io/tx/";
+        List<TxRowVO> rows = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?,?> tx)) continue;
+            TxRowVO row = new TxRowVO();
+
+            // 时间
+            Object tsObj = tx.get("txTime");
+            if (tsObj != null) {
+                try {
+                    long ts = Long.parseLong(String.valueOf(tsObj));
+                    row.setDisplayTime(TX_FMT.format(Instant.ofEpochMilli(ts)));
+                } catch (Exception e) { row.setDisplayTime("—"); }
+            } else { row.setDisplayTime("—"); }
+
+            // 类型
+            Object itypeObj = tx.get("itype");
+            String itype = itypeObj != null ? String.valueOf(itypeObj) : "";
+            row.setTypeLabel("2".equals(itype) ? "Token转账" : "0".equals(itype) ? "主链币" : "合约调用");
+
+            // 代币/数量
+            Object sym = tx.get("symbol");
+            row.setSymbol(sym != null ? String.valueOf(sym) : "—");
+            Object amt = tx.get("amount");
+            row.setAmount(amt != null ? String.valueOf(amt) : "—");
+
+            // 方向
+            boolean incoming = false;
+            Object toObj = tx.get("to");
+            if (toObj instanceof List<?> toList && !toList.isEmpty()) {
+                Object first = toList.get(0);
+                if (first instanceof Map<?,?> toMap) {
+                    Object toAddr = toMap.get("address");
+                    incoming = toAddr != null && String.valueOf(toAddr).toLowerCase().contains(addrLower);
+                }
+            }
+            row.setIncoming(incoming);
+
+            // 状态
+            row.setSuccess("success".equals(tx.get("txStatus")));
+
+            // Hash
+            Object hash = tx.get("txHash");
+            String hashStr = hash != null ? String.valueOf(hash) : "";
+            row.setTxHash(hashStr);
+            row.setTxHashShort(hashStr.length() > 12 ? hashStr.substring(0, 12) + "..." : hashStr);
+            row.setExplorerUrl(explorer + hashStr);
+
+            rows.add(row);
+        }
+        return rows;
     }
 
     /** 我的持仓看板 */
