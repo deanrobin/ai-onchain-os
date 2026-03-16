@@ -38,7 +38,7 @@ smart-money:
     signal-fetch:
       enabled: true
       interval-minutes: 1          # 每 1 分钟抓一次信号
-      chains: "1,56,8453,501"      # ETH,BSC,Base,SOL
+      chains: "56,501"             # BSC,SOL
       wallet-types: "1"            # 1=Smart Money 2=KOL 3=Whale
       min-amount-usd: "5000"       # 最小买入金额过滤
     # 钱包分析 Job（更新评分/胜率/PnL）
