@@ -31,31 +31,35 @@
             <div class="sc-lbl">覆盖链</div>
         </div>
     </div>
-    <!-- 实时币价：与左侧三张 stat-card 保持相同结构 -->
+    <!-- 实时币价 -->
     <div class="col-6 col-lg-3">
         <div class="stat-card sc-cyan">
             <span class="sc-icon">💹</span>
-            <div class="sc-lbl" style="margin-bottom:8px">
-                实时币价
-                <span id="price-update-time" style="font-size:.62rem;color:var(--t3);margin-left:6px">--</span>
-            </div>
-            <div id="price-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:5px 10px">
+            <div id="price-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:3px 6px;position:relative;z-index:1">
                 <div class="price-item" data-sym="BTC">
                     <span class="price-sym">BTC</span>
-                    <div><span class="price-val">—</span><span class="price-chg"></span></div>
+                    <span class="price-val">—</span>
+                    <span class="price-chg"></span>
                 </div>
                 <div class="price-item" data-sym="ETH">
                     <span class="price-sym">ETH</span>
-                    <div><span class="price-val">—</span><span class="price-chg"></span></div>
+                    <span class="price-val">—</span>
+                    <span class="price-chg"></span>
                 </div>
                 <div class="price-item" data-sym="BNB">
                     <span class="price-sym">BNB</span>
-                    <div><span class="price-val">—</span><span class="price-chg"></span></div>
+                    <span class="price-val">—</span>
+                    <span class="price-chg"></span>
                 </div>
                 <div class="price-item" data-sym="SOL">
                     <span class="price-sym">SOL</span>
-                    <div><span class="price-val">—</span><span class="price-chg"></span></div>
+                    <span class="price-val">—</span>
+                    <span class="price-chg"></span>
                 </div>
+            </div>
+            <div class="sc-lbl" style="margin-top:8px">
+                实时币价
+                <span id="price-update-time" style="font-size:.6rem;font-weight:400;margin-left:4px">--</span>
             </div>
         </div>
     </div>
@@ -147,30 +151,45 @@
             </div>
             <table th:unless="${recentSignals.isEmpty()}" class="table" id="idx-sig-tbl">
                 <thead><tr>
-                    <th>时间</th><th>代币 <span style="font-size:.65rem;color:var(--t3);font-weight:400">点击交易↗</span></th>
-                    <th>链</th><th>买入金额</th><th>钱包数</th>
+                    <th>时间</th>
+                    <th>代币 <span style="font-size:.62rem;color:var(--t3);font-weight:400">↗点击交易</span></th>
+                    <th>链</th><th>买入额</th>
+                    <th>市值</th>
+                    <th>信号价</th>
+                    <th>🧠</th>
                 </tr></thead>
                 <tbody id="sig-tbody">
                 <tr th:each="s : ${recentSignals}" class="sig-row">
                     <td class="mono t-dim" style="font-size:.7rem"
                         th:text="${#temporals.format(s.signalTime,'MM-dd HH:mm')}"></td>
                     <td>
-                        <!-- data 属性存地址和链，JS 根据选中 tab 生成 URL -->
                         <div class="fw-7 sig-token-link"
                              style="cursor:pointer;color:var(--blue)"
                              th:attr="data-addr=${s.tokenAddress},data-chain=${s.chainIndex}"
                              onclick="openTrade(this)"
                              th:text="${s.tokenSymbol}"></div>
                         <div class="addr sig-token-link"
-                             style="font-size:.68rem;cursor:pointer"
+                             style="font-size:.65rem;cursor:pointer"
                              th:attr="data-addr=${s.tokenAddress},data-chain=${s.chainIndex}"
                              onclick="openTrade(this)"
                              th:text="${#strings.substring(s.tokenAddress,0,10)+'...'}"></div>
                     </td>
                     <td><span class="chain-badge" th:classappend="'c-'+${s.chainIndex}"
                               th:text="${s.chainIndex=='56'?'BSC':s.chainIndex=='501'?'SOL':s.chainIndex}"></span></td>
-                    <td><span class="up fw-7" th:text="${'$'+#numbers.formatDecimal(s.amountUsd,1,0)}"></span></td>
-                    <td><span class="tag-blue" th:text="${s.triggerWalletCount+' 🧠'}"></span></td>
+                    <td><span class="up fw-7" style="font-size:.82rem"
+                              th:text="${'$'+#numbers.formatDecimal(s.amountUsd,1,0)}"></span></td>
+                    <!-- 市值 -->
+                    <td class="mono t-dim" style="font-size:.76rem"
+                        th:with="mc=${s.marketCapUsd!=null?s.marketCapUsd.doubleValue():0}"
+                        th:text="${mc>=1e9?'$'+(mc/1e9).toString().substring(0,4)+'B':mc>=1e6?'$'+(mc/1e6).toString().substring(0,5)+'M':mc>0?'$'+#numbers.formatDecimal(mc,1,0):'—'}">
+                    </td>
+                    <!-- 信号时价格 -->
+                    <td class="mono" style="font-size:.76rem"
+                        th:with="p=${s.priceAtSignal!=null?s.priceAtSignal.doubleValue():0}"
+                        th:text="${p>0?(p>=1?'$'+#numbers.formatDecimal(p,1,4):'$'+p):'—'}">
+                    </td>
+                    <td><span class="tag-blue" style="font-size:.72rem"
+                              th:text="${s.triggerWalletCount}"></span></td>
                 </tr>
                 </tbody>
             </table>
@@ -233,17 +252,25 @@ async function refreshSignals() {
             const addr = s.tokenAddress || '';
             const chain = s.chainIndex==='56'?'BSC':s.chainIndex==='501'?'SOL':s.chainIndex;
             const ts = s.signalTimeStr || '';
+            const mc  = parseFloat(s.marketCapUsd||0);
+            const mcStr = mc>=1e9 ? '$'+(mc/1e9).toFixed(2)+'B'
+                        : mc>=1e6 ? '$'+(mc/1e6).toFixed(2)+'M'
+                        : mc>0    ? '$'+mc.toLocaleString('en',{maximumFractionDigits:0}) : '—';
+            const pr  = parseFloat(s.priceAtSignal||0);
+            const prStr = pr>0 ? (pr>=1 ? '$'+pr.toFixed(4) : '$'+pr.toPrecision(4)) : '—';
             return `<tr class="sig-row">
                 <td class="mono t-dim" style="font-size:.7rem">${ts}</td>
                 <td>
                     <div class="fw-7 sig-token-link" style="cursor:pointer;color:var(--blue)"
                          data-addr="${addr}" data-chain="${s.chainIndex}" onclick="openTrade(this)">${s.tokenSymbol||'?'}</div>
-                    <div class="addr sig-token-link" style="font-size:.68rem;cursor:pointer"
+                    <div class="addr sig-token-link" style="font-size:.65rem;cursor:pointer"
                          data-addr="${addr}" data-chain="${s.chainIndex}" onclick="openTrade(this)">${addr.substring(0,10)}...</div>
                 </td>
                 <td><span class="chain-badge c-${s.chainIndex}">${chain}</span></td>
-                <td><span class="up fw-7">$${parseFloat(s.amountUsd||0).toLocaleString('en',{maximumFractionDigits:0})}</span></td>
-                <td><span class="tag-blue">${s.triggerWalletCount||0} 🧠</span></td>
+                <td><span class="up fw-7" style="font-size:.82rem">$${parseFloat(s.amountUsd||0).toLocaleString('en',{maximumFractionDigits:0})}</span></td>
+                <td class="mono t-dim" style="font-size:.76rem">${mcStr}</td>
+                <td class="mono" style="font-size:.76rem">${prStr}</td>
+                <td><span class="tag-blue" style="font-size:.72rem">${s.triggerWalletCount||0}</span></td>
             </tr>`;
         }).join('');
     } catch(e){ console.warn('refreshSignals', e); }

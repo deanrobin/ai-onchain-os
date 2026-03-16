@@ -50,8 +50,9 @@ public class ApiController {
             m.put("chainIndex",        s.getChainIndex());
             m.put("amountUsd",         s.getAmountUsd());
             m.put("triggerWalletCount",s.getTriggerWalletCount());
-            m.put("signalTimeStr",     s.getSignalTime() != null
-                ? s.getSignalTime().format(SIG_FMT) : "—");
+            m.put("signalTimeStr",  s.getSignalTime() != null ? s.getSignalTime().format(SIG_FMT) : "—");
+            m.put("marketCapUsd",   s.getMarketCapUsd());
+            m.put("priceAtSignal",  s.getPriceAtSignal());
             return m;
         }).collect(Collectors.toList());
     }
