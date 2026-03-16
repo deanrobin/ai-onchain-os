@@ -48,14 +48,15 @@
                         </div>
                     </td>
                     <td class="mono t-muted" style="font-size:.78rem"
-                        th:text="${s.token?.marketCapUsd!=null?'$'+#numbers.formatDecimal(s.token.marketCapUsd,1,0):'—'}"></td>
-                    <td><span class="up fw-7" th:text="${'$'+#numbers.formatDecimal(s.amountUsd,1,0)}"></span></td>
+                        th:text="${s.token?.marketCapUsd!=null?('$'+#numbers.formatDecimal(T(java.lang.Double).parseDouble(''+s.token.marketCapUsd),1,0)):'—'}"></td>
+                    <td><span class="up fw-7"
+                              th:text="${'$'+#numbers.formatDecimal(T(java.lang.Double).parseDouble(''+s.amountUsd),1,0)}"></span></td>
                     <td><span class="tag-blue" th:text="${(s.triggerWalletCount?:0)+' 🧠'}"></span></td>
                     <td>
                         <span th:if="${s.soldRatioPercent!=null}"
-                              th:with="sr=${s.soldRatioPercent.doubleValue()}"
-                              th:class="${sr>0.5?'dn':'up'}"
-                              th:text="${#numbers.formatDecimal(sr*100,1,1)+'%'}"></span>
+                              th:with="sr=${T(java.lang.Double).parseDouble(''+s.soldRatioPercent)}"
+                              th:class="${sr>50?'dn':'up'}"
+                              th:text="${#numbers.formatDecimal(sr,1,1)+'%'}"></span>
                         <span th:unless="${s.soldRatioPercent!=null}" class="t-dim">—</span>
                     </td>
                     <td><a href="https://www.okx.com/zh-hans/web3/dex/swap" class="btn-green-o" target="_blank">跟单 ↗</a></td>
