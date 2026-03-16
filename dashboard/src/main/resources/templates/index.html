@@ -118,7 +118,7 @@
             </div>
             <table th:unless="${recentSignals.isEmpty()}" class="table" id="idx-sig-tbl">
                 <thead><tr>
-                    <th>时间</th><th>代币</th><th>链</th><th>买入金额</th><th>钱包数</th>
+                    <th>时间</th><th>代币</th><th>链</th><th>买入金额</th><th>钱包数</th><th>交易</th>
                 </tr></thead>
                 <tbody id="sig-tbody">
                 <tr th:each="s : ${recentSignals}" class="sig-row">
@@ -133,6 +133,20 @@
                               th:text="${s.chainIndex=='56'?'BSC':s.chainIndex=='501'?'SOL':s.chainIndex}"></span></td>
                     <td><span class="up fw-7" th:text="${'$'+#numbers.formatDecimal(s.amountUsd,1,0)}"></span></td>
                     <td><span class="tag-blue" th:text="${s.triggerWalletCount+' 🧠'}"></span></td>
+                    <td>
+                        <a th:href="${s.chainIndex=='501'?
+                                    'https://gmgn.ai/sol/token/'+s.tokenAddress :
+                                    'https://gmgn.ai/bsc/token/'+s.tokenAddress}"
+                           target="_blank" rel="noopener"
+                           style="display:inline-block;margin-right:4px;padding:2px 8px;background:#e8f4fd;color:#1a73e8;border:1px solid #bee3f8;border-radius:5px;font-size:.7rem;font-weight:600;text-decoration:none"
+                           title="在 GMGN 查看/交易">GMGN</a>
+                        <a th:href="${s.chainIndex=='501'?
+                                    'https://www.okx.com/web3/dex-swap#inputChain=501&inputCurrency=So11111111111111111111111111111111111111112&outputChain=501&outputCurrency='+s.tokenAddress :
+                                    'https://www.okx.com/web3/dex-swap#inputChain=56&inputCurrency=0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee&outputChain=56&outputCurrency='+s.tokenAddress}"
+                           target="_blank" rel="noopener"
+                           style="display:inline-block;padding:2px 8px;background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;border-radius:5px;font-size:.7rem;font-weight:600;text-decoration:none"
+                           title="在 OKX DEX 交易">OKX</a>
+                    </td>
                 </tr>
                 </tbody>
             </table>
@@ -195,6 +209,13 @@ async function refreshSignals() {
             const addr = s.tokenAddress || '';
             const chain = s.chainIndex==='56'?'BSC':s.chainIndex==='501'?'SOL':s.chainIndex;
             const ts = s.signalTimeStr || '';
+            const isSol = s.chainIndex === '501';
+            const gmgnUrl = isSol
+                ? `https://gmgn.ai/sol/token/${addr}`
+                : `https://gmgn.ai/bsc/token/${addr}`;
+            const okxUrl = isSol
+                ? `https://www.okx.com/web3/dex-swap#inputChain=501&inputCurrency=So11111111111111111111111111111111111111112&outputChain=501&outputCurrency=${addr}`
+                : `https://www.okx.com/web3/dex-swap#inputChain=56&inputCurrency=0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee&outputChain=56&outputCurrency=${addr}`;
             return `<tr class="sig-row">
                 <td class="mono t-dim" style="font-size:.7rem">${ts}</td>
                 <td><div class="fw-7">${s.tokenSymbol||'?'}</div>
@@ -202,6 +223,12 @@ async function refreshSignals() {
                 <td><span class="chain-badge c-${s.chainIndex}">${chain}</span></td>
                 <td><span class="up fw-7">$${parseFloat(s.amountUsd||0).toLocaleString('en',{maximumFractionDigits:0})}</span></td>
                 <td><span class="tag-blue">${s.triggerWalletCount||0} 🧠</span></td>
+                <td>
+                    <a href="${gmgnUrl}" target="_blank" rel="noopener"
+                       style="display:inline-block;margin-right:4px;padding:2px 8px;background:#e8f4fd;color:#1a73e8;border:1px solid #bee3f8;border-radius:5px;font-size:.7rem;font-weight:600;text-decoration:none">GMGN</a>
+                    <a href="${okxUrl}" target="_blank" rel="noopener"
+                       style="display:inline-block;padding:2px 8px;background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;border-radius:5px;font-size:.7rem;font-weight:600;text-decoration:none">OKX</a>
+                </td>
             </tr>`;
         }).join('');
     } catch(e){ console.warn('refreshSignals', e); }
