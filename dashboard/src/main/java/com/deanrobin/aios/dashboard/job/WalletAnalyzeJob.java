@@ -60,14 +60,20 @@ public class WalletAnalyzeJob {
         List<SmartMoneyWallet> wallets = walletRepo.findAllByOrderByLastAnalyzedAtAsc(
                 PageRequest.of(0, cfg.getMaxWallets()));
 
-        log.info("🧠 WalletAnalyzeJob 开始 待分析={}", wallets.size());
+        // 过滤掉 2 小时内已分析过的（防止重复打 API）
+        LocalDateTime freshCutoff = LocalDateTime.now().minusHours(2);
+        long skip = wallets.stream().filter(w -> w.getLastAnalyzedAt() != null && w.getLastAnalyzedAt().isAfter(freshCutoff)).count();
+        wallets = wallets.stream().filter(w -> w.getLastAnalyzedAt() == null || w.getLastAnalyzedAt().isBefore(freshCutoff))
+                         .collect(java.util.stream.Collectors.toList());
+
+        log.info("🧠 WalletAnalyzeJob 开始 待分析={} 跳过(2h内已分析)={}", wallets.size(), skip);
         int ok = 0, fail = 0;
 
         for (SmartMoneyWallet w : wallets) {
             try {
                 analyze(w, cfg.getTimeFrame());
                 ok++;
-                Thread.sleep(300); // 限速
+                Thread.sleep(1000); // 限速：每个钱包 1s 间隔
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;

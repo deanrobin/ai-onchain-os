@@ -44,6 +44,6 @@ smart-money:
     # 钱包分析 Job（更新评分/胜率/PnL）
     wallet-analyze:
       enabled: true
-      interval-minutes: 5          # 每 5 分钟分析一次
+      interval-minutes: 60         # 每 60 分钟分析一次
       time-frame: "3"              # 1=1D 2=3D 3=7D 4=1M 5=3M
-      max-wallets: 100             # 每次最多分析多少个钱包
+      max-wallets: 30              # 每次最多分析 30 个钱包（2 API×30 = 60次/小时）
