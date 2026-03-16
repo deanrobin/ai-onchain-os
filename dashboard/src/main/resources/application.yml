@@ -37,13 +37,13 @@ smart-money:
     # 信号抓取 Job
     signal-fetch:
       enabled: true
-      interval-minutes: 5          # 每 5 分钟抓一次信号
+      interval-minutes: 1          # 每 1 分钟抓一次信号
       chains: "1,56,8453,501"      # ETH,BSC,Base,SOL
       wallet-types: "1"            # 1=Smart Money 2=KOL 3=Whale
       min-amount-usd: "5000"       # 最小买入金额过滤
     # 钱包分析 Job（更新评分/胜率/PnL）
     wallet-analyze:
       enabled: true
-      interval-minutes: 30         # 每 30 分钟分析一次
+      interval-minutes: 5          # 每 5 分钟分析一次
       time-frame: "3"              # 1=1D 2=3D 3=7D 4=1M 5=3M
       max-wallets: 100             # 每次最多分析多少个钱包

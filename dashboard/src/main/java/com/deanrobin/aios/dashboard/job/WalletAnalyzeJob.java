@@ -33,8 +33,8 @@ public class WalletAnalyzeJob {
     private final WalletScorerService       scorer;
 
     @Scheduled(
-        initialDelayString = "#{${smart-money.jobs.wallet-analyze.interval-minutes:30} * 60000}",
-        fixedDelayString   = "#{${smart-money.jobs.wallet-analyze.interval-minutes:30} * 60000}"
+        initialDelayString = "60000",
+        fixedDelayString   = "#{${smart-money.jobs.wallet-analyze.interval-minutes:5} * 60000}"
     )
     public void run() {
         SmartMoneyJobConfig.WalletAnalyze cfg = jobConfig.getWalletAnalyze();
