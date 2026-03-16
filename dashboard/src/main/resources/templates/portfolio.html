@@ -41,6 +41,12 @@
         </button>
     </div>
 
+    <!-- Stats 为空时提示 -->
+    <div th:unless="${entry.ov != null}" class="card mb-3">
+        <div class="card-body" style="text-align:center;padding:24px 20px">
+            <div style="color:var(--t3);font-size:.84rem">📡 概览数据加载中，或 OKX 暂无该地址数据</div>
+        </div>
+    </div>
     <!-- Stats (entry.ov is OverviewVO, pure display) -->
     <div th:if="${entry.ov != null}" class="row g-2 mb-3">
         <div class="col-6 col-md-4 col-xl-2">
@@ -89,12 +95,14 @@
             <span class="info-pill ms-2">已实现盈亏排序</span>
             <button class="btn-outline ms-auto"
                     th:attr="data-addr=${entry.address},data-chain=${entry.chainIndex},data-idx=${eIdx.index}"
-                    onclick="reloadPnl(this.dataset.addr,this.dataset.chain,this.dataset.idx)"
+                    onclick="reloadPnl(this.dataset.addr,this.dataset.chain,this.dataset.idx)">
                 🔄 刷新
             </button>
         </div>
-        <div th:if="${entry.pnlList.isEmpty()}" class="empty-state">
-            <div class="ei">🪙</div><div>暂无持仓数据</div>
+        <div th:if="${entry.pnlList.isEmpty()}" class="card-body" style="text-align:center;padding:36px 20px">
+            <div style="font-size:2rem;margin-bottom:8px">🪙</div>
+            <div style="color:var(--t3);font-size:.84rem">暂无持仓数据</div>
+            <div style="color:var(--t3);font-size:.75rem;margin-top:4px">OKX 未返回该地址的盈亏记录</div>
         </div>
         <table th:unless="${entry.pnlList.isEmpty()}" class="table" th:id="'pnl-tbl-'+${eIdx.index}">
             <thead><tr>
