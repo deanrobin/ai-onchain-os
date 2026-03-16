@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('我的关注地址', ~{::main})}">
+<body><main>
+
+<!-- 顶部统计 + 提示 -->
+<div class="d-flex align-items-center flex-wrap gap-3 mb-4">
+    <h5 class="fw-7 mb-0">📌 我的关注地址</h5>
+    <span class="tag-blue" th:text="${total + ' / 4 个'}"></span>
+    <span th:if="${total >= maxAddresses}"
+          style="font-size:.8rem;color:var(--red);font-weight:600">
+        ⚠️ 已达上限，无法继续添加
+    </span>
+</div>
+
+<!-- 成功/错误提示 -->
+<div th:if="${success}" class="alert-ok mb-3" th:text="${success}"></div>
+<div th:if="${error}"   class="alert-err mb-3" th:text="${error}"></div>
+
+<!-- 现有地址列表 -->
+<div class="card mb-4">
+    <div class="card-body p-0">
+        <table class="data-table w-100">
+            <thead><tr>
+                <th>#</th>
+                <th>地址</th>
+                <th>链</th>
+                <th>备注</th>
+                <th>状态</th>
+                <th>添加时间</th>
+            </tr></thead>
+            <tbody>
+            <tr th:if="${addresses.isEmpty()}">
+                <td colspan="6" class="empty-state">
+                    <div class="ei">📭</div><div>还没有关注地址</div>
+                </td>
+            </tr>
+            <tr th:each="a, idx : ${addresses}">
+                <td class="mono t-dim" style="font-size:.75rem" th:text="${idx.count}"></td>
+                <td>
+                    <span class="addr"
+                          th:text="${a.address.length()>20 ? a.address.substring(0,10)+'...'+a.address.substring(a.address.length()-6) : a.address}"
+                          th:attr="onclick='copyAddr(\''+${a.address}+'\')'"
+                          style="cursor:pointer" title="点击复制完整地址"></span>
+                </td>
+                <td>
+                    <span class="chain-badge"
+                          th:classappend="'c-'+${a.chainIndex}"
+                          th:text="${a.chainIndex=='1'?'ETH':a.chainIndex=='56'?'BSC':a.chainIndex=='8453'?'Base':'SOL'}"></span>
+                </td>
+                <td class="t-dim" style="font-size:.82rem" th:text="${a.label?:'—'}"></td>
+                <td>
+                    <span th:if="${a.isActive}"  class="up"  style="font-size:.78rem">● 启用</span>
+                    <span th:unless="${a.isActive}" class="dn" style="font-size:.78rem">● 停用</span>
+                </td>
+                <td class="mono t-dim" style="font-size:.72rem"
+                    th:text="${a.createdAt!=null?#temporals.format(a.createdAt,'MM-dd HH:mm'):'—'}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 新增表单（达到上限时禁用） -->
+<div class="card">
+    <div class="card-body">
+        <h6 class="fw-7 mb-3">
+            ➕ 添加新地址
+            <span th:if="${!canAdd}" class="t-dim" style="font-size:.78rem;font-weight:400;margin-left:8px">
+                （已达 4 个上限，如需调整请直接操作数据库）
+            </span>
+        </h6>
+
+        <form th:action="@{/my-addresses/add}" method="post"
+              th:classappend="${!canAdd?'disabled-form':''}">
+
+            <div class="row g-3">
+                <!-- 地址 -->
+                <div class="col-12 col-md-5">
+                    <label class="form-label" style="font-size:.82rem;font-weight:600">钱包地址 *</label>
+                    <input type="text" name="address" class="form-input"
+                           placeholder="0x... 或 Solana 地址"
+                           th:disabled="${!canAdd}" required
+                           style="font-family:'JetBrains Mono',monospace;font-size:.82rem">
+                </div>
+
+                <!-- 链选择 -->
+                <div class="col-6 col-md-2">
+                    <label class="form-label" style="font-size:.82rem;font-weight:600">链 *</label>
+                    <select name="chainIndex" class="form-input" th:disabled="${!canAdd}">
+                        <option value="56">BSC</option>
+                        <option value="1">ETH</option>
+                        <option value="501">SOL</option>
+                        <option value="8453">Base</option>
+                    </select>
+                </div>
+
+                <!-- 备注 -->
+                <div class="col-6 col-md-3">
+                    <label class="form-label" style="font-size:.82rem;font-weight:600">备注</label>
+                    <input type="text" name="label" class="form-input"
+                           placeholder="如：主钱包、Mev Bot..."
+                           maxlength="50" th:disabled="${!canAdd}"
+                           style="font-size:.82rem">
+                </div>
+
+                <!-- 提交 -->
+                <div class="col-12 col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn-primary w-100"
+                            th:disabled="${!canAdd}"
+                            th:classappend="${!canAdd?'btn-disabled':''}">
+                        添加
+                    </button>
+                </div>
+            </div>
+
+        </form>
+
+        <!-- 上限提示说明 -->
+        <div th:unless="${canAdd}"
+             style="margin-top:14px;padding:12px 16px;background:#fff8e1;border:1px solid #ffd54f;border-radius:8px;font-size:.8rem;color:#7a6000">
+            💡 已达 4 个上限。如需修改或删除地址，直接在数据库操作：<br>
+            <span class="addr">UPDATE my_address SET is_active=0 WHERE id=?;</span><br>
+            <span class="addr">DELETE FROM my_address WHERE id=?;</span>
+        </div>
+    </div>
+</div>
+
+<style>
+.disabled-form input, .disabled-form select { opacity:.5; cursor:not-allowed; background:#f5f5f5; }
+.btn-disabled { opacity:.45; cursor:not-allowed; pointer-events:none; }
+.form-input  { width:100%; padding:7px 11px; border:1px solid var(--border-m); border-radius:8px;
+               background:#fff; color:var(--t1); outline:none; font-size:.85rem; }
+.form-input:focus { border-color:var(--blue); box-shadow:0 0 0 2px rgba(59,130,246,.15); }
+.form-label  { display:block; margin-bottom:5px; color:var(--t2); }
+.alert-ok    { padding:10px 14px; background:#e8faf0; border:1px solid #86efac; border-radius:8px;
+               color:#166534; font-size:.84rem; }
+.alert-err   { padding:10px 14px; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px;
+               color:#991b1b; font-size:.84rem; }
+</style>
+
+</main></body>
+</html>

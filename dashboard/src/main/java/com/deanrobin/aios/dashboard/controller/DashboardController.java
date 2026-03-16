@@ -13,6 +13,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -117,6 +118,77 @@ public class DashboardController {
         model.addAttribute("portfolioData", portfolioData);
         model.addAttribute("hasAddresses", !addresses.isEmpty());
         return "portfolio";
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // 我的地址管理：查看 + 新增（最多 4 个）
+    // ──────────────────────────────────────────────────────────────
+    private static final int MAX_ADDRESSES = 4;
+    // 支持的链（白名单校验，防止非法 chainIndex 注入）
+    private static final java.util.Set<String> ALLOWED_CHAINS =
+            java.util.Set.of("1", "56", "501", "8453");
+    // 地址格式：0x 开头 hex（EVM）或 Base58 长度（Solana）
+    private static final java.util.regex.Pattern ADDR_PATTERN =
+            java.util.regex.Pattern.compile("^(0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$");
+
+    @GetMapping("/my-addresses")
+    public String myAddresses(Model model) {
+        model.addAttribute("activePage", "portfolio");
+        List<MyAddress> list = myAddressRepo.findAll();
+        long total = list.size();
+        model.addAttribute("addresses", list);
+        model.addAttribute("total", total);
+        model.addAttribute("canAdd", total < MAX_ADDRESSES);
+        model.addAttribute("maxAddresses", MAX_ADDRESSES);
+        return "my-addresses";
+    }
+
+    @PostMapping("/my-addresses/add")
+    public String addAddress(
+            @RequestParam String address,
+            @RequestParam String chainIndex,
+            @RequestParam(required = false, defaultValue = "") String label,
+            RedirectAttributes ra) {
+
+        // ── 输入校验（SQL 注入防护：JPA 参数化查询天然安全，这里额外做格式校验）
+        String addr = address == null ? "" : address.trim();
+        String chain = chainIndex == null ? "" : chainIndex.trim();
+        String lbl   = label == null ? "" : label.trim();
+
+        if (!ADDR_PATTERN.matcher(addr).matches()) {
+            ra.addFlashAttribute("error", "地址格式不合法（仅支持 EVM 0x 地址或 Solana 地址）");
+            return "redirect:/my-addresses";
+        }
+        if (!ALLOWED_CHAINS.contains(chain)) {
+            ra.addFlashAttribute("error", "不支持的链，请选择 ETH/BSC/SOL/Base");
+            return "redirect:/my-addresses";
+        }
+        if (lbl.length() > 50) {
+            ra.addFlashAttribute("error", "备注最多 50 个字符");
+            return "redirect:/my-addresses";
+        }
+
+        long total = myAddressRepo.countBy();
+        if (total >= MAX_ADDRESSES) {
+            ra.addFlashAttribute("error", "最多只能添加 " + MAX_ADDRESSES + " 个关注地址");
+            return "redirect:/my-addresses";
+        }
+        if (myAddressRepo.existsByAddressAndChainIndex(addr, chain)) {
+            ra.addFlashAttribute("error", "该地址已存在");
+            return "redirect:/my-addresses";
+        }
+
+        MyAddress ma = new MyAddress();
+        ma.setAddress(addr);
+        ma.setChainIndex(chain);
+        ma.setLabel(lbl.isEmpty() ? null : lbl);
+        ma.setIsActive(true);
+        ma.setCreatedAt(java.time.LocalDateTime.now());
+        myAddressRepo.save(ma);
+
+        log.info("➕ 新增关注地址 addr={} chain={} label={}", addr, chain, lbl);
+        ra.addFlashAttribute("success", "添加成功：" + addr.substring(0, 10) + "...");
+        return "redirect:/my-addresses";
     }
 
     // ──────────────────────────────────────────────────────────────
