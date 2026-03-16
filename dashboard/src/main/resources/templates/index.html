@@ -31,12 +31,35 @@
             <div class="sc-lbl">覆盖链</div>
         </div>
     </div>
+    <!-- 实时币价卡片 -->
     <div class="col-6 col-lg-3">
-        <div class="stat-card sc-cyan">
-            <span class="sc-icon">📡</span>
-            <div class="sc-val" style="font-size:1rem">OKX DEX</div>
-            <div class="sc-lbl">数据来源</div>
-            <div class="sc-sub">OnChain Signals API</div>
+        <div class="stat-card sc-cyan" style="padding:12px 16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span style="font-size:.7rem;color:var(--t3)">实时币价</span>
+                <span id="price-update-time" style="font-size:.65rem;color:var(--t3)">--</span>
+            </div>
+            <div id="price-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 8px">
+                <div class="price-item" data-sym="BTC">
+                    <span class="price-sym">BTC</span>
+                    <span class="price-val t-dim">—</span>
+                    <span class="price-chg" style="font-size:.62rem"></span>
+                </div>
+                <div class="price-item" data-sym="ETH">
+                    <span class="price-sym">ETH</span>
+                    <span class="price-val t-dim">—</span>
+                    <span class="price-chg" style="font-size:.62rem"></span>
+                </div>
+                <div class="price-item" data-sym="BNB">
+                    <span class="price-sym">BNB</span>
+                    <span class="price-val t-dim">—</span>
+                    <span class="price-chg" style="font-size:.62rem"></span>
+                </div>
+                <div class="price-item" data-sym="SOL">
+                    <span class="price-sym">SOL</span>
+                    <span class="price-val t-dim">—</span>
+                    <span class="price-chg" style="font-size:.62rem"></span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -110,7 +133,7 @@
                     <div id="tab-gmgn"   class="tab-item active" onclick="setSigTab('gmgn')"
                          style="font-size:.72rem">GMGN</div>
                     <div id="tab-okx"    class="tab-item"        onclick="setSigTab('okx')"
-                         style="font-size:.72rem">OKX DEX</div>
+                         style="font-size:.72rem">OKX</div>
                     <div id="tab-custom" class="tab-item"
                          style="font-size:.72rem;opacity:.45;cursor:not-allowed;pointer-events:auto"
                          title="敬请期待">自定义</div>
@@ -229,6 +252,39 @@ async function refreshSignals() {
     } catch(e){ console.warn('refreshSignals', e); }
 }
 
+// ───────────── 价格展示 ─────────────
+
+async function refreshPrices() {
+    try {
+        const r = await fetch('/api/prices');
+        const list = await r.json();
+        if (!list || !list.length) return;
+        list.forEach(p => {
+            const item = document.querySelector(`#price-grid .price-item[data-sym="${p.symbol}"]`);
+            if (!item) return;
+            const price = parseFloat(p.priceUsd || 0);
+            const chg   = parseFloat(p.change24h || 0);
+            const priceStr = price >= 1000
+                ? '$' + price.toLocaleString('en', {maximumFractionDigits: 0})
+                : '$' + price.toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            item.querySelector('.price-val').textContent = priceStr;
+            item.querySelector('.price-val').style.color = '';
+            const chgEl = item.querySelector('.price-chg');
+            if (chgEl) {
+                chgEl.textContent = (chg >= 0 ? '▲' : '▼') + Math.abs(chg).toFixed(2) + '%';
+                chgEl.style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
+            }
+        });
+        const now = new Date().toLocaleString('zh-CN', {timeZone:'Asia/Shanghai', hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        const el = document.getElementById('price-update-time');
+        if (el) el.textContent = now;
+    } catch(e) { console.warn('refreshPrices', e); }
+}
+
+// 启动时立即拉价格，然后每 30 秒刷新一次
+refreshPrices();
+setInterval(refreshPrices, 30000);
+
 // ───────────── 平台选项卡 ─────────────
 
 let sigTab = 'gmgn'; // 默认 GMGN
@@ -251,9 +307,10 @@ function tradeUrl(addr, chain, tab) {
             : `https://gmgn.ai/bsc/token/${addr}`;
     }
     if (tab === 'okx') {
+        // OKX Web3 行情页：chain 用 bsc/solana（经过重定向验证）
         return isSol
-            ? `https://www.okx.com/web3/dex-swap#inputChain=501&inputCurrency=So11111111111111111111111111111111111111112&outputChain=501&outputCurrency=${addr}`
-            : `https://www.okx.com/web3/dex-swap#inputChain=56&inputCurrency=0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee&outputChain=56&outputCurrency=${addr}`;
+            ? `https://web3.okx.com/zh-hans/token/solana/${addr}`
+            : `https://web3.okx.com/zh-hans/token/bsc/${addr}`;
     }
     return '#';
 }

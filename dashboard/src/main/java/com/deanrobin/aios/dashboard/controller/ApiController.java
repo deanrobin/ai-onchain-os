@@ -1,6 +1,8 @@
 package com.deanrobin.aios.dashboard.controller;
 
+import com.deanrobin.aios.dashboard.model.PriceTicker;
 import com.deanrobin.aios.dashboard.model.SmartMoneySignal;
+import com.deanrobin.aios.dashboard.repository.PriceTickerRepository;
 import com.deanrobin.aios.dashboard.service.PortfolioService;
 import com.deanrobin.aios.dashboard.service.SmartMoneyService;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +19,22 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ApiController {
 
-    private final SmartMoneyService smartMoneyService;
-    private final PortfolioService portfolioService;
+    private final SmartMoneyService      smartMoneyService;
+    private final PortfolioService       portfolioService;
+    private final PriceTickerRepository  priceRepo;
+
+    /** 最新四币价格（从 DB 读，PriceFetchJob 每 30s 更新） */
+    @GetMapping("/prices")
+    public List<Map<String, Object>> prices() {
+        return priceRepo.findAllByOrderBySymbolAsc().stream().map(p -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("symbol",    p.getSymbol());
+            m.put("priceUsd",  p.getPriceUsd());
+            m.put("change24h", p.getChange24h());
+            m.put("updatedAt", p.getUpdatedAt() != null ? p.getUpdatedAt().toString() : null);
+            return m;
+        }).collect(Collectors.toList());
+    }
 
     private static final DateTimeFormatter SIG_FMT =
         DateTimeFormatter.ofPattern("MM-dd HH:mm");
