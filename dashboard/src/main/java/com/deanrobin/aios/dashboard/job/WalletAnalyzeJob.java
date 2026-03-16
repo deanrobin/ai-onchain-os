@@ -91,9 +91,9 @@ public class WalletAnalyzeJob {
     private void analyze(SmartMoneyWallet w, String timeFrame) {
         // 1. 抓 overview
         Map<?, ?> resp = okxClient.getWeb3(OVERVIEW_PATH, Map.of(
-            "chainIndex", w.getChainIndex(),
-            "address",    w.getAddress(),
-            "timeFrame",  timeFrame
+            "chainIndex",    w.getChainIndex(),
+            "walletAddress", w.getAddress(),   // OKX 参数名是 walletAddress
+            "timeFrame",     timeFrame
         ));
         if (resp == null || !"0".equals(String.valueOf(resp.get("code")))) return;
 

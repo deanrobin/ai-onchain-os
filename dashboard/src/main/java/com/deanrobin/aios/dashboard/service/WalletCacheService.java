@@ -105,11 +105,14 @@ public class WalletCacheService {
     private Map<String, Object> fetchOverviewFromOkx(String address, String chain, String timeFrame) {
         try {
             Map<?, ?> resp = okxClient.getWeb3(OVERVIEW_PATH, Map.of(
-                "chainIndex", chain,
-                "address",    address,
-                "timeFrame",  timeFrame
+                "chainIndex",   chain,
+                "walletAddress", address,   // OKX 用 walletAddress，不是 address
+                "timeFrame",    timeFrame
             ));
-            if (resp == null || !"0".equals(String.valueOf(resp.get("code")))) return Map.of();
+            if (resp == null || !"0".equals(String.valueOf(resp.get("code")))) {
+                log.warn("⚠️ OKX overview 返回异常 addr={} code={} msg={}", address.substring(0,8), resp != null ? resp.get("code") : "null", resp != null ? resp.get("msg") : "");
+                return Map.of();
+            }
             Object data = resp.get("data");
             Map<?, ?> raw = null;
             if (data instanceof List<?> l && !l.isEmpty()) raw = (Map<?, ?>) l.get(0);
@@ -153,13 +156,27 @@ public class WalletCacheService {
                 "chains",  chain,
                 "limit",   String.valueOf(txHistoryLimit)
             ));
-            if (resp == null || !"0".equals(String.valueOf(resp.get("code")))) return List.of();
+            if (resp == null || !"0".equals(String.valueOf(resp.get("code")))) {
+                log.warn("⚠️ OKX tx_history 返回异常 addr={} code={} msg={}", address.substring(0,8), resp != null ? resp.get("code") : "null", resp != null ? resp.get("msg") : "");
+                return List.of();
+            }
 
-            Object txData = resp.get("data");
+            // OKX 返回结构：data=[{transactions:[...], ...}]
+            Object rawData = resp.get("data");
             List<?> txList = null;
-            if (txData instanceof Map<?,?> txMap) txList = (List<?>) txMap.get("transactions");
-            else if (txData instanceof List<?> l)  txList = l;
-            if (txList == null || txList.isEmpty()) return List.of();
+            if (rawData instanceof List<?> dataList && !dataList.isEmpty()
+                    && dataList.get(0) instanceof Map<?,?> firstItem) {
+                Object txs = firstItem.get("transactions");
+                if (txs instanceof List<?> l) txList = l;
+            } else if (rawData instanceof Map<?,?> m) {
+                Object txs = m.get("transactions");
+                if (txs instanceof List<?> l) txList = l;
+            }
+            if (txList == null || txList.isEmpty()) {
+                log.info("📭 tx_history 无数据 addr={} chain={}", address.substring(0,8), chain);
+                return List.of();
+            }
+            log.info("✅ tx_history 获取成功 addr={} chain={} count={}", address.substring(0,8), chain, txList.size());
 
             return saveTxCache(address, chain, txList);
         } catch (Exception e) {
