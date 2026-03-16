@@ -53,7 +53,8 @@ public class OverviewVO {
         OverviewVO v = new OverviewVO();
         if (raw == null || raw.isEmpty()) return v;
 
-        double wr  = toDouble(raw.get("winRate"));
+        // OKX 返回 winRate = "72.41"（已是百分比，如 72.41%），除以100转为小数再格式化
+        double wr  = toDouble(raw.get("winRate")) / 100.0;
         double pnl = toDouble(raw.get("realizedPnlUsd"));
         double top3= toDouble(raw.get("top3PnlTokenSumUsd"));
         double avg = toDouble(raw.get("avgBuyValueUsd"));
