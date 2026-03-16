@@ -8,7 +8,7 @@
     <div class="col-6 col-lg-3">
         <div class="stat-card sc-blue">
             <span class="sc-icon">🧠</span>
-            <div class="sc-val" th:text="${topWallets.size()}">0</div>
+            <div class="sc-val" id="stat-wallets" th:text="${topWallets.size()}">0</div>
             <div class="sc-lbl">聪明钱追踪</div>
             <div class="mini-bar"><div class="mini-bar-fill" style="width:65%"></div></div>
         </div>
@@ -16,7 +16,7 @@
     <div class="col-6 col-lg-3">
         <div class="stat-card sc-green">
             <span class="sc-icon">⚡</span>
-            <div class="sc-val" th:text="${recentSignals.size()}">0</div>
+            <div class="sc-val" id="stat-signals" th:text="${recentSignals.size()}">0</div>
             <div class="sc-lbl">今日信号</div>
             <div class="mini-bar"><div class="mini-bar-fill" style="width:42%;background:linear-gradient(90deg,var(--green),#34d399)"></div></div>
         </div>
@@ -25,9 +25,7 @@
         <div class="stat-card sc-purple">
             <span class="sc-icon">🔗</span>
             <div class="sc-val" style="font-size:.85rem;line-height:2.2;letter-spacing:0">
-                <span class="chain-badge c-1">ETH</span>
-                <span class="chain-badge c-56 ms-1">BSC</span>
-                <span class="chain-badge c-8453 ms-1">Base</span>
+                <span class="chain-badge c-56">BSC</span>
                 <span class="chain-badge c-501 ms-1">SOL</span>
             </div>
             <div class="sc-lbl">覆盖链</div>
@@ -46,19 +44,20 @@
 <!-- ── Main Grid ── -->
 <div class="row g-3">
 
-    <!-- 聪明钱 Top 10 -->
+    <!-- 聪明钱 Top 20 -->
     <div class="col-xl-6">
         <div class="card h-100">
             <div class="card-header">
-                🏆 聪明钱排行 Top 10
+                🏆 聪明钱排行 <span id="rank-title">Top 20</span>
                 <span class="info-pill ms-2">综合评分</span>
                 <a href="/smart-money" class="btn-outline ms-auto" style="font-size:.75rem">全部 →</a>
             </div>
+            <div id="wallet-list-wrap">
             <div th:if="${topWallets.isEmpty()}" class="empty-state">
                 <div class="ei">🔍</div>
-                <div>暂无数据，先运行<br><code style="color:var(--blue)">python main.py all</code></div>
+                <div>暂无数据</div>
             </div>
-            <table th:unless="${topWallets.isEmpty()}" class="table">
+            <table th:unless="${topWallets.isEmpty()}" class="table" id="wallet-tbl">
                 <thead><tr>
                     <th style="width:44px">#</th>
                     <th>钱包地址</th>
@@ -78,7 +77,7 @@
                            class="addr"
                            th:text="${#strings.substring(w.address,0,6)+'...'+#strings.substring(w.address,w.address.length()-4)}"></a>
                         <span class="chain-badge ms-1" th:classappend="'c-'+${w.chainIndex}"
-                              th:text="${w.chainIndex=='1'?'ETH':w.chainIndex=='56'?'BSC':w.chainIndex=='8453'?'Base':'SOL'}"></span>
+                              th:text="${w.chainIndex=='56'?'BSC':'SOL'}"></span>
                     </td>
                     <td>
                         <span class="score-pill"
@@ -96,6 +95,7 @@
                 </tr>
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 
@@ -106,17 +106,21 @@
                 <span class="pulse-dot"></span>
                 <span class="ms-2">实时买入信号</span>
                 <span class="info-pill ms-2">Smart Money</span>
-                <button class="btn-primary-g ms-auto" onclick="refreshIdx()" style="padding:5px 14px;font-size:.75rem">⚡ 刷新</button>
+                <!-- 刷新按钮：点击后灰色倒计时 5 秒 -->
+                <button id="refresh-btn" class="btn-primary-g ms-auto"
+                        onclick="manualRefresh()"
+                        style="padding:5px 14px;font-size:.75rem;min-width:80px">⚡ 刷新</button>
             </div>
+            <div id="sig-wrap">
             <div th:if="${recentSignals.isEmpty()}" class="empty-state">
                 <div class="ei">📭</div>
-                <div>点击刷新获取最新信号</div>
+                <div>暂无信号</div>
             </div>
             <table th:unless="${recentSignals.isEmpty()}" class="table" id="idx-sig-tbl">
                 <thead><tr>
                     <th>时间</th><th>代币</th><th>链</th><th>买入金额</th><th>钱包数</th>
                 </tr></thead>
-                <tbody>
+                <tbody id="sig-tbody">
                 <tr th:each="s : ${recentSignals}" class="sig-row">
                     <td class="mono t-dim" style="font-size:.7rem"
                         th:text="${#temporals.format(s.signalTime,'MM-dd HH:mm')}"></td>
@@ -126,39 +130,142 @@
                              th:text="${#strings.substring(s.tokenAddress,0,10)+'...'}"></div>
                     </td>
                     <td><span class="chain-badge" th:classappend="'c-'+${s.chainIndex}"
-                              th:text="${s.chainIndex=='1'?'ETH':s.chainIndex=='56'?'BSC':s.chainIndex=='8453'?'Base':s.chainIndex=='501'?'SOL':s.chainIndex}"></span></td>
+                              th:text="${s.chainIndex=='56'?'BSC':s.chainIndex=='501'?'SOL':s.chainIndex}"></span></td>
                     <td><span class="up fw-7" th:text="${'$'+#numbers.formatDecimal(s.amountUsd,1,0)}"></span></td>
                     <td><span class="tag-blue" th:text="${s.triggerWalletCount+' 🧠'}"></span></td>
                 </tr>
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- 右下角自动刷新倒计时提示 -->
+<div id="auto-refresh-tip"
+     style="position:fixed;bottom:18px;right:18px;background:rgba(0,0,0,.55);color:#fff;
+            padding:6px 14px;border-radius:20px;font-size:.74rem;pointer-events:none;z-index:999">
+    🔄 <span id="countdown">60</span>s 后自动刷新
+</div>
+
 <script>
-async function refreshIdx() {
-    try {
-        const r = await fetch('/api/signals?chain=1&walletType=1');
-        const sigs = await r.json();
-        if(!sigs.length) return;
-        const tbody = document.querySelector('#idx-sig-tbl tbody');
-        if(!tbody) return;
-        sigs.slice(0,8).forEach(s => {
-            const t = s.token||{};
-            const ts = new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-            const tr = document.createElement('tr');
-            tr.className = 'sig-row';
-            tr.innerHTML = `
-                <td class="mono t-dim" style="font-size:.7rem">${ts}</td>
-                <td><div class="fw-7">${t.symbol||'?'}</div><div class="addr" style="font-size:.68rem">${(t.tokenAddress||'').substring(0,10)}...</div></td>
-                <td><span class="chain-badge c-1">ETH</span></td>
-                <td><span class="up fw-7">$${parseFloat(s.amountUsd||0).toFixed(0)}</span></td>
-                <td><span class="tag-blue">${s.triggerWalletCount||0} 🧠</span></td>`;
-            tbody.prepend(tr);
-        });
-    } catch(e){}
+// ───────────── 数据刷新逻辑 ─────────────
+
+async function refreshAll() {
+    await Promise.all([refreshWallets(), refreshSignals()]);
 }
+
+async function refreshWallets() {
+    try {
+        const r = await fetch('/api/wallets?limit=20');
+        const wallets = await r.json();
+        if (!wallets || !wallets.length) return;
+        document.getElementById('stat-wallets').textContent = wallets.length;
+        const medals = ['🥇','🥈','🥉'];
+        const tbody = document.querySelector('#wallet-tbl tbody');
+        if (!tbody) return;
+        tbody.innerHTML = wallets.slice(0,20).map((w,i) => {
+            const rank = i < 3 ? medals[i] : '#'+(i+1);
+            const addr = w.address || '';
+            const short = addr.length > 10 ? addr.substring(0,6)+'...'+addr.slice(-4) : addr;
+            const chain = w.chainIndex==='56'?'BSC':'SOL';
+            const sc = parseFloat(w.score||0);
+            const pillCls = sc>=75?'score-pill s-high':sc>=50?'score-pill s-med':'score-pill';
+            const wr = parseFloat(w.winRate||0);
+            const wrCls = wr>=0.5?'up fw-7':'dn';
+            const pnl = parseFloat(w.realizedPnlUsd||0);
+            const pnlCls = pnl>=0?'tag-up':'tag-dn';
+            const pnlTxt = (pnl>=0?'▲ +$':'▼ $')+Math.abs(pnl).toLocaleString('en',{maximumFractionDigits:0});
+            return `<tr class="${i<3?'rank-'+(i+1):''}">
+                <td><span class="mono fw-7 t-dim">${rank}</span></td>
+                <td><a href="/smart-money/${addr}?chain=${w.chainIndex}" class="addr">${short}</a>
+                    <span class="chain-badge ms-1 c-${w.chainIndex}">${chain}</span></td>
+                <td><span class="${pillCls}">${sc.toFixed(1)}</span></td>
+                <td class="${wrCls}">${(wr*100).toFixed(1)}%</td>
+                <td><span class="${pnlCls}">${pnlTxt}</span></td>
+            </tr>`;
+        }).join('');
+    } catch(e){ console.warn('refreshWallets', e); }
+}
+
+async function refreshSignals() {
+    try {
+        const r = await fetch('/api/signals/db?limit=20');
+        const sigs = await r.json();
+        if (!sigs || !sigs.length) return;
+        document.getElementById('stat-signals').textContent = sigs.length;
+        const tbody = document.getElementById('sig-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = sigs.map(s => {
+            const addr = s.tokenAddress || '';
+            const chain = s.chainIndex==='56'?'BSC':s.chainIndex==='501'?'SOL':s.chainIndex;
+            const ts = s.signalTimeStr || '';
+            return `<tr class="sig-row">
+                <td class="mono t-dim" style="font-size:.7rem">${ts}</td>
+                <td><div class="fw-7">${s.tokenSymbol||'?'}</div>
+                    <div class="addr" style="font-size:.68rem">${addr.substring(0,10)}...</div></td>
+                <td><span class="chain-badge c-${s.chainIndex}">${chain}</span></td>
+                <td><span class="up fw-7">$${parseFloat(s.amountUsd||0).toLocaleString('en',{maximumFractionDigits:0})}</span></td>
+                <td><span class="tag-blue">${s.triggerWalletCount||0} 🧠</span></td>
+            </tr>`;
+        }).join('');
+    } catch(e){ console.warn('refreshSignals', e); }
+}
+
+// ───────────── 手动刷新 + 5 秒冷却 ─────────────
+
+let refreshCooldown = false;
+let cooldownTimer = null;
+
+function manualRefresh() {
+    if (refreshCooldown) return;
+    refreshCooldown = true;
+    const btn = document.getElementById('refresh-btn');
+    let secs = 5;
+    btn.disabled = true;
+    btn.style.opacity = '0.45';
+    btn.style.cursor = 'not-allowed';
+    btn.textContent = `⏳ ${secs}s`;
+    cooldownTimer = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+            clearInterval(cooldownTimer);
+            refreshCooldown = false;
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = '';
+            btn.textContent = '⚡ 刷新';
+        } else {
+            btn.textContent = `⏳ ${secs}s`;
+        }
+    }, 1000);
+    refreshAll();
+    resetCountdown(); // 手动刷新后重置自动刷新倒计时
+}
+
+// ───────────── 60 秒自动刷新 ─────────────
+
+let autoSeconds = 60;
+let countdownTimer = null;
+
+function resetCountdown() {
+    autoSeconds = 60;
+    document.getElementById('countdown').textContent = autoSeconds;
+}
+
+function startAutoRefresh() {
+    countdownTimer = setInterval(() => {
+        autoSeconds--;
+        document.getElementById('countdown').textContent = autoSeconds;
+        if (autoSeconds <= 0) {
+            autoSeconds = 60;
+            refreshAll();
+        }
+    }, 1000);
+}
+
+// 启动
+startAutoRefresh();
 </script>
 </main></body>
 </html>

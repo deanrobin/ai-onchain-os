@@ -1,5 +1,6 @@
 package com.deanrobin.aios.dashboard.service;
 
+import com.deanrobin.aios.dashboard.model.SmartMoneySignal;
 import com.deanrobin.aios.dashboard.repository.SmartMoneyWalletRepository;
 import com.deanrobin.aios.dashboard.repository.SmartMoneySignalRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,7 @@ public class SmartMoneyService {
     }
 
     /** 从 DB 获取最近信号 */
-    public List<?> getRecentSignals(String chainIndex, int limit) {
+    public List<SmartMoneySignal> getRecentSignals(String chainIndex, int limit) {
         if (chainIndex != null && !chainIndex.isEmpty()) {
             return signalRepo.findRecentByChain(chainIndex, limit);
         }

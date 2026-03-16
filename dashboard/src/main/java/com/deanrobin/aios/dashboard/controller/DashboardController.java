@@ -33,7 +33,7 @@ public class DashboardController {
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("activePage", "index");
-        model.addAttribute("topWallets", smartMoneyService.getTopWallets(30));
+        model.addAttribute("topWallets", smartMoneyService.getTopWallets(20));
         model.addAttribute("recentSignals", smartMoneyService.getRecentSignals(null, 20));
         return "index";
     }

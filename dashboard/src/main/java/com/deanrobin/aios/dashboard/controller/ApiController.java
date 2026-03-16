@@ -1,12 +1,15 @@
 package com.deanrobin.aios.dashboard.controller;
 
+import com.deanrobin.aios.dashboard.model.SmartMoneySignal;
 import com.deanrobin.aios.dashboard.service.PortfolioService;
 import com.deanrobin.aios.dashboard.service.SmartMoneyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /** REST endpoints for AJAX calls from frontend */
 @RestController
@@ -16,6 +19,26 @@ public class ApiController {
 
     private final SmartMoneyService smartMoneyService;
     private final PortfolioService portfolioService;
+
+    private static final DateTimeFormatter SIG_FMT =
+        DateTimeFormatter.ofPattern("MM-dd HH:mm");
+
+    /** 从 DB 读最新信号，供首页 AJAX 刷新使用（含格式化时间字符串） */
+    @GetMapping("/signals/db")
+    public List<Map<String, Object>> signalsFromDb(
+            @RequestParam(defaultValue = "20") int limit) {
+        return smartMoneyService.getRecentSignals(null, limit).stream().map(s -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("tokenSymbol",       s.getTokenSymbol());
+            m.put("tokenAddress",      s.getTokenAddress());
+            m.put("chainIndex",        s.getChainIndex());
+            m.put("amountUsd",         s.getAmountUsd());
+            m.put("triggerWalletCount",s.getTriggerWalletCount());
+            m.put("signalTimeStr",     s.getSignalTime() != null
+                ? s.getSignalTime().format(SIG_FMT) : "—");
+            return m;
+        }).collect(Collectors.toList());
+    }
 
     @GetMapping("/signals")
     public List<?> signals(
