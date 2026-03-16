@@ -141,12 +141,7 @@
     </div>
 </div>
 
-<!-- 右下角自动刷新倒计时提示 -->
-<div id="auto-refresh-tip"
-     style="position:fixed;bottom:18px;right:18px;background:rgba(0,0,0,.55);color:#fff;
-            padding:6px 14px;border-radius:20px;font-size:.74rem;pointer-events:none;z-index:999">
-    🔄 <span id="countdown">60</span>s 后自动刷新
-</div>
+
 
 <script>
 // ───────────── 数据刷新逻辑 ─────────────
@@ -250,15 +245,25 @@ let countdownTimer = null;
 
 function resetCountdown() {
     autoSeconds = 60;
-    document.getElementById('countdown').textContent = autoSeconds;
+    updateCountdownBadge(autoSeconds);
+}
+
+function updateCountdownBadge(s) {
+    const el = document.getElementById('nav-countdown');
+    if (el) el.textContent = s;
 }
 
 function startAutoRefresh() {
+    // 显示 nav-bar 里的倒计时徽章（仅首页）
+    const badge = document.getElementById('nav-refresh-badge');
+    if (badge) badge.style.display = 'inline-block';
+
     countdownTimer = setInterval(() => {
         autoSeconds--;
-        document.getElementById('countdown').textContent = autoSeconds;
+        updateCountdownBadge(autoSeconds);
         if (autoSeconds <= 0) {
             autoSeconds = 60;
+            updateCountdownBadge(autoSeconds);
             refreshAll();
         }
     }, 1000);

@@ -385,6 +385,13 @@
     </div>
     <div class="nav-right">
         <span class="live-indicator">实时</span>
+        <!-- 自动刷新倒计时（仅首页显示，由 index.html JS 控制） -->
+        <span id="nav-refresh-badge" style="display:none;
+              background:#f0f4ff;border:1px solid #c7d7fa;color:#3b82f6;
+              border-radius:20px;padding:3px 11px;font-size:.74rem;font-weight:600;
+              pointer-events:none;user-select:none;letter-spacing:.02em">
+            🔄 <span id="nav-countdown">60</span>s
+        </span>
         <span class="clock-pill" id="clock">--</span>
     </div>
 </nav>
