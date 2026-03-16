@@ -37,10 +37,7 @@ public class SignalFetchJob {
     /**
      * fixedDelayString 读 yml，单位 ms，启动 10s 后开始跑
      */
-    @Scheduled(
-        initialDelayString = "30000",
-        fixedDelayString   = "#{${smart-money.jobs.signal-fetch.interval-minutes:1} * 60000}"
-    )
+    @Scheduled(initialDelay = 30000, fixedDelay = 10000)
     public void run() {
         SmartMoneyJobConfig.SignalFetch cfg = jobConfig.getSignalFetch();
         if (!cfg.isEnabled()) {

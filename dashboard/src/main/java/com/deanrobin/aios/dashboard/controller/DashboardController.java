@@ -19,9 +19,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Controller
@@ -87,9 +89,22 @@ public class DashboardController {
         model.addAttribute("ov", OverviewVO.from(rawOverview));
         model.addAttribute("hasOverview", !rawOverview.isEmpty());
 
-        // 交易记录：从 DB 缓存读，不调 OKX
+        // 交易记录：30秒内有缓存直接用，否则按需从 OKX 拉一次
         List<WalletTxCache> cachedTxs = txCacheRepo
             .findByAddressAndChainIndexOrderByTxTimeDesc(address, chain);
+        boolean cacheStale = cachedTxs.isEmpty() ||
+            cachedTxs.get(0).getCreatedAt().isBefore(LocalDateTime.now().minusSeconds(30));
+        if (cacheStale) {
+            try {
+                Map<?, ?> txData = portfolioService.getTxHistory(address, chain, "50");
+                Object txRaw = txData.get("transactions");
+                if (txRaw instanceof List<?> freshList && !freshList.isEmpty()) {
+                    cachedTxs = buildAndSaveTxCache(address, chain, freshList);
+                }
+            } catch (Exception e) {
+                log.warn("⚠️ 按需抓取 tx_history 失败 addr={}: {}", address.substring(0,10), e.getMessage());
+            }
+        }
         List<TxRowVO> txRows = cachedTxs.stream().map(tx -> {
             TxRowVO row = new TxRowVO();
             row.setDisplayTime(tx.getDisplayTime() != null ? tx.getDisplayTime() : "—");
@@ -113,6 +128,50 @@ public class DashboardController {
         model.addAttribute("explorer", explorer);
 
         return "wallet-detail";
+    }
+
+    /** 把 OKX 原始 txList 存入 DB 缓存并返回 WalletTxCache 列表 */
+    @SuppressWarnings("unchecked")
+    private List<WalletTxCache> buildAndSaveTxCache(String address, String chain, List<?> txList) {
+        String explorer = chain.equals("56") ? "https://bscscan.com/tx/"
+                        : chain.equals("501") ? "https://solscan.io/tx/"
+                        : "https://etherscan.io/tx/";
+        String addrLower = address.toLowerCase();
+        txCacheRepo.deleteByAddressAndChainIndex(address, chain);
+        List<WalletTxCache> rows = new ArrayList<>();
+        for (Object item : txList) {
+            if (!(item instanceof Map<?,?> tx)) continue;
+            WalletTxCache row = new WalletTxCache();
+            row.setAddress(address);
+            row.setChainIndex(chain);
+            Object tsObj = tx.get("txTime");
+            if (tsObj != null) {
+                try {
+                    long ts = Long.parseLong(String.valueOf(tsObj));
+                    row.setTxTime(ts);
+                    row.setDisplayTime(TX_FMT.format(Instant.ofEpochMilli(ts)));
+                } catch (Exception e) { row.setDisplayTime("—"); }
+            }
+            Object itypeObj = tx.get("itype");
+            String itype = itypeObj != null ? String.valueOf(itypeObj) : "";
+            row.setTypeLabel("2".equals(itype) ? "Token转账" : "0".equals(itype) ? "主链币" : "合约调用");
+            Object sym = tx.get("symbol"); row.setSymbol(sym != null ? String.valueOf(sym) : "—");
+            Object amt = tx.get("amount"); row.setAmount(amt != null ? String.valueOf(amt) : "—");
+            boolean incoming = false;
+            Object toObj = tx.get("to");
+            if (toObj instanceof List<?> toList && !toList.isEmpty() && toList.get(0) instanceof Map<?,?> toMap) {
+                Object toAddr = toMap.get("address");
+                incoming = toAddr != null && String.valueOf(toAddr).toLowerCase().contains(addrLower);
+            }
+            row.setIncoming(incoming);
+            row.setSuccess("success".equals(tx.get("txStatus")));
+            Object hash = tx.get("txHash"); String hashStr = hash != null ? String.valueOf(hash) : "";
+            row.setTxHash(hashStr);
+            row.setExplorerUrl(explorer + hashStr);
+            row.setCreatedAt(LocalDateTime.now());
+            rows.add(row);
+        }
+        return txCacheRepo.saveAll(rows);
     }
 
     @SuppressWarnings("unchecked")
