@@ -16,11 +16,21 @@
           th:text="${chain=='1'?'ETH':chain=='56'?'BSC':chain=='8453'?'Base':'SOL'}"></span>
     <!-- Time Frame -->
     <div class="tab-row">
-        <div th:each="tf : ${{1,2,3,4,5}}" class="tab-item"
-             th:classappend="${timeFrame==tf?' active':''}"
-             th:text="${tf==1?'1D':tf==2?'3D':tf==3?'7D':tf==4?'1M':'3M'}"
-             th:attr="data-href='?chain='+${chain}+'&amp;timeFrame='+${tf}"
-             onclick="window.location.href=this.dataset.href"></div>
+        <div class="tab-item" th:classappend="${timeFrame=='1' or timeFrame==1?' active':''}"
+             data-href="" th:attr="data-href='?chain='+${chain}+'&amp;timeFrame=1'"
+             onclick="window.location.href=this.dataset.href">1D</div>
+        <div class="tab-item" th:classappend="${timeFrame=='2' or timeFrame==2?' active':''}"
+             data-href="" th:attr="data-href='?chain='+${chain}+'&amp;timeFrame=2'"
+             onclick="window.location.href=this.dataset.href">3D</div>
+        <div class="tab-item" th:classappend="${timeFrame=='3' or timeFrame==3?' active':''}"
+             data-href="" th:attr="data-href='?chain='+${chain}+'&amp;timeFrame=3'"
+             onclick="window.location.href=this.dataset.href">7D</div>
+        <div class="tab-item" th:classappend="${timeFrame=='4' or timeFrame==4?' active':''}"
+             data-href="" th:attr="data-href='?chain='+${chain}+'&amp;timeFrame=4'"
+             onclick="window.location.href=this.dataset.href">1M</div>
+        <div class="tab-item" th:classappend="${timeFrame=='5' or timeFrame==5?' active':''}"
+             data-href="" th:attr="data-href='?chain='+${chain}+'&amp;timeFrame=5'"
+             onclick="window.location.href=this.dataset.href">3M</div>
     </div>
 </div>
 

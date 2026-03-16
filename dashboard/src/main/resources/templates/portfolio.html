@@ -26,10 +26,11 @@
         <span class="chain-badge" th:classappend="'c-'+${entry.chainIndex}"
               th:text="${entry.chainIndex=='1'?'ETH':entry.chainIndex=='56'?'BSC':entry.chainIndex=='8453'?'Base':'SOL'}"></span>
         <div class="tab-row" th:attr="id='tf-'+${eIdx.index}">
-            <div th:each="tf : ${{1,2,3,4,5}}" class="tab-item"
-                 th:classappend="${tf==3?' active':''}"
-                 th:text="${tf==1?'1D':tf==2?'3D':tf==3?'7D':tf==4?'1M':'3M'}"
-                 th:attr="data-tf=${tf}" onclick="switchTf(this)"></div>
+            <div class="tab-item" data-tf="1" onclick="switchTf(this)">1D</div>
+            <div class="tab-item" data-tf="2" onclick="switchTf(this)">3D</div>
+            <div class="tab-item active" data-tf="3" onclick="switchTf(this)">7D</div>
+            <div class="tab-item" data-tf="4" onclick="switchTf(this)">1M</div>
+            <div class="tab-item" data-tf="5" onclick="switchTf(this)">3M</div>
         </div>
         <button class="btn-outline ms-auto"
                 th:onclick="'toggleTx(\''+${entry.address}+'\',\''+${entry.chainIndex}+'\',\'tx-'+${eIdx.index}+'\')'">
