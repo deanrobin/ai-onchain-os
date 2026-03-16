@@ -31,33 +31,30 @@
             <div class="sc-lbl">覆盖链</div>
         </div>
     </div>
-    <!-- 实时币价卡片 -->
+    <!-- 实时币价：与左侧三张 stat-card 保持相同结构 -->
     <div class="col-6 col-lg-3">
-        <div class="stat-card sc-cyan" style="padding:12px 16px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                <span style="font-size:.7rem;color:var(--t3)">实时币价</span>
-                <span id="price-update-time" style="font-size:.65rem;color:var(--t3)">--</span>
+        <div class="stat-card sc-cyan">
+            <span class="sc-icon">💹</span>
+            <div class="sc-lbl" style="margin-bottom:8px">
+                实时币价
+                <span id="price-update-time" style="font-size:.62rem;color:var(--t3);margin-left:6px">--</span>
             </div>
-            <div id="price-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 8px">
+            <div id="price-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:5px 10px">
                 <div class="price-item" data-sym="BTC">
                     <span class="price-sym">BTC</span>
-                    <span class="price-val t-dim">—</span>
-                    <span class="price-chg" style="font-size:.62rem"></span>
+                    <div><span class="price-val">—</span><span class="price-chg"></span></div>
                 </div>
                 <div class="price-item" data-sym="ETH">
                     <span class="price-sym">ETH</span>
-                    <span class="price-val t-dim">—</span>
-                    <span class="price-chg" style="font-size:.62rem"></span>
+                    <div><span class="price-val">—</span><span class="price-chg"></span></div>
                 </div>
                 <div class="price-item" data-sym="BNB">
                     <span class="price-sym">BNB</span>
-                    <span class="price-val t-dim">—</span>
-                    <span class="price-chg" style="font-size:.62rem"></span>
+                    <div><span class="price-val">—</span><span class="price-chg"></span></div>
                 </div>
                 <div class="price-item" data-sym="SOL">
                     <span class="price-sym">SOL</span>
-                    <span class="price-val t-dim">—</span>
-                    <span class="price-chg" style="font-size:.62rem"></span>
+                    <div><span class="price-val">—</span><span class="price-chg"></span></div>
                 </div>
             </div>
         </div>

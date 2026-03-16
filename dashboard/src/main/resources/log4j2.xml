@@ -6,64 +6,67 @@
     </Properties>
 
     <Appenders>
-        <!-- 控制台 -->
-        <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="${PATTERN}" charset="UTF-8"/>
-        </Console>
-
-        <!-- info.log：记录 INFO / WARN / ERROR 全量日志 -->
-        <RollingFile name="InfoFile" fileName="${LOG_DIR}/info.log"
+        <!-- info.log：全量 INFO+，每天归档一次 或 超过 100MB 切割，保留 7 天 -->
+        <RollingFile name="InfoFile"
+                     fileName="${LOG_DIR}/info.log"
                      filePattern="${LOG_DIR}/info-%d{yyyy-MM-dd}-%i.log.gz">
             <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${PATTERN}" charset="UTF-8"/>
             <Policies>
-                <TimeBasedTriggeringPolicy interval="1"/>
-                <SizeBasedTriggeringPolicy size="50MB"/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
             </Policies>
-            <DefaultRolloverStrategy max="30"/>
+            <!-- max=7：保留最近 7 个归档；fileIndex=min 配合 TimeBasedPolicy 每天序号从 1 重新计 -->
+            <DefaultRolloverStrategy max="7" fileIndex="min">
+                <Delete basePath="${LOG_DIR}" maxDepth="1">
+                    <IfFileName glob="info-*.log.gz"/>
+                    <IfLastModified age="7d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
         </RollingFile>
 
-        <!-- error.log：仅记录 ERROR 严重日志 -->
-        <RollingFile name="ErrorFile" fileName="${LOG_DIR}/error.log"
+        <!-- error.log：仅 ERROR，同样每天 or 100MB 切割，保留 7 天 -->
+        <RollingFile name="ErrorFile"
+                     fileName="${LOG_DIR}/error.log"
                      filePattern="${LOG_DIR}/error-%d{yyyy-MM-dd}-%i.log.gz">
             <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${PATTERN}" charset="UTF-8"/>
             <Policies>
-                <TimeBasedTriggeringPolicy interval="1"/>
-                <SizeBasedTriggeringPolicy size="20MB"/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
             </Policies>
-            <DefaultRolloverStrategy max="30"/>
+            <DefaultRolloverStrategy max="7" fileIndex="min">
+                <Delete basePath="${LOG_DIR}" maxDepth="1">
+                    <IfFileName glob="error-*.log.gz"/>
+                    <IfLastModified age="7d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
         </RollingFile>
     </Appenders>
 
     <Loggers>
-        <!-- 业务代码：INFO 级别，输出到 info.log + error.log -->
+        <!-- 业务代码：INFO 级别，只写文件，不再输出到 Console -->
         <Logger name="com.deanrobin.aios" level="INFO" additivity="false">
-            <AppenderRef ref="Console"/>
             <AppenderRef ref="InfoFile"/>
             <AppenderRef ref="ErrorFile"/>
         </Logger>
 
-        <!-- Spring / Hibernate 框架：WARN 以上，减少噪音 -->
+        <!-- Spring / Hibernate / HikariCP：WARN 以上减噪，只写文件 -->
         <Logger name="org.springframework" level="WARN" additivity="false">
-            <AppenderRef ref="Console"/>
             <AppenderRef ref="InfoFile"/>
             <AppenderRef ref="ErrorFile"/>
         </Logger>
         <Logger name="org.hibernate" level="WARN" additivity="false">
-            <AppenderRef ref="Console"/>
             <AppenderRef ref="InfoFile"/>
             <AppenderRef ref="ErrorFile"/>
         </Logger>
         <Logger name="com.zaxxer.hikari" level="WARN" additivity="false">
-            <AppenderRef ref="Console"/>
             <AppenderRef ref="InfoFile"/>
             <AppenderRef ref="ErrorFile"/>
         </Logger>
 
-        <!-- Root：兜底 WARN，写全部输出 -->
+        <!-- Root：兜底 WARN，只写文件 -->
         <Root level="WARN">
-            <AppenderRef ref="Console"/>
             <AppenderRef ref="InfoFile"/>
             <AppenderRef ref="ErrorFile"/>
         </Root>
