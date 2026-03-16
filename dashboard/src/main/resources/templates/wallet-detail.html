@@ -8,9 +8,9 @@
     <a href="/smart-money" class="btn-outline">← 返回</a>
     <span>🧠</span>
     <span class="addr" style="font-size:.88rem" th:text="${address}"
-          th:attr="onclick='copyAddr(\''+${address}+'\')'"></span>
+          th:attr="data-addr=${address}" onclick="copyAddr(this.dataset.addr)"></span>
     <button class="btn-outline" style="font-size:.72rem;padding:3px 8px"
-            th:attr="onclick='copyAddr(\''+${address}+'\')'">📋 复制</button>
+            th:attr="data-addr=${address}" onclick="copyAddr(this.dataset.addr)">📋 复制</button>
     <span class="chain-badge" th:classappend="'c-'+${chain}" th:text="${chainName}"></span>
     <!-- Time Frame -->
     <div class="tab-row">

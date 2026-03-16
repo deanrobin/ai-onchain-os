@@ -21,7 +21,9 @@
     <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
         <span style="font-size:1.05rem">💼</span>
         <span class="fw-7" style="font-size:.95rem" th:text="${entry.label?:'我的钱包'}"></span>
-        <span class="addr" th:attr="onclick='copyAddr(\''+${entry.address}+'\')'"
+        <span class="addr"
+              th:attr="data-addr=${entry.address}"
+              onclick="copyAddr(this.dataset.addr)"
               th:text="${#strings.substring(entry.address,0,8)+'...'+#strings.substring(entry.address,entry.address.length()-6)}"></span>
         <span class="chain-badge" th:classappend="'c-'+${entry.chainIndex}"
               th:text="${entry.chainIndex=='1'?'ETH':entry.chainIndex=='56'?'BSC':entry.chainIndex=='8453'?'Base':'SOL'}"></span>
@@ -33,7 +35,8 @@
             <div class="tab-item" data-tf="5" onclick="switchTf(this)">3M</div>
         </div>
         <button class="btn-outline ms-auto"
-                th:onclick="'toggleTx(\''+${entry.address}+'\',\''+${entry.chainIndex}+'\',\'tx-'+${eIdx.index}+'\')'">
+                th:attr="data-addr=${entry.address},data-chain=${entry.chainIndex},data-txid=${'tx-'+eIdx.index}"
+                onclick="toggleTx(this.dataset.addr,this.dataset.chain,this.dataset.txid)">
             📋 交易记录
         </button>
     </div>
@@ -85,7 +88,8 @@
             🪙 持仓代币 &amp; 盈亏明细
             <span class="info-pill ms-2">已实现盈亏排序</span>
             <button class="btn-outline ms-auto"
-                    th:onclick="'reloadPnl(\''+${entry.address}+'\',\''+${entry.chainIndex}+'\','+${eIdx.index}+')'">
+                    th:attr="data-addr=${entry.address},data-chain=${entry.chainIndex},data-idx=${eIdx.index}"
+                    onclick="reloadPnl(this.dataset.addr,this.dataset.chain,this.dataset.idx)"
                 🔄 刷新
             </button>
         </div>

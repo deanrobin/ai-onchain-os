@@ -40,7 +40,8 @@
                 <td>
                     <span class="addr"
                           th:text="${a.address.length()>20 ? a.address.substring(0,10)+'...'+a.address.substring(a.address.length()-6) : a.address}"
-                          th:attr="onclick='copyAddr(\''+${a.address}+'\')'"
+                          th:attr="data-addr=${a.address}"
+                          onclick="copyAddr(this.dataset.addr)"
                           style="cursor:pointer" title="点击复制完整地址"></span>
                 </td>
                 <td>
