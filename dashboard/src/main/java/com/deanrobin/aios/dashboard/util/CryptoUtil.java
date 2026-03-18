@@ -62,13 +62,13 @@ public final class CryptoUtil {
         return new String(cipher.doFinal(ct), StandardCharsets.UTF_8);
     }
 
-    /** 脱敏：只显示最后4位，前面全部用 * 替换，如 *****abc1 */
+    /** 脱敏：固定8个*号 + 最后4位，如 ********ab1c */
     public static String mask(String plaintext) {
         if (plaintext == null) return "(null)";
-        int len = plaintext.length();
+        String s = plaintext.trim();
+        int len = s.length();
         if (len <= 4) return "*".repeat(len);
-        return "*".repeat(Math.min(len - 4, 8))   // 最多8个*，避免超长
-                + plaintext.substring(len - 4);
+        return "********" + s.substring(len - 4);
     }
 
     private static SecretKey deriveKey(String password, byte[] salt) throws Exception {

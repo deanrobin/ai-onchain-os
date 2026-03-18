@@ -52,7 +52,7 @@ public class KeyLoaderService {
             // 3. 解密
             String plaintext;
             try {
-                plaintext = CryptoUtil.decrypt(encryptedLine, pass);
+                plaintext = CryptoUtil.decrypt(encryptedLine, pass).trim();
             } catch (Exception e) {
                 log.warn("🔑 [KeyLoader] decryption failed: {}", e.getClass().getSimpleName());
                 return;
