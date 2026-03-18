@@ -139,6 +139,9 @@ function openTrade(el) {
     if (url && url !== '#') window.open(url, '_blank', 'noopener');
 }
 
+// ─── 上次金额缓存（token地址 → amountUsd） ───
+const prevAmounts = {};
+
 // ─── 刷新信号 ───
 async function refreshSignals() {
     try {
@@ -173,6 +176,17 @@ async function refreshSignals() {
                 } catch { return false; }
             })();
             const newBadge = isNew ? '<span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:4px;font-size:.6rem;font-weight:700;padding:1px 5px;margin-left:4px;vertical-align:middle">NEW</span>' : '';
+            // 计算买入额增量
+            const curAmt = parseFloat(s.amountUsd||0);
+            const key    = s.chainIndex + ':' + addr;
+            const prev   = prevAmounts[key];
+            let deltaHtml = '';
+            if (prev !== undefined && curAmt > prev + 0.5) {
+                const delta = curAmt - prev;
+                deltaHtml = `<span style="font-size:.68rem;color:var(--green);font-weight:700;margin-left:4px">▲+$${delta.toLocaleString('en',{maximumFractionDigits:0})}</span>`;
+            }
+            prevAmounts[key] = curAmt; // 更新缓存
+
             return `<tr class="sig-row row-flash">
                 <td class="mono t-dim" style="font-size:.72rem">${ts}${newBadge}</td>
                 <td>
@@ -182,7 +196,10 @@ async function refreshSignals() {
                          data-addr="${addr}" data-chain="${s.chainIndex}" onclick="openTrade(this)">${addr.substring(0,10)}...</div>
                 </td>
                 <td><span class="chain-badge c-${s.chainIndex}">${chain}</span></td>
-                <td><span class="up fw-7" style="font-size:.84rem">$${parseFloat(s.amountUsd||0).toLocaleString('en',{maximumFractionDigits:0})}</span></td>
+                <td>
+                    <span class="up fw-7" style="font-size:.84rem">$${curAmt.toLocaleString('en',{maximumFractionDigits:0})}</span>
+                    ${deltaHtml}
+                </td>
                 <td class="mono t-dim" style="font-size:.78rem">${mcStr}</td>
                 <td class="mono" style="font-size:.78rem">${prStr}</td>
                 <td><span class="tag-blue" style="font-size:.74rem">${s.triggerWalletCount||0}</span></td>
