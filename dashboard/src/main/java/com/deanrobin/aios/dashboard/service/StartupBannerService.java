@@ -32,6 +32,6 @@ public class StartupBannerService {
                 ? String.format("%.2fs", uptimeSec)
                 : String.format("%.0fm%.0fs", uptimeSec / 60, uptimeSec % 60);
 
-        log.info("🚀 aios-dashboard v{} started in {} | port=9900", VERSION, startCost);
+        log.info("🚀 aios-dashboard v{} started successfully in {} | port=9900", VERSION, startCost);
     }
 }
