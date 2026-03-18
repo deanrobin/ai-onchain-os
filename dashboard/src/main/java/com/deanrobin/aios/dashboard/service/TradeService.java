@@ -62,21 +62,50 @@ public class TradeService {
     // ─────────────────────────── PUBLIC API ───────────────────────────
 
     public TradeResult executeTrade(String chain, String tokenCA, String amount) {
+        return executeTrade(chain, tokenCA, amount, null);
+    }
+
+    public TradeResult executeTrade(String chain, String tokenCA, String amount, String slippage) {
+        // 滑点处理：传入值优先，兜底 DEFAULT_SLIPPAGE（10%）
+        String resolvedSlippage = resolveSlippage(slippage);
         try {
             return switch (chain.toLowerCase()) {
-                case "bsc", "56"  -> executeBscTrade(tokenCA, amount);
-                case "sol", "501" -> executeSolTrade(tokenCA, amount);
+                case "bsc", "56"  -> executeBscTrade(tokenCA, amount, resolvedSlippage);
+                case "sol", "501" -> executeSolTrade(tokenCA, amount, resolvedSlippage);
                 default -> TradeResult.error("不支持的链: " + chain + "（仅支持 bsc / sol）");
             };
         } catch (Exception e) {
-            log.error("Trade failed chain={} tokenCA={} amount={}", chain, tokenCA, amount, e);
+            log.error("Trade failed chain={} tokenCA={} amount={} slippage={}", chain, tokenCA, amount, resolvedSlippage, e);
             return TradeResult.error(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * 解析滑点值，返回 OKX API 格式（0~1 的小数字符串，如 "0.1" 表示 10%）。
+     * 支持：null/空 → 默认10%；"10" → 解析为 0.10（百分比格式）；"0.1" → 直接使用。
+     */
+    private String resolveSlippage(String slippage) {
+        if (slippage == null || slippage.isBlank()) return DEFAULT_SLIPPAGE;
+        slippage = slippage.trim();
+        try {
+            BigDecimal val = new BigDecimal(slippage);
+            // 若大于 1，视为百分比格式（如 "10" → 0.10）
+            if (val.compareTo(BigDecimal.ONE) > 0) {
+                val = val.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
+            }
+            // 限制范围 0.001 ~ 0.5（0.1% ~ 50%）
+            if (val.compareTo(new BigDecimal("0.001")) < 0) val = new BigDecimal("0.001");
+            if (val.compareTo(new BigDecimal("0.5"))   > 0) val = new BigDecimal("0.5");
+            return val.stripTrailingZeros().toPlainString();
+        } catch (Exception e) {
+            log.warn("⚠️ 滑点参数解析失败 slippage={}，使用默认值 {}", slippage, DEFAULT_SLIPPAGE);
+            return DEFAULT_SLIPPAGE;
         }
     }
 
     // ─────────────────────────── BSC ──────────────────────────────────
 
-    private TradeResult executeBscTrade(String tokenCA, String amount) throws Exception {
+    private TradeResult executeBscTrade(String tokenCA, String amount, String slippage) throws Exception {
         String rawKey = loadEnvKey("WALLET_PRIVATE_KEY_EVM");
         Credentials credentials = Credentials.create(rawKey);
         String walletAddress = credentials.getAddress();
@@ -88,12 +117,13 @@ public class TradeService {
                 .toBigInteger();
 
         // ── 1. Get swap data from OKX DEX (retry 3×, 1 s) ──
+        log.info("BSC slippage={} ({}%)", slippage, new BigDecimal(slippage).multiply(BigDecimal.valueOf(100)).toPlainString());
         Map<String, String> params = new LinkedHashMap<>();
         params.put("chainId",          "56");
         params.put("fromTokenAddress", BSC_NATIVE);
         params.put("toTokenAddress",   tokenCA);
         params.put("amount",           amountWei.toString());
-        params.put("slippage",         DEFAULT_SLIPPAGE);
+        params.put("slippage",         slippage);
         params.put("userWalletAddress", walletAddress);
 
         Map<?, ?> swapResp = callOkxSwapWithRetry(params);
@@ -149,7 +179,7 @@ public class TradeService {
 
     // ─────────────────────────── SOLANA ───────────────────────────────
 
-    private TradeResult executeSolTrade(String tokenCA, String amount) throws Exception {
+    private TradeResult executeSolTrade(String tokenCA, String amount, String slippage) throws Exception {
         String rawKey = loadEnvKey("WALLET_PRIVATE_KEY_SOL");
         byte[] keypair = base58Decode(rawKey.trim());
         // Solana keypair: first 32 bytes = Ed25519 seed, last 32 = public key
@@ -168,12 +198,13 @@ public class TradeService {
                 .toBigInteger();
 
         // ── 1. Get swap data from OKX DEX (retry 3×, 1 s) ──
+        log.info("SOL slippage={} ({}%)", slippage, new BigDecimal(slippage).multiply(BigDecimal.valueOf(100)).toPlainString());
         Map<String, String> params = new LinkedHashMap<>();
         params.put("chainId",          "501");
         params.put("fromTokenAddress", SOL_NATIVE);
         params.put("toTokenAddress",   tokenCA);
         params.put("amount",           lamports.toString());
-        params.put("slippage",         DEFAULT_SLIPPAGE);
+        params.put("slippage",         slippage);
         params.put("userWalletAddress", walletAddress);
 
         Map<?, ?> swapResp = callOkxSwapWithRetry(params);

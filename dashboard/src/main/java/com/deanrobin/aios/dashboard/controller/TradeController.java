@@ -29,16 +29,18 @@ public class TradeController {
 
     /**
      * 执行交易
-     * @param chain   "bsc" 或 "sol"
-     * @param tokenCA 目标代币合约地址 (CA)
-     * @param amount  金额（BNB 或 SOL 数量，如 0.1）
+     * @param chain    "bsc" 或 "sol"
+     * @param tokenCA  目标代币合约地址 (CA)
+     * @param amount   金额（BNB 或 SOL 数量，如 0.1）
+     * @param slippage 滑点，可选，支持小数（0.1 = 10%）或百分比（10 = 10%），默认 0.1（10%）
      */
     @PostMapping("/trade/execute")
     @ResponseBody
     public ResponseEntity<TradeResult> executeT(
             @RequestParam String chain,
             @RequestParam String tokenCA,
-            @RequestParam String amount) {
+            @RequestParam String amount,
+            @RequestParam(required = false) String slippage) {
 
         // ── 基础校验 ──────────────────────────────────────────────────
         if (chain == null || chain.isBlank()
@@ -62,9 +64,18 @@ public class TradeController {
             return ResponseEntity.badRequest()
                     .body(TradeResult.error("amount 格式错误（需为数字，如 0.1）"));
         }
+        if (slippage != null && !slippage.isBlank()) {
+            try {
+                new java.math.BigDecimal(slippage.trim());
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest()
+                        .body(TradeResult.error("slippage 格式错误（如 0.1 表示10%，或直接填 10）"));
+            }
+        }
 
-        log.info("Trade request chain={} tokenCA={} amount={}", chain, tokenCA, amount);
-        TradeResult result = tradeService.executeTrade(chain, tokenCA, amount);
+        log.info("Trade request chain={} tokenCA={} amount={} slippage={}", chain, tokenCA, amount,
+                slippage != null && !slippage.isBlank() ? slippage : "default(10%)");
+        TradeResult result = tradeService.executeTrade(chain, tokenCA, amount, slippage);
         return ResponseEntity.ok(result);
     }
 }

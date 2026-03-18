@@ -227,7 +227,20 @@
                 </div>
                 <p class="field-hint">
                     输入花费的原生代币数量（BSC 为 BNB，Solana 为 SOL）。
-                    滑点默认 10%，Gas 自动从 OKX 获取，最多重试 3 次。
+                </p>
+            </div>
+
+            <!-- Slippage -->
+            <div class="field-group">
+                <label class="field-label" for="slippage">滑点（%）</label>
+                <div class="amount-row">
+                    <input class="field-input" id="slippage" type="number"
+                           step="0.1" min="0.1" max="50"
+                           placeholder="10" value="10">
+                    <span class="amount-unit">%</span>
+                </div>
+                <p class="field-hint">
+                    允许的最大价格偏差，范围 0.1% ~ 50%，默认 10%。Gas 自动从 OKX 获取，广播最多重试 3 次。
                 </p>
             </div>
 
@@ -247,7 +260,7 @@
             <div class="info-card">
                 <strong>📋 说明</strong><br>
                 • 私钥从服务器环境变量读取（<code>WALLET_PRIVATE_KEY_EVM</code> / <code>WALLET_PRIVATE_KEY_SOL</code>），支持 AES 加密存储<br>
-                • 交易数据由 OKX DEX Aggregator 提供，Gas 自动计算，滑点兜底 10%<br>
+                • 交易数据由 OKX DEX Aggregator 提供，Gas 自动计算，滑点可在上方配置（默认 10%）<br>
                 • 广播失败自动重试最多 3 次（间隔 500ms）<br>
                 • 本操作不可撤销，请确认参数无误后再点击执行
             </div>
@@ -313,20 +326,28 @@ function setLoading(loading) {
 }
 
 async function executeTrade() {
-    const tokenCA = document.getElementById('tokenCA').value.trim();
-    const amount  = document.getElementById('amount').value.trim();
+    const tokenCA  = document.getElementById('tokenCA').value.trim();
+    const amount   = document.getElementById('amount').value.trim();
+    const slippage = document.getElementById('slippage').value.trim();
 
     if (!tokenCA) { alert('请输入代币合约地址'); return; }
     if (!amount || parseFloat(amount) <= 0) { alert('请输入有效的买入金额'); return; }
+    const slippageNum = parseFloat(slippage);
+    if (slippage && (isNaN(slippageNum) || slippageNum < 0.1 || slippageNum > 50)) {
+        alert('滑点范围为 0.1% ~ 50%');
+        return;
+    }
 
     hideResult();
     setLoading(true);
 
     try {
+        // 滑点转换：UI 输入百分比（如 10），传给后端（后端支持百分比格式）
         const params = new URLSearchParams({
-            chain:   selectedChain,
-            tokenCA: tokenCA,
-            amount:  amount
+            chain:    selectedChain,
+            tokenCA:  tokenCA,
+            amount:   amount,
+            slippage: slippage || '10'
         });
         const resp = await fetch('/trade/execute', {
             method: 'POST',
@@ -344,7 +365,7 @@ async function executeTrade() {
 
 // Allow Enter key on inputs to trigger trade
 document.addEventListener('DOMContentLoaded', () => {
-    ['tokenCA', 'amount'].forEach(id => {
+    ['tokenCA', 'amount', 'slippage'].forEach(id => {
         document.getElementById(id).addEventListener('keydown', e => {
             if (e.key === 'Enter') executeTrade();
         });
