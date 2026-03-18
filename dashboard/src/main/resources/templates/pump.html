@@ -134,7 +134,7 @@
                         <th style="width:62px">时间</th>
                         <th>代币</th>
                         <th>合约</th>
-                        <th style="width:70px">市值(BNB)</th>
+                        <th style="width:72px">市值(USD)</th>
                         <th>进度</th>
                         <th>链接</th>
                     </tr></thead>
@@ -314,7 +314,6 @@ async function refreshBsc() {
         if (!tokens.length) return;
         document.getElementById('bsc-tbody').innerHTML = tokens.map((t,i) => {
             const addr=t.tokenAddress||'';
-            const cap  = t.capBnb ? parseFloat(t.capBnb).toFixed(2) : '—';
             const prg  = t.progress!=null ? parseFloat(t.progress) : 0;
             const prgStr = prg.toFixed(1)+'%';
             const img  = t.img ? `https://four.meme${t.img}` : '';
@@ -332,7 +331,11 @@ async function refreshBsc() {
                 <td>
                     <span class="addr" style="font-size:.68rem;cursor:pointer" data-addr="${addr}" onclick="copyAddr(this.dataset.addr)">${shorten(addr)}</span>
                 </td>
-                <td class="mono t-dim" style="font-size:.74rem">${cap}</td>
+                <td>
+                    ${t.usdMarketCap
+                        ? `<span class="up" style="font-size:.76rem;font-weight:600">${fmtMcap(t.usdMarketCap)}</span>`
+                        : t.capBnb ? `<span class="t-dim" style="font-size:.72rem">${parseFloat(t.capBnb).toFixed(2)} BNB</span>` : '<span class="t-dim">—</span>'}
+                </td>
                 <td>
                     <div style="display:flex;align-items:center;gap:4px">
                         <div class="prog-bar"><div class="prog-fill" style="width:${Math.min(prg,100)}%"></div></div>

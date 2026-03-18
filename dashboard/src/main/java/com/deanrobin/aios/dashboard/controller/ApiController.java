@@ -141,12 +141,26 @@ public class ApiController {
 
     @GetMapping("/fourmeme/tokens")
     public Object fourMemeTokens(@RequestParam(defaultValue = "100") int limit) {
+        // 取 BNB 当前价格
+        java.math.BigDecimal bnbPrice = null;
+        try {
+            bnbPrice = pumpTokenRepo.findBnbPrice();
+        } catch (Exception ignored) {}
+        final java.math.BigDecimal finalBnbPrice = bnbPrice;
+
         return fourMemeRepo.findRecent(Math.min(limit, 200)).stream().map(t -> {
             var m = new java.util.LinkedHashMap<String, Object>();
             m.put("tokenAddress", t.getTokenAddress());
             m.put("name",         t.getName());
             m.put("symbol",       t.getShortName());
             m.put("capBnb",       t.getCapBnb());
+            // capBnb × BNB价 → USD
+            if (t.getCapBnb() != null && finalBnbPrice != null) {
+                m.put("usdMarketCap", t.getCapBnb().multiply(finalBnbPrice)
+                        .setScale(2, java.math.RoundingMode.HALF_UP));
+            } else {
+                m.put("usdMarketCap", null);
+            }
             m.put("progress",     t.getProgress());
             m.put("hold",         t.getHold());
             m.put("img",          t.getImg());
