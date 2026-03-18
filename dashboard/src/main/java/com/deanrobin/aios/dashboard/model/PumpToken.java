@@ -39,6 +39,11 @@ public class PumpToken {
     @Column(length = 20)
     private String status = "new";
 
-    private LocalDateTime lastCheckedAt;
+    @Column(name = "checked_10m_at")
+    private LocalDateTime checked10mAt;   // 10分钟阶段检查
+
+    @Column(name = "checked_1h_at")
+    private LocalDateTime checked1hAt;    // 1小时阶段检查
+    private LocalDateTime lastCheckedAt;  // 24H阶段检查
     private java.math.BigDecimal currentMarketCap;
 }

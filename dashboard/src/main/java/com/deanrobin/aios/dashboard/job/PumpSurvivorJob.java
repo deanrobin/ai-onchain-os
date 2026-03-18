@@ -16,6 +16,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Pump token 三阶段市值检查
+ *
+ * 10min 检查：mcap >= 10K → 标记 survived 并展示，否则仅记录检查时间
+ *  1h  检查：同上
+ * 24h  检查：mcap >= 10K → 标记 survived + 快照；< 10K → 删除
+ *
+ * Job 每 5 分钟轮一次，精确捡到三个时间节点。
+ */
 @Log4j2
 @Component
 @RequiredArgsConstructor
@@ -25,90 +34,123 @@ public class PumpSurvivorJob {
     private static final String CHAIN_SOL      = "501";
     private static final String TOKEN_DETAIL   = "/api/v5/wallet/token/token-detail";
     private static final String BASE_WEB3      = "https://www.okx.com";
+    private static final int    SLEEP_MS       = 5_000;
 
-    private final PumpTokenRepository          pumpTokenRepo;
-    private final PumpMarketCapSnapshotRepository snapshotRepo;
-    private final OkxApiClient                 okxApiClient;
+    private final PumpTokenRepository              pumpTokenRepo;
+    private final PumpMarketCapSnapshotRepository  snapshotRepo;
+    private final OkxApiClient                     okxApiClient;
 
-    /** 每小时执行，初始延迟 10 分钟（等 OKX Job 先稳定） */
-    @Scheduled(initialDelay = 600_000, fixedDelay = 3_600_000)
+    /** 每 5 分钟轮一次，覆盖三个检查节点 */
+    @Scheduled(initialDelay = 120_000, fixedDelay = 300_000)
     @Transactional
     public void run() {
-        LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
-        List<PumpToken> due = pumpTokenRepo.findDueForCheck(cutoff);
-        if (due.isEmpty()) {
-            log.info("🔍 PumpSurvivor: 无需检查的 token");
-            return;
-        }
-        log.info("🔍 PumpSurvivor: 开始检查 {} 个超 24H token", due.size());
+        LocalDateTime now = LocalDateTime.now();
 
-        int deleted = 0, survived = 0, failed = 0;
-        for (int i = 0; i < due.size(); i++) {
-            PumpToken t = due.get(i);
-            // 除第一条外，每次查询前 sleep 5 秒
+        // ── 10 分钟阶段 ──────────────────────────────────
+        List<PumpToken> due10m = pumpTokenRepo.findDueFor10m(now.minusMinutes(10));
+        if (!due10m.isEmpty()) {
+            log.info("⏱ PumpSurvivor [10min] 检查 {} 个", due10m.size());
+            processBatch(due10m, Stage.TEN_MIN);
+        }
+
+        // ── 1 小时阶段 ──────────────────────────────────
+        List<PumpToken> due1h = pumpTokenRepo.findDueFor1h(now.minusHours(1));
+        if (!due1h.isEmpty()) {
+            log.info("⏱ PumpSurvivor [1h] 检查 {} 个", due1h.size());
+            processBatch(due1h, Stage.ONE_HOUR);
+        }
+
+        // ── 24 小时阶段 ─────────────────────────────────
+        List<PumpToken> due24h = pumpTokenRepo.findDueFor24h(now.minusHours(24));
+        if (!due24h.isEmpty()) {
+            log.info("⏱ PumpSurvivor [24h] 检查 {} 个", due24h.size());
+            processBatch(due24h, Stage.TWENTY_FOUR_HOUR);
+        }
+    }
+
+    private enum Stage { TEN_MIN, ONE_HOUR, TWENTY_FOUR_HOUR }
+
+    private void processBatch(List<PumpToken> tokens, Stage stage) {
+        int survived = 0, deleted = 0, skipped = 0;
+        for (int i = 0; i < tokens.size(); i++) {
             if (i > 0) {
-                try { Thread.sleep(5_000); } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
+                try { Thread.sleep(SLEEP_MS); } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt(); break;
                 }
             }
+            PumpToken t = tokens.get(i);
             try {
                 BigDecimal mc = fetchMarketCap(t.getMint());
-                t.setLastCheckedAt(LocalDateTime.now());
+                LocalDateTime now = LocalDateTime.now();
 
-                if (mc == null || mc.compareTo(BigDecimal.valueOf(MIN_MARKET_CAP)) < 0) {
-                    // 市值 < 10K 或查不到 → 删除
-                    pumpTokenRepo.delete(t);
-                    deleted++;
-                    log.info("🗑 删除低市值 token: {} ({}) mc={}", t.getSymbol(), t.getMint().substring(0, 10), mc);
-                } else {
-                    // 市值 >= 10K → 标记存活，保存快照
+                switch (stage) {
+                    case TEN_MIN  -> t.setChecked10mAt(now);
+                    case ONE_HOUR -> t.setChecked1hAt(now);
+                    case TWENTY_FOUR_HOUR -> t.setLastCheckedAt(now);
+                }
+
+                boolean aboveMin = mc != null && mc.compareTo(BigDecimal.valueOf(MIN_MARKET_CAP)) >= 0;
+
+                if (aboveMin) {
+                    // 市值达标 → 标记存活
                     t.setStatus("survived");
                     t.setCurrentMarketCap(mc);
                     pumpTokenRepo.save(t);
 
-                    PumpMarketCapSnapshot snap = new PumpMarketCapSnapshot();
-                    snap.setMint(t.getMint());
-                    snap.setSymbol(t.getSymbol());
-                    snap.setName(t.getName());
-                    snap.setMarketCapUsd(mc);
-                    snap.setCheckedAt(LocalDateTime.now());
-                    snapshotRepo.save(snap);
-
+                    // 只有 24H 阶段写快照（避免 3 个阶段都写）
+                    if (stage == Stage.TWENTY_FOUR_HOUR) {
+                        saveSnapshot(t, mc, now);
+                    }
                     survived++;
-                    log.info("✅ 存活 token: {} ({}) mc=${}", t.getSymbol(), t.getMint().substring(0, 10),
-                            mc.toPlainString());
+                    log.info("✅ [{}] 存活: {} mc=${}", stage, t.getSymbol(), mc.toPlainString());
+                } else if (stage == Stage.TWENTY_FOUR_HOUR) {
+                    // 24H 阶段 + 不达标 → 删除
+                    pumpTokenRepo.delete(t);
+                    deleted++;
+                    log.info("🗑 [24h] 删除: {} mc={}", t.getSymbol(), mc);
+                } else {
+                    // 10min / 1h 不达标 → 只记录检查时间，不删
+                    pumpTokenRepo.save(t);
+                    skipped++;
                 }
             } catch (Exception e) {
-                failed++;
-                log.warn("⚠️ 检查 token {} 失败: {}", t.getMint().substring(0, 10), e.getMessage());
-                // 出错时也更新检查时间，避免下次重复打爆
-                t.setLastCheckedAt(LocalDateTime.now());
+                log.warn("⚠️ [{}] 检查 {} 失败: {}", stage, t.getMint().substring(0, 10), e.getMessage());
+                // 出错也记录检查时间，避免死循环
+                switch (stage) {
+                    case TEN_MIN  -> t.setChecked10mAt(LocalDateTime.now());
+                    case ONE_HOUR -> t.setChecked1hAt(LocalDateTime.now());
+                    case TWENTY_FOUR_HOUR -> t.setLastCheckedAt(LocalDateTime.now());
+                }
                 pumpTokenRepo.save(t);
             }
         }
-        log.info("🔍 PumpSurvivor 完成: 存活={} 删除={} 失败={}", survived, deleted, failed);
+        log.info("✔ [{}] 完成: 存活={} 删除={} 不达标跳过={}", stage, survived, deleted, skipped);
+    }
+
+    private void saveSnapshot(PumpToken t, BigDecimal mc, LocalDateTime at) {
+        PumpMarketCapSnapshot snap = new PumpMarketCapSnapshot();
+        snap.setMint(t.getMint());
+        snap.setSymbol(t.getSymbol());
+        snap.setName(t.getName());
+        snap.setMarketCapUsd(mc);
+        snap.setCheckedAt(at);
+        snapshotRepo.save(snap);
     }
 
     @SuppressWarnings("unchecked")
     private BigDecimal fetchMarketCap(String mint) {
         try {
             Map<?, ?> resp = okxApiClient.get(
-                BASE_WEB3, TOKEN_DETAIL,
-                Map.of("chainIndex", CHAIN_SOL, "tokenAddress", mint)
+                    BASE_WEB3, TOKEN_DETAIL,
+                    Map.of("chainIndex", CHAIN_SOL, "tokenAddress", mint)
             );
             if (!"0".equals(String.valueOf(resp.get("code")))) return null;
-
             Object dataObj = resp.get("data");
             if (!(dataObj instanceof List<?> dataList) || dataList.isEmpty()) return null;
-
             Map<?, ?> item = (Map<?, ?>) dataList.get(0);
-
-            // OKX 返回 marketCap 字段
             Object mc = item.get("marketCap");
             if (mc == null) mc = item.get("market_cap");
             if (mc == null) return null;
-
             BigDecimal val = new BigDecimal(mc.toString().replace(",", ""));
             return val.compareTo(BigDecimal.ZERO) <= 0 ? null : val;
         } catch (Exception e) {

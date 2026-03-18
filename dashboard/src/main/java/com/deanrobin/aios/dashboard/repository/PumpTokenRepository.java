@@ -16,9 +16,17 @@ public interface PumpTokenRepository extends JpaRepository<PumpToken, Long> {
 
     boolean existsByMint(String mint);
 
-    /** 超过 24H 且（从未检查过 OR 上次检查超过 24H 前）的待检查 token */
-    @Query("SELECT t FROM PumpToken t WHERE t.receivedAt < :before AND (t.lastCheckedAt IS NULL OR t.lastCheckedAt < :before)")
-    List<PumpToken> findDueForCheck(LocalDateTime before);
+    /** 到了 10 分钟但还没做过 10min 检查的 token */
+    @Query("SELECT t FROM PumpToken t WHERE t.receivedAt < :before AND t.checked10mAt IS NULL")
+    List<PumpToken> findDueFor10m(LocalDateTime before);
+
+    /** 到了 1 小时但还没做过 1h 检查的 token */
+    @Query("SELECT t FROM PumpToken t WHERE t.receivedAt < :before AND t.checked1hAt IS NULL")
+    List<PumpToken> findDueFor1h(LocalDateTime before);
+
+    /** 到了 24 小时但还没做过 24H 检查（或需要再次检查）的 token */
+    @Query("SELECT t FROM PumpToken t WHERE t.receivedAt < :before AND t.lastCheckedAt IS NULL")
+    List<PumpToken> findDueFor24h(LocalDateTime before);
 
     /** 已存活 token，按最新市值倒序 */
     @Query("SELECT t FROM PumpToken t WHERE t.status = 'survived' ORDER BY t.currentMarketCap DESC NULLS LAST")
