@@ -34,4 +34,11 @@ public class PumpToken {
 
     @Column(nullable = false)
     private LocalDateTime receivedAt;
+
+    /** new / survived */
+    @Column(length = 20)
+    private String status = "new";
+
+    private LocalDateTime lastCheckedAt;
+    private java.math.BigDecimal currentMarketCap;
 }

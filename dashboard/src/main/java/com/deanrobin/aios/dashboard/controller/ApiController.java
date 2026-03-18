@@ -20,8 +20,9 @@ import java.util.stream.Collectors;
 public class ApiController {
 
     private final SmartMoneyService         smartMoneyService;
-    private final com.deanrobin.aios.dashboard.repository.PumpTokenRepository pumpTokenRepo;
-    private final com.deanrobin.aios.dashboard.service.PumpPortalClient pumpPortalClient;
+    private final com.deanrobin.aios.dashboard.repository.PumpTokenRepository          pumpTokenRepo;
+    private final com.deanrobin.aios.dashboard.repository.PumpMarketCapSnapshotRepository snapshotRepo;
+    private final com.deanrobin.aios.dashboard.service.PumpPortalClient                pumpPortalClient;
     private final PortfolioService       portfolioService;
     private final PriceTickerRepository  priceRepo;
 
@@ -131,5 +132,29 @@ public class ApiController {
             "connected", pumpPortalClient.isConnected(),
             "total",     pumpTokenRepo.count()
         );
+    }
+
+    @GetMapping("/pump/survivors")
+    public Object pumpSurvivors() {
+        var list = pumpTokenRepo.findSurvivors();
+        return list.stream().map(t -> {
+            var m = new java.util.LinkedHashMap<String, Object>();
+            m.put("mint",             t.getMint());
+            m.put("name",             t.getName());
+            m.put("symbol",           t.getSymbol());
+            m.put("imageUri",         t.getImageUri());
+            m.put("currentMarketCap", t.getCurrentMarketCap());
+            m.put("lastCheckedAt",    t.getLastCheckedAt() != null
+                    ? t.getLastCheckedAt().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm")) : "—");
+            m.put("receivedAt",       t.getReceivedAt() != null
+                    ? t.getReceivedAt().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm")) : "—");
+            // 最近 5 条快照
+            var snaps = snapshotRepo.findByMintRecent(t.getMint(), 5);
+            m.put("snapshots", snaps.stream().map(s -> Map.of(
+                "mc",  s.getMarketCapUsd(),
+                "at",  s.getCheckedAt().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))
+            )).toList());
+            return m;
+        }).toList();
     }
 }

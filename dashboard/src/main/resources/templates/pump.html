@@ -85,13 +85,31 @@
             </div>
         </div>
 
-        <!-- 今日统计（预留扩展） -->
-        <div class="card">
+        <!-- 快速跳转 -->
+        <div class="card mb-3">
             <div class="card-header">💡 快速跳转</div>
             <div class="card-body" style="font-size:.84rem;color:var(--t2);line-height:2">
                 点击合约地址可复制<br>
                 点击 <strong>GMGN</strong> 跳转行情<br>
                 点击 <strong>Pump</strong> 跳转 pump.fun 页面
+            </div>
+        </div>
+
+        <!-- ════ 24H 存活 meme 看板 ════ -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <span>🏆 24H 存活 meme</span>
+                <span class="tag-gray ms-1" style="font-size:.72rem">市值 ≥ $10K</span>
+                <span id="survivor-count" class="tag-blue ms-1" style="font-size:.72rem">0</span>
+                <span class="t-dim ms-auto" style="font-size:.7rem">每小时检查更新</span>
+            </div>
+            <div class="card-body p-0">
+                <div id="survivor-list" style="max-height:460px;overflow-y:auto">
+                    <div class="empty-state" style="padding:30px 0">
+                        <div class="ei">⏳</div>
+                        <div style="font-size:.8rem">等待首次检查（超 24H 新币才会出现）</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -119,6 +137,55 @@
 <script>
 let pumpCooldown = false;
 let pumpCountdown = 5;
+
+async function refreshSurvivors() {
+    try {
+        const r = await fetch('/api/pump/survivors');
+        const list = await r.json();
+        document.getElementById('survivor-count').textContent = list.length;
+        const el = document.getElementById('survivor-list');
+        if (!list.length) return;
+        el.innerHTML = list.map(t => {
+            const mc = t.currentMarketCap ? fmtMcap(t.currentMarketCap) : '—';
+            const mint = t.mint || '';
+            const short = mint.length > 14 ? mint.substring(0,8)+'...'+mint.slice(-6) : mint;
+            const gmgn = `https://gmgn.ai/sol/token/${mint}`;
+            const pump = `https://pump.fun/${mint}`;
+            // 快照趋势（最多 3 条，时间升序排列做趋势）
+            const snaps = (t.snapshots || []).slice().reverse();
+            const trend = snaps.length >= 2 ? (() => {
+                const first = parseFloat(snaps[0].mc || 0);
+                const last  = parseFloat(snaps[snaps.length-1].mc || 0);
+                const pct = first > 0 ? ((last - first) / first * 100).toFixed(1) : null;
+                if (pct === null) return '';
+                const cls = parseFloat(pct) >= 0 ? 'up' : 'dn';
+                return `<span class="${cls}" style="font-size:.7rem;font-weight:600">${parseFloat(pct)>=0?'▲':'▼'}${Math.abs(pct)}%</span>`;
+            })() : '';
+            const snapHtml = snaps.map(s =>
+                `<span class="t-dim" style="font-size:.62rem;white-space:nowrap">${s.at} $${Number(s.mc).toLocaleString('en',{maximumFractionDigits:0})}</span>`
+            ).join(' → ');
+            return `<div style="padding:10px 14px;border-bottom:1px solid var(--border)">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fw-7" style="font-size:.9rem">${t.symbol||'?'}</span>
+                    <span class="t-dim" style="font-size:.74rem">${t.name||''}</span>
+                    <span class="chain-badge c-501">SOL</span>
+                    <span class="up fw-7 ms-auto" style="font-size:.88rem">${mc}</span>
+                    ${trend}
+                </div>
+                <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                    <span class="addr" style="font-size:.68rem;cursor:pointer"
+                          data-addr="${mint}" onclick="copyAddr(this.dataset.addr)">${short}</span>
+                    <span class="t-dim" style="font-size:.68rem">发射 ${t.receivedAt} | 检查 ${t.lastCheckedAt}</span>
+                </div>
+                ${snaps.length ? `<div class="mt-1" style="line-height:1.6">${snapHtml}</div>` : ''}
+                <div class="mt-1">
+                    <a class="link-pill lp-gmgn" href="${gmgn}" target="_blank" rel="noopener">GMGN↗</a>
+                    <a class="link-pill lp-pump" href="${pump}" target="_blank" rel="noopener">Pump↗</a>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) { console.warn('refreshSurvivors', e); }
+}
 
 async function refreshPump() {
     try {
@@ -216,6 +283,9 @@ function manualRefresh() {
 
 // 页面加载立即拉一次
 refreshPump();
+refreshSurvivors();
+// survivors 每 60 秒刷新（数据由 1H Job 更新，高频无意义）
+setInterval(refreshSurvivors, 60_000);
 </script>
 
 </main></body>
