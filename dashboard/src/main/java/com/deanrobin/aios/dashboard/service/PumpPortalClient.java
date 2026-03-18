@@ -63,7 +63,7 @@ public class PumpPortalClient {
     @Scheduled(fixedDelay = 300_000)
     public void cleanup() {
         try {
-            pumpTokenRepo.retainLatest(2000);
+            pumpTokenRepo.retainLatest(100_000);
         } catch (Exception e) {
             log.warn("pump_token 清理失败: {}", e.getMessage());
         }
