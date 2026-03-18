@@ -65,6 +65,13 @@
             <artifactId>common</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
+
+        <!-- Web3j for EVM (BSC) transaction signing -->
+        <dependency>
+            <groupId>org.web3j</groupId>
+            <artifactId>core</artifactId>
+            <version>4.12.0</version>
+        </dependency>
     </dependencies>
 
     <build>

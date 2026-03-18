@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('交易', ~{::body-content})}">
+<body>
+<th:block th:fragment="body-content">
+
+<style>
+/* ── Trade page styles ──────────────────────────────────────── */
+.trade-wrap {
+    max-width: 560px; margin: 48px auto; padding: 0 16px;
+}
+.trade-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--sh-2);
+    overflow: hidden;
+}
+.trade-header {
+    background: linear-gradient(135deg, #1e3a6e 0%, #2563eb 100%);
+    padding: 28px 30px 22px;
+    color: #fff;
+}
+.trade-header h2 {
+    font-size: 1.35rem; font-weight: 800; margin: 0 0 6px;
+    letter-spacing: -.4px;
+}
+.trade-header p {
+    font-size: .82rem; opacity: .75; margin: 0;
+}
+.trade-body {
+    padding: 28px 30px;
+}
+
+/* Chain selector tabs */
+.chain-tabs {
+    display: flex; gap: 10px; margin-bottom: 24px;
+}
+.chain-tab {
+    flex: 1; padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-page);
+    cursor: pointer;
+    text-align: center;
+    transition: all .18s;
+    user-select: none;
+}
+.chain-tab:hover { border-color: var(--blue); background: var(--blue-l); }
+.chain-tab.active {
+    border-color: var(--blue);
+    background: var(--blue-l);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+.chain-tab .ct-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+.chain-tab .ct-name { font-size: .82rem; font-weight: 700; color: var(--t1); }
+.chain-tab .ct-unit { font-size: .7rem; color: var(--t3); }
+.chain-tab.active .ct-name { color: var(--blue); }
+
+/* Form fields */
+.field-group { margin-bottom: 20px; }
+.field-label {
+    display: block;
+    font-size: .75rem; font-weight: 700; color: var(--t2);
+    text-transform: uppercase; letter-spacing: .7px;
+    margin-bottom: 7px;
+}
+.field-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border-m);
+    border-radius: 10px;
+    font-size: .9rem;
+    color: var(--t1);
+    background: #fff;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    font-family: 'JetBrains Mono', monospace;
+}
+.field-input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+}
+.field-input::placeholder { color: var(--t3); font-size: .82rem; font-family: 'Inter', sans-serif; }
+.field-hint {
+    font-size: .71rem; color: var(--t3); margin-top: 5px;
+    line-height: 1.4;
+}
+
+/* Amount row */
+.amount-row {
+    display: flex; align-items: center; gap: 10px;
+}
+.amount-row .field-input { flex: 1; }
+.amount-unit {
+    font-size: .85rem; font-weight: 700;
+    color: var(--blue);
+    background: var(--blue-l);
+    border: 1.5px solid var(--blue-b);
+    border-radius: 8px;
+    padding: 10px 14px;
+    white-space: nowrap; min-width: 56px; text-align: center;
+}
+
+/* Execute button */
+.btn-execute {
+    width: 100%;
+    padding: 13px 20px;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #fff; border: none; border-radius: 11px;
+    font-size: .95rem; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(37,99,235,.35);
+    transition: all .2s;
+    margin-top: 8px;
+}
+.btn-execute:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(37,99,235,.45);
+}
+.btn-execute:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+/* Result panel */
+.result-panel {
+    margin-top: 22px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: .84rem;
+    display: none;
+}
+.result-panel.show { display: block; }
+.result-panel.success {
+    background: var(--green-l);
+    border: 1.5px solid var(--green-b);
+    color: var(--green);
+}
+.result-panel.error {
+    background: var(--red-l);
+    border: 1.5px solid var(--red-b);
+    color: var(--red);
+}
+.result-label {
+    font-weight: 700; font-size: .78rem; text-transform: uppercase;
+    letter-spacing: .7px; margin-bottom: 7px; display: flex; align-items: center; gap: 5px;
+}
+.result-hash {
+    font-family: 'JetBrains Mono'; font-size: .78rem;
+    word-break: break-all; line-height: 1.5;
+    color: var(--t1);
+}
+.result-link {
+    display: inline-block; margin-top: 8px;
+    font-size: .78rem; font-weight: 600;
+    color: var(--blue); text-decoration: none;
+}
+.result-link:hover { text-decoration: underline; }
+.error-msg {
+    font-size: .84rem; color: var(--red); line-height: 1.5;
+    word-break: break-all;
+}
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2.5px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Info card */
+.info-card {
+    background: #f8faff; border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    margin-top: 20px; font-size: .78rem; color: var(--t2);
+    line-height: 1.6;
+}
+.info-card strong { color: var(--t1); }
+</style>
+
+<div class="trade-wrap">
+    <div class="trade-card">
+        <!-- Header -->
+        <div class="trade-header">
+            <h2>⚡ 交易执行</h2>
+            <p>通过 OKX DEX Aggregator 执行 BSC / Solana 链上买入交易</p>
+        </div>
+
+        <!-- Body -->
+        <div class="trade-body">
+
+            <!-- Chain selector -->
+            <div class="field-group">
+                <span class="field-label">选择链</span>
+                <div class="chain-tabs">
+                    <div class="chain-tab active" id="tab-bsc" onclick="selectChain('bsc')">
+                        <span class="ct-icon">🟡</span>
+                        <span class="ct-name">BSC</span>
+                        <span class="ct-unit">BNB Chain</span>
+                    </div>
+                    <div class="chain-tab" id="tab-sol" onclick="selectChain('sol')">
+                        <span class="ct-icon">🟣</span>
+                        <span class="ct-name">Solana</span>
+                        <span class="ct-unit">SOL Network</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Token CA -->
+            <div class="field-group">
+                <label class="field-label" for="tokenCA">代币合约地址（CA）</label>
+                <input class="field-input" id="tokenCA" type="text"
+                       placeholder="0x... 或 Solana CA 地址" autocomplete="off" spellcheck="false">
+                <p class="field-hint">输入目标代币的合约地址（Token CA）</p>
+            </div>
+
+            <!-- Amount -->
+            <div class="field-group">
+                <label class="field-label" for="amount">买入金额</label>
+                <div class="amount-row">
+                    <input class="field-input" id="amount" type="number"
+                           step="0.001" min="0.001"
+                           placeholder="0.1">
+                    <span class="amount-unit" id="amount-unit">BNB</span>
+                </div>
+                <p class="field-hint">
+                    输入花费的原生代币数量（BSC 为 BNB，Solana 为 SOL）。
+                    滑点默认 10%，Gas 自动从 OKX 获取，最多重试 3 次。
+                </p>
+            </div>
+
+            <!-- Execute -->
+            <button class="btn-execute" id="btn-execute" onclick="executeTrade()">
+                <span id="btn-icon">🚀</span>
+                <span id="btn-text">执行买入</span>
+            </button>
+
+            <!-- Result panel -->
+            <div class="result-panel" id="result-panel">
+                <div class="result-label" id="result-label"></div>
+                <div id="result-content"></div>
+            </div>
+
+            <!-- Info card -->
+            <div class="info-card">
+                <strong>📋 说明</strong><br>
+                • 私钥从服务器环境变量读取（<code>WALLET_PRIVATE_KEY_EVM</code> / <code>WALLET_PRIVATE_KEY_SOL</code>），支持 AES 加密存储<br>
+                • 交易数据由 OKX DEX Aggregator 提供，Gas 自动计算，滑点兜底 10%<br>
+                • 广播失败自动重试最多 3 次（间隔 500ms）<br>
+                • 本操作不可撤销，请确认参数无误后再点击执行
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedChain = 'bsc';
+
+function selectChain(chain) {
+    selectedChain = chain;
+    document.querySelectorAll('.chain-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + chain).classList.add('active');
+    document.getElementById('amount-unit').textContent = chain === 'bsc' ? 'BNB' : 'SOL';
+    // Reset result
+    hideResult();
+}
+
+function hideResult() {
+    const panel = document.getElementById('result-panel');
+    panel.classList.remove('show', 'success', 'error');
+}
+
+function showResult(success, txHash, errorMsg) {
+    const panel   = document.getElementById('result-panel');
+    const label   = document.getElementById('result-label');
+    const content = document.getElementById('result-content');
+
+    panel.classList.remove('show', 'success', 'error');
+
+    if (success) {
+        panel.classList.add('show', 'success');
+        label.innerHTML = '✅ 交易成功';
+        const explorer = selectedChain === 'bsc'
+            ? 'https://bscscan.com/tx/'
+            : 'https://solscan.io/tx/';
+        content.innerHTML = `
+            <div class="result-hash">${txHash}</div>
+            <a class="result-link" href="${explorer}${txHash}" target="_blank" rel="noopener">
+                🔗 在区块链浏览器中查看
+            </a>`;
+    } else {
+        panel.classList.add('show', 'error');
+        label.innerHTML = '❌ 交易失败';
+        content.innerHTML = `<div class="error-msg">${errorMsg}</div>`;
+    }
+}
+
+function setLoading(loading) {
+    const btn  = document.getElementById('btn-execute');
+    const icon = document.getElementById('btn-icon');
+    const text = document.getElementById('btn-text');
+    if (loading) {
+        btn.disabled = true;
+        icon.innerHTML = '<span class="spinner"></span>';
+        text.textContent = '执行中，请稍候…';
+    } else {
+        btn.disabled = false;
+        icon.textContent = '🚀';
+        text.textContent = '执行买入';
+    }
+}
+
+async function executeTrade() {
+    const tokenCA = document.getElementById('tokenCA').value.trim();
+    const amount  = document.getElementById('amount').value.trim();
+
+    if (!tokenCA) { alert('请输入代币合约地址'); return; }
+    if (!amount || parseFloat(amount) <= 0) { alert('请输入有效的买入金额'); return; }
+
+    hideResult();
+    setLoading(true);
+
+    try {
+        const params = new URLSearchParams({
+            chain:   selectedChain,
+            tokenCA: tokenCA,
+            amount:  amount
+        });
+        const resp = await fetch('/trade/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        });
+        const data = await resp.json();
+        showResult(data.success, data.txHash, data.errorMsg);
+    } catch (err) {
+        showResult(false, null, '请求失败: ' + err.message);
+    } finally {
+        setLoading(false);
+    }
+}
+
+// Allow Enter key on inputs to trigger trade
+document.addEventListener('DOMContentLoaded', () => {
+    ['tokenCA', 'amount'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') executeTrade();
+        });
+    });
+});
+</script>
+
+</th:block>
+</body>
+</html>
