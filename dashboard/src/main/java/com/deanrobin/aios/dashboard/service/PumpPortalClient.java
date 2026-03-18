@@ -163,10 +163,7 @@ public class PumpPortalClient {
             }
 
             pumpTokenRepo.save(t);
-            log.info("🆕 新币 {} ({}) mcSol={} prg={}%",
-                    t.getName(), t.getSymbol(),
-                    t.getMarketCapSol() != null ? t.getMarketCapSol().setScale(1, java.math.RoundingMode.HALF_UP) : "?",
-                    t.getProgress() != null ? t.getProgress().setScale(1, java.math.RoundingMode.HALF_UP) : "?");
+            // 新币不打印，减少日志噪音
         } catch (DataIntegrityViolationException ignored) {
         } catch (Exception e) {
             log.debug("pump message 解析失败: {}", e.getMessage());

@@ -170,7 +170,7 @@ public class FourMemeClient {
                     saved++;
                 } catch (DataIntegrityViolationException ignored) {}
             }
-            if (saved > 0) log.info("🆕 FourMeme 新币 {} 个", saved);
+            // 新币不打印，减少日志噪音
         } catch (Exception e) {
             log.debug("FourMeme message 解析失败: {}", e.getMessage());
         }
