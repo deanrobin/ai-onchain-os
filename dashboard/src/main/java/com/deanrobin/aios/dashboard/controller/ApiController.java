@@ -122,6 +122,9 @@ public class ApiController {
             m.put("website",       t.getWebsite());
             m.put("creator",       t.getCreator());
             m.put("usdMarketCap",  t.getUsdMarketCap());
+            m.put("marketCapSol",  t.getMarketCapSol());
+            m.put("progress",      t.getProgress());
+            m.put("initialBuy",    t.getInitialBuy());
             m.put("receivedAt",    t.getReceivedAt() != null
                     ? t.getReceivedAt().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")) : "—");
             return m;

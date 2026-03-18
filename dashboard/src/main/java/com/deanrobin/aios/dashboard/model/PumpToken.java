@@ -35,15 +35,20 @@ public class PumpToken {
     @Column(nullable = false)
     private LocalDateTime receivedAt;
 
+    // ── 实时数据（来自 pumpportal WSS）──────────────
+    private java.math.BigDecimal marketCapSol;    // 市值(SOL)
+    private java.math.BigDecimal progress;         // bonding curve 进度 0-100
+    private java.math.BigDecimal vSolInCurve;      // vSolInBondingCurve
+    private java.math.BigDecimal initialBuy;       // 初始买入 SOL
+
     /** new / survived */
     @Column(length = 20)
     private String status = "new";
 
     @Column(name = "checked_10m_at")
-    private LocalDateTime checked10mAt;   // 10分钟阶段检查
-
+    private LocalDateTime checked10mAt;
     @Column(name = "checked_1h_at")
-    private LocalDateTime checked1hAt;    // 1小时阶段检查
-    private LocalDateTime lastCheckedAt;  // 24H阶段检查
+    private LocalDateTime checked1hAt;
+    private LocalDateTime lastCheckedAt;
     private java.math.BigDecimal currentMarketCap;
 }

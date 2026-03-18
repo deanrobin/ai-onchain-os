@@ -113,30 +113,61 @@ public class PumpPortalClient {
             Map<String, Object> data = objectMapper.readValue(raw, Map.class);
             String mint = str(data, "mint");
             if (mint == null || mint.isBlank()) return;
+            // 只处理新建交易
+            String txType = str(data, "txType");
+            if (txType != null && !"create".equals(txType)) return;
             if (pumpTokenRepo.existsByMint(mint)) return;
 
             PumpToken t = new PumpToken();
             t.setMint(mint);
             t.setName(str(data, "name"));
             t.setSymbol(str(data, "symbol"));
-            t.setDescription(str(data, "description"));
-            t.setImageUri(str(data, "image_uri"));
-            t.setTwitter(str(data, "twitter"));
-            t.setTelegram(str(data, "telegram"));
-            t.setWebsite(str(data, "website"));
-            t.setCreator(str(data, "creator"));
+            // pumpportal WSS 真实字段
+            t.setCreator(str(data, "traderPublicKey"));
+            t.setImageUri(str(data, "uri"));         // metadata URI
             t.setReceivedAt(LocalDateTime.now());
 
-            Object ts = data.get("created_timestamp");
-            if (ts instanceof Number n) t.setCreatedTimestamp(n.longValue());
+            // marketCapSol
+            Object mcSol = data.get("marketCapSol");
+            if (mcSol instanceof Number n) {
+                java.math.BigDecimal mcVal = new java.math.BigDecimal(n.toString());
+                t.setMarketCapSol(mcVal);
+                // usd_market_cap = marketCapSol × SOL价格（从 price_ticker 取，取不到则 null）
+                try {
+                    var solPrice = pumpTokenRepo.findSolPrice();
+                    if (solPrice != null) t.setUsdMarketCap(mcVal.multiply(solPrice));
+                } catch (Exception ignored) {}
+            }
 
-            Object mc = data.get("usd_market_cap");
-            if (mc instanceof Number n) t.setUsdMarketCap(new java.math.BigDecimal(n.toString()));
+            // vSolInBondingCurve → 计算进度
+            // pump.fun: 虚拟基础 = 30 SOL, 完成阈值 = 85 SOL → 进度 = (vSol-30)/55*100
+            Object vSol = data.get("vSolInBondingCurve");
+            if (vSol instanceof Number n) {
+                java.math.BigDecimal vSolVal = new java.math.BigDecimal(n.toString())
+                        .divide(java.math.BigDecimal.valueOf(1_000_000_000L), 9, java.math.RoundingMode.HALF_UP);
+                t.setVSolInCurve(vSolVal);
+                // 进度 = (vSol - 30) / 55 * 100，限 [0, 100]
+                java.math.BigDecimal prg = vSolVal.subtract(java.math.BigDecimal.valueOf(30))
+                        .divide(java.math.BigDecimal.valueOf(55), 4, java.math.RoundingMode.HALF_UP)
+                        .multiply(java.math.BigDecimal.valueOf(100));
+                if (prg.compareTo(java.math.BigDecimal.ZERO) < 0) prg = java.math.BigDecimal.ZERO;
+                if (prg.compareTo(java.math.BigDecimal.valueOf(100)) > 0) prg = java.math.BigDecimal.valueOf(100);
+                t.setProgress(prg);
+            }
+
+            // initialBuy (SOL)
+            Object iBuy = data.get("solAmount");
+            if (iBuy instanceof Number n) {
+                t.setInitialBuy(new java.math.BigDecimal(n.toString())
+                        .divide(java.math.BigDecimal.valueOf(1_000_000_000L), 9, java.math.RoundingMode.HALF_UP));
+            }
 
             pumpTokenRepo.save(t);
-            log.info("🆕 新币 {} ({}) mint={}", t.getName(), t.getSymbol(), mint.substring(0, 10));
+            log.info("🆕 新币 {} ({}) mcSol={} prg={}%",
+                    t.getName(), t.getSymbol(),
+                    t.getMarketCapSol() != null ? t.getMarketCapSol().setScale(1, java.math.RoundingMode.HALF_UP) : "?",
+                    t.getProgress() != null ? t.getProgress().setScale(1, java.math.RoundingMode.HALF_UP) : "?");
         } catch (DataIntegrityViolationException ignored) {
-            // 并发重复写入，忽略
         } catch (Exception e) {
             log.debug("pump message 解析失败: {}", e.getMessage());
         }

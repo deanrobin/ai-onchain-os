@@ -104,10 +104,12 @@
                         <th style="width:62px">时间</th>
                         <th>代币</th>
                         <th>合约</th>
+                        <th style="width:72px">市值</th>
+                        <th style="width:72px">进度</th>
                         <th>链接</th>
                     </tr></thead>
                     <tbody id="sol-tbody">
-                        <tr><td colspan="4" class="empty-state"><div class="ei">⏳</div><div>接收中...</div></td></tr>
+                        <tr><td colspan="6" class="empty-state"><div class="ei">⏳</div><div>接收中...</div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -259,6 +261,17 @@ async function refreshSol() {
                 </td>
                 <td>
                     <span class="addr" style="font-size:.68rem;cursor:pointer" data-addr="${addr}" onclick="copyAddr(this.dataset.addr)">${shorten(addr)}</span>
+                </td>
+                <td>
+                    ${t.usdMarketCap ? `<span class="up" style="font-size:.76rem;font-weight:600">${fmtMcap(t.usdMarketCap)}</span>` :
+                      t.marketCapSol  ? `<span class="t-dim" style="font-size:.72rem">${parseFloat(t.marketCapSol).toFixed(1)} SOL</span>` : '<span class="t-dim">—</span>'}
+                </td>
+                <td>
+                    ${t.progress != null ? `
+                        <div style="display:flex;align-items:center;gap:3px">
+                            <div class="prog-bar"><div class="prog-fill" style="width:${Math.min(parseFloat(t.progress),100)}%"></div></div>
+                            <span class="t-dim" style="font-size:.63rem">${parseFloat(t.progress).toFixed(1)}%</span>
+                        </div>` : '<span class="t-dim" style="font-size:.7rem">—</span>'}
                 </td>
                 <td>
                     <a class="link-pill lp-gmgn" href="https://gmgn.ai/sol/token/${addr}" target="_blank" rel="noopener">GMGN↗</a>
