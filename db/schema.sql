@@ -52,3 +52,13 @@ CREATE TABLE IF NOT EXISTS my_address (
 -- 示例：插入 Dean 的地址（替换为真实地址）
 -- INSERT INTO my_address (address, chain_index, label)
 -- VALUES ('0xYourAddress', '1', 'Main ETH Wallet');
+
+-- 转账白名单表（仅地址维度，无 chain）
+-- BSC 地址存储为小写；SOL 地址原样存储
+CREATE TABLE IF NOT EXISTS transfer_whitelist (
+    id         BIGINT PRIMARY KEY AUTO_INCREMENT,
+    address    VARCHAR(100) NOT NULL COMMENT '白名单地址（BSC 小写；SOL 原始大小写）',
+    note       VARCHAR(200)          COMMENT '备注（可选）',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_address (address)
+);

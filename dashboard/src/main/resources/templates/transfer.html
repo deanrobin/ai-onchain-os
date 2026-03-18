@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('转账', ~{::body-content})}">
+<body>
+<th:block th:fragment="body-content">
+
+<style>
+/* ── Transfer page styles ────────────────────────────────────── */
+.transfer-wrap {
+    max-width: 580px; margin: 48px auto; padding: 0 16px;
+}
+.transfer-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--sh-2);
+    overflow: hidden;
+}
+.transfer-header {
+    background: linear-gradient(135deg, #1a3a5c 0%, #0ea5e9 100%);
+    padding: 28px 30px 22px;
+    color: #fff;
+}
+.transfer-header h2 {
+    font-size: 1.35rem; font-weight: 800; margin: 0 0 6px;
+    letter-spacing: -.4px;
+}
+.transfer-header p {
+    font-size: .82rem; opacity: .75; margin: 0;
+}
+.transfer-body { padding: 28px 30px; }
+
+/* Chain selector tabs */
+.chain-tabs {
+    display: flex; gap: 10px; margin-bottom: 24px;
+}
+.chain-tab {
+    flex: 1; padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-page);
+    cursor: pointer;
+    text-align: center;
+    transition: all .18s;
+    user-select: none;
+}
+.chain-tab:hover { border-color: var(--cyan); background: var(--cyan-l); }
+.chain-tab.active {
+    border-color: var(--cyan);
+    background: var(--cyan-l);
+    box-shadow: 0 0 0 3px rgba(6,182,212,.15);
+}
+.chain-tab .ct-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+.chain-tab .ct-name { font-size: .82rem; font-weight: 700; color: var(--t1); }
+.chain-tab .ct-unit { font-size: .7rem; color: var(--t3); }
+.chain-tab.active .ct-name { color: var(--cyan); }
+
+/* Token type selector */
+.token-tabs {
+    display: flex; gap: 10px; margin-bottom: 6px;
+}
+.token-tab {
+    flex: 1; padding: 11px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-page);
+    cursor: pointer;
+    text-align: center;
+    transition: all .18s;
+    user-select: none;
+}
+.token-tab:hover { border-color: var(--purple); background: var(--purple-l); }
+.token-tab.active {
+    border-color: var(--purple);
+    background: var(--purple-l);
+    box-shadow: 0 0 0 3px rgba(139,92,246,.15);
+}
+.token-tab .tt-name { font-size: .88rem; font-weight: 700; color: var(--t1); }
+.token-tab .tt-desc { font-size: .7rem; color: var(--t3); margin-top: 2px; }
+.token-tab.active .tt-name { color: var(--purple); }
+
+/* Form fields */
+.field-group { margin-bottom: 20px; }
+.field-label {
+    display: block;
+    font-size: .75rem; font-weight: 700; color: var(--t2);
+    text-transform: uppercase; letter-spacing: .7px;
+    margin-bottom: 7px;
+}
+.field-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border-m);
+    border-radius: 10px;
+    font-size: .9rem;
+    color: var(--t1);
+    background: #fff;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    font-family: 'JetBrains Mono', monospace;
+    box-sizing: border-box;
+}
+.field-input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(6,182,212,.12);
+}
+.field-input::placeholder { color: var(--t3); font-size: .82rem; font-family: 'Inter', sans-serif; }
+.field-hint {
+    font-size: .71rem; color: var(--t3); margin-top: 5px;
+    line-height: 1.4;
+}
+
+/* Amount row */
+.amount-row {
+    display: flex; align-items: center; gap: 10px;
+}
+.amount-row .field-input { flex: 1; }
+.amount-unit {
+    font-size: .85rem; font-weight: 700;
+    color: var(--cyan);
+    background: var(--cyan-l);
+    border: 1.5px solid rgba(6,182,212,.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    white-space: nowrap; min-width: 60px; text-align: center;
+}
+
+/* Execute button */
+.btn-execute {
+    width: 100%;
+    padding: 13px 20px;
+    background: linear-gradient(135deg, #0284c7, #7c3aed);
+    color: #fff; border: none; border-radius: 11px;
+    font-size: .95rem; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(2,132,199,.35);
+    transition: all .2s;
+    margin-top: 8px;
+}
+.btn-execute:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(2,132,199,.45);
+}
+.btn-execute:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+/* Result panel */
+.result-panel {
+    margin-top: 22px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: .84rem;
+    display: none;
+}
+.result-panel.show { display: block; }
+.result-panel.success {
+    background: var(--green-l);
+    border: 1.5px solid var(--green-b);
+    color: var(--green);
+}
+.result-panel.error {
+    background: var(--red-l);
+    border: 1.5px solid var(--red-b);
+    color: var(--red);
+}
+.result-label {
+    font-weight: 700; font-size: .78rem; text-transform: uppercase;
+    letter-spacing: .7px; margin-bottom: 7px; display: flex; align-items: center; gap: 5px;
+}
+.result-hash {
+    font-family: 'JetBrains Mono'; font-size: .78rem;
+    word-break: break-all; line-height: 1.5;
+    color: var(--t1);
+}
+.result-link {
+    display: inline-block; margin-top: 8px;
+    font-size: .78rem; font-weight: 600;
+    color: var(--cyan); text-decoration: none;
+}
+.result-link:hover { text-decoration: underline; }
+.error-msg {
+    font-size: .84rem; color: var(--red); line-height: 1.5;
+    word-break: break-all;
+}
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2.5px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Info card */
+.info-card {
+    background: #f8faff; border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    margin-top: 20px; font-size: .78rem; color: var(--t2);
+    line-height: 1.6;
+}
+.info-card strong { color: var(--t1); }
+
+/* Contract addr badge */
+.contract-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono'; font-size: .68rem;
+    background: var(--bg-tag); border: 1px solid var(--border);
+    border-radius: 6px; padding: 2px 7px; color: var(--t2);
+    margin-top: 4px; word-break: break-all;
+}
+</style>
+
+<div class="transfer-wrap">
+    <div class="transfer-card">
+        <!-- Header -->
+        <div class="transfer-header">
+            <h2>💸 转账</h2>
+            <p>支持 BSC / Solana 链；主币（BNB/SOL）或 USDT；白名单校验保护资产安全</p>
+        </div>
+
+        <!-- Body -->
+        <div class="transfer-body">
+
+            <!-- Step 1: Chain -->
+            <div class="field-group">
+                <span class="field-label">① 选择链</span>
+                <div class="chain-tabs">
+                    <div class="chain-tab active" id="tab-bsc" onclick="selectChain('bsc')">
+                        <span class="ct-icon">🟡</span>
+                        <span class="ct-name">BSC</span>
+                        <span class="ct-unit">BNB Chain</span>
+                    </div>
+                    <div class="chain-tab" id="tab-sol" onclick="selectChain('sol')">
+                        <span class="ct-icon">🟣</span>
+                        <span class="ct-name">Solana</span>
+                        <span class="ct-unit">SOL Network</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: To Address -->
+            <div class="field-group">
+                <label class="field-label" for="toAddress">② 收款地址</label>
+                <input class="field-input" id="toAddress" type="text"
+                       placeholder="0x... 或 Solana 地址" autocomplete="off" spellcheck="false">
+                <p class="field-hint" id="addr-hint">
+                    BSC 地址（0x 开头）；地址将与白名单比对，不在白名单中的地址会被拒绝。
+                </p>
+            </div>
+
+            <!-- Step 3: Token type -->
+            <div class="field-group">
+                <span class="field-label">③ 代币类型</span>
+                <div class="token-tabs">
+                    <div class="token-tab active" id="tt-native" onclick="selectToken('native')">
+                        <div class="tt-name" id="tt-native-name">BNB（主币）</div>
+                        <div class="tt-desc">Native coin</div>
+                    </div>
+                    <div class="token-tab" id="tt-usdt" onclick="selectToken('usdt')">
+                        <div class="tt-name">USDT</div>
+                        <div class="tt-desc" id="tt-usdt-desc">Tether USD</div>
+                    </div>
+                </div>
+                <div id="contract-info" style="display:none; margin-top:6px;">
+                    <span style="font-size:.72rem;color:var(--t3);">合约地址：</span>
+                    <span class="contract-badge" id="contract-addr"></span>
+                </div>
+            </div>
+
+            <!-- Step 4: Amount -->
+            <div class="field-group">
+                <label class="field-label" for="amount">④ 转账金额</label>
+                <div class="amount-row">
+                    <input class="field-input" id="amount" type="number"
+                           step="0.000001" min="0.000001"
+                           placeholder="0.01">
+                    <span class="amount-unit" id="amount-unit">BNB</span>
+                </div>
+                <p class="field-hint">
+                    输入转账数量；服务端会再次校验余额是否充足。
+                </p>
+            </div>
+
+            <!-- Execute -->
+            <button class="btn-execute" id="btn-execute" onclick="executeTransfer()">
+                <span id="btn-icon">💸</span>
+                <span id="btn-text">执行转账</span>
+            </button>
+
+            <!-- Result panel -->
+            <div class="result-panel" id="result-panel">
+                <div class="result-label" id="result-label"></div>
+                <div id="result-content"></div>
+            </div>
+
+            <!-- Info card -->
+            <div class="info-card">
+                <strong>📋 说明</strong><br>
+                • 私钥从环境变量读取（<code>WALLET_PRIVATE_KEY_EVM</code> / <code>WALLET_PRIVATE_KEY_SOL</code>），支持 AES 加密存储<br>
+                • 收款地址须在白名单中（BSC 不区分大小写；SOL 区分大小写）<br>
+                • BSC USDT 合约：<code>0x55d398326f99059fF775485246999027B3197955</code>（18 decimals）<br>
+                • SOL USDT Mint：<code>Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB</code>（6 decimals）<br>
+                • 广播走 OKX API（BSC 降级 BSC RPC），OKX 调用间隔 300-500ms，最多重试 3 次<br>
+                • 本操作不可撤销，请确认收款地址和金额无误后再执行
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const BSC_USDT_CONTRACT = '0x55d398326f99059fF775485246999027B3197955';
+const SOL_USDT_MINT     = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
+
+let selectedChain = 'bsc';
+let selectedToken = 'native';
+
+function selectChain(chain) {
+    selectedChain = chain;
+    document.querySelectorAll('.chain-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + chain).classList.add('active');
+
+    // Update UI text
+    const nativeLabel = chain === 'bsc' ? 'BNB（主币）' : 'SOL（主币）';
+    document.getElementById('tt-native-name').textContent = nativeLabel;
+
+    const addrHint = document.getElementById('addr-hint');
+    if (chain === 'bsc') {
+        addrHint.textContent = 'BSC 地址（0x 开头）；地址将与白名单比对（不区分大小写），不在白名单中的地址会被拒绝。';
+        document.getElementById('toAddress').placeholder = '0x... EVM 地址';
+    } else {
+        addrHint.textContent = 'Solana 地址（Base58）；地址将与白名单精确比对（区分大小写），不在白名单中的地址会被拒绝。';
+        document.getElementById('toAddress').placeholder = 'Solana Base58 地址';
+    }
+
+    // Update token desc
+    const usdtDesc = document.getElementById('tt-usdt-desc');
+    usdtDesc.textContent = chain === 'bsc'
+        ? '0x55d3...7955'
+        : 'Es9vMF...wNYB';
+
+    updateAmountUnit();
+    updateContractInfo();
+    hideResult();
+}
+
+function selectToken(type) {
+    selectedToken = type;
+    document.querySelectorAll('.token-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tt-' + type).classList.add('active');
+    updateAmountUnit();
+    updateContractInfo();
+    hideResult();
+}
+
+function updateAmountUnit() {
+    const unit = document.getElementById('amount-unit');
+    if (selectedToken === 'usdt') {
+        unit.textContent = 'USDT';
+    } else {
+        unit.textContent = selectedChain === 'bsc' ? 'BNB' : 'SOL';
+    }
+}
+
+function updateContractInfo() {
+    const div  = document.getElementById('contract-info');
+    const addr = document.getElementById('contract-addr');
+    if (selectedToken === 'usdt') {
+        div.style.display = 'block';
+        addr.textContent = selectedChain === 'bsc' ? BSC_USDT_CONTRACT : SOL_USDT_MINT;
+    } else {
+        div.style.display = 'none';
+    }
+}
+
+function hideResult() {
+    const panel = document.getElementById('result-panel');
+    panel.classList.remove('show', 'success', 'error');
+}
+
+function showResult(success, txHash, errorMsg) {
+    const panel   = document.getElementById('result-panel');
+    const label   = document.getElementById('result-label');
+    const content = document.getElementById('result-content');
+
+    panel.classList.remove('show', 'success', 'error');
+
+    if (success) {
+        panel.classList.add('show', 'success');
+        label.innerHTML = '✅ 转账成功';
+        const explorer = selectedChain === 'bsc'
+            ? 'https://bscscan.com/tx/'
+            : 'https://solscan.io/tx/';
+        content.innerHTML = `
+            <div class="result-hash">${txHash}</div>
+            <a class="result-link" href="${explorer}${txHash}" target="_blank" rel="noopener">
+                🔗 在区块链浏览器中查看
+            </a>`;
+    } else {
+        panel.classList.add('show', 'error');
+        label.innerHTML = '❌ 转账失败';
+        content.innerHTML = `<div class="error-msg">${errorMsg}</div>`;
+    }
+}
+
+function setLoading(loading) {
+    const btn  = document.getElementById('btn-execute');
+    const icon = document.getElementById('btn-icon');
+    const text = document.getElementById('btn-text');
+    if (loading) {
+        btn.disabled = true;
+        icon.innerHTML = '<span class="spinner"></span>';
+        text.textContent = '执行中，请稍候…';
+    } else {
+        btn.disabled = false;
+        icon.textContent = '💸';
+        text.textContent = '执行转账';
+    }
+}
+
+async function executeTransfer() {
+    const toAddress = document.getElementById('toAddress').value.trim();
+    const amount    = document.getElementById('amount').value.trim();
+
+    if (!toAddress) { alert('请输入收款地址'); return; }
+    if (!amount || parseFloat(amount) <= 0) { alert('请输入有效的转账金额'); return; }
+
+    const confirmMsg = `确认转账？\n\n链：${selectedChain.toUpperCase()}\n收款地址：${toAddress}\n代币：${selectedToken === 'native' ? (selectedChain === 'bsc' ? 'BNB' : 'SOL') : 'USDT'}\n金额：${amount}\n\n⚠️ 转账不可撤销，请确认无误！`;
+    if (!confirm(confirmMsg)) return;
+
+    hideResult();
+    setLoading(true);
+
+    try {
+        const params = new URLSearchParams({
+            chain:     selectedChain,
+            toAddress: toAddress,
+            tokenType: selectedToken,
+            amount:    amount
+        });
+        const resp = await fetch('/transfer/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        });
+        const data = await resp.json();
+        showResult(data.success, data.txHash, data.errorMsg);
+    } catch (err) {
+        showResult(false, null, '请求失败: ' + err.message);
+    } finally {
+        setLoading(false);
+    }
+}
+
+// Enter key trigger
+document.addEventListener('DOMContentLoaded', () => {
+    ['toAddress', 'amount'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') executeTransfer();
+        });
+    });
+});
+</script>
+
+</th:block>
+</body>
+</html>
