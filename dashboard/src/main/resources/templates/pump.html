@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('新币发射', ~{::main})}">
+<body><main>
+
+<div class="row g-3">
+
+    <!-- ════════ 左栏：SOL 新币实时流 ════════ -->
+    <div class="col-12 col-xl-7">
+        <!-- 标题栏 -->
+        <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+            <span class="pulse-dot"></span>
+            <h5 class="fw-7 mb-0 ms-1">🚀 SOL 新币发射流</h5>
+            <span class="chain-badge c-501 ms-1">Solana</span>
+
+            <!-- 连接状态 -->
+            <span id="ws-status" class="info-pill ms-2" style="font-size:.72rem">
+                <span id="ws-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#94a3c0;margin-right:4px"></span>
+                <span id="ws-text">连接中...</span>
+            </span>
+
+            <!-- 倒计时 -->
+            <span id="pump-badge"
+                  style="background:#f5f3ff;border:1px solid #ddd6fe;color:#7c3aed;
+                         border-radius:20px;padding:3px 11px;font-size:.76rem;font-weight:600;
+                         pointer-events:none">
+                🔄 <span id="pump-countdown">5</span>s
+            </span>
+
+            <span class="tag-gray ms-1">共 <span id="pump-count">0</span> 个</span>
+
+            <button id="pump-refresh-btn" class="btn-primary-g ms-auto"
+                    onclick="manualRefresh()"
+                    style="padding:5px 14px;font-size:.78rem;min-width:80px">⚡ 刷新</button>
+        </div>
+
+        <!-- 新币列表 -->
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table" id="pump-tbl">
+                    <thead><tr>
+                        <th style="width:70px">时间</th>
+                        <th>代币</th>
+                        <th>合约地址</th>
+                        <th>市值</th>
+                        <th>链接</th>
+                    </tr></thead>
+                    <tbody id="pump-tbody">
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <div class="ei">⏳</div>
+                            <div>正在接收数据流...</div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ 右栏：说明 / 预留 ════════ -->
+    <div class="col-12 col-xl-5">
+        <div class="card mb-3">
+            <div class="card-header">📖 数据说明</div>
+            <div class="card-body">
+                <div style="font-size:.84rem;line-height:1.8;color:var(--t2)">
+                    <p>数据来源：<a href="https://pumpportal.fun" target="_blank" class="addr">pumpportal.fun</a> WebSocket 实时流</p>
+                    <p>订阅方式：<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:.78rem">subscribeNewToken</code></p>
+                    <p>接收链：<span class="chain-badge c-501">Solana</span>（pump.fun 只有 SOL）</p>
+                    <p>存储上限：最近 <strong>2000</strong> 条，超出自动清理</p>
+                </div>
+                <div id="pump-stat" class="mt-3"
+                     style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div class="stat-card sc-purple" style="padding:14px 16px">
+                        <div class="sc-icon" style="font-size:1.1rem">🔌</div>
+                        <div class="sc-val" id="stat-conn" style="font-size:1.2rem">—</div>
+                        <div class="sc-lbl">WSS 状态</div>
+                    </div>
+                    <div class="stat-card sc-cyan" style="padding:14px 16px">
+                        <div class="sc-icon" style="font-size:1.1rem">🪙</div>
+                        <div class="sc-val" id="stat-total" style="font-size:1.2rem">—</div>
+                        <div class="sc-lbl">累计新币</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 今日统计（预留扩展） -->
+        <div class="card">
+            <div class="card-header">💡 快速跳转</div>
+            <div class="card-body" style="font-size:.84rem;color:var(--t2);line-height:2">
+                点击合约地址可复制<br>
+                点击 <strong>GMGN</strong> 跳转行情<br>
+                点击 <strong>Pump</strong> 跳转 pump.fun 页面
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+@keyframes pumpFlash {
+    0%   { background: #f5f3ff; }
+    100% { background: transparent; }
+}
+.pump-new { animation: pumpFlash 1.5s ease-out; }
+.link-pill {
+    display:inline-block; padding:2px 8px; border-radius:5px;
+    font-size:.68rem; font-weight:600; text-decoration:none;
+    margin-right:3px; white-space:nowrap;
+    transition: opacity .15s;
+}
+.link-pill:hover { opacity:.75; }
+.lp-gmgn { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+.lp-pump  { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; }
+.lp-copy  { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; cursor:pointer; }
+</style>
+
+<script>
+let pumpCooldown = false;
+let pumpCountdown = 5;
+
+async function refreshPump() {
+    try {
+        const [tr, sr] = await Promise.all([
+            fetch('/api/pump/tokens?limit=100'),
+            fetch('/api/pump/status')
+        ]);
+        const tokens = await tr.json();
+        const status = await sr.json();
+
+        // 更新统计
+        document.getElementById('pump-count').textContent   = tokens.length;
+        document.getElementById('stat-total').textContent   = status.total ?? '—';
+        const isConn = status.connected;
+        document.getElementById('stat-conn').textContent    = isConn ? '已连接' : '断线';
+        document.getElementById('stat-conn').className      = 'sc-val ' + (isConn ? 'up' : 'dn');
+        const dot  = document.getElementById('ws-dot');
+        const text = document.getElementById('ws-text');
+        dot.style.background  = isConn ? 'var(--green)' : 'var(--red)';
+        text.textContent       = isConn ? '实时接收中' : '连接断开';
+
+        // 倒计时徽章闪烁
+        const badge = document.getElementById('pump-badge');
+        badge.style.background = '#dcfce7'; badge.style.borderColor = '#86efac'; badge.style.color = '#16a34a';
+        setTimeout(() => { badge.style.background=''; badge.style.borderColor=''; badge.style.color=''; }, 600);
+
+        if (!tokens.length) return;
+
+        const tbody = document.getElementById('pump-tbody');
+        tbody.innerHTML = tokens.map((t, idx) => {
+            const mint  = t.mint || '';
+            const short = mint.length > 14 ? mint.substring(0,8)+'...'+mint.slice(-6) : mint;
+            const mc    = t.usdMarketCap ? fmtMcap(t.usdMarketCap) : '—';
+            const gmgn  = `https://gmgn.ai/sol/token/${mint}`;
+            const pump  = `https://pump.fun/${mint}`;
+            const links = `
+                <a class="link-pill lp-gmgn" href="${gmgn}" target="_blank" rel="noopener">GMGN↗</a>
+                <a class="link-pill lp-pump" href="${pump}" target="_blank" rel="noopener">Pump↗</a>
+            `;
+            const socials = [
+                t.twitter  ? `<a href="${t.twitter}" target="_blank" class="link-pill" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd" rel="noopener">𝕏</a>` : '',
+                t.telegram ? `<a href="${t.telegram}" target="_blank" class="link-pill" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd" rel="noopener">TG</a>` : '',
+            ].join('');
+            return `<tr class="${idx < 3 ? 'pump-new' : ''}">
+                <td class="mono t-dim" style="font-size:.7rem">${t.receivedAt||'—'}</td>
+                <td>
+                    <div class="fw-7" style="font-size:.88rem">${t.symbol||'?'}</div>
+                    <div class="t-dim" style="font-size:.7rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name||'—'}</div>
+                </td>
+                <td>
+                    <span class="addr" style="font-size:.7rem;cursor:pointer"
+                          data-addr="${mint}" onclick="copyAddr(this.dataset.addr)"
+                          title="点击复制">${short}</span>
+                </td>
+                <td class="mono t-dim" style="font-size:.76rem">${mc}</td>
+                <td>${links}${socials}</td>
+            </tr>`;
+        }).join('');
+    } catch(e) { console.warn('refreshPump', e); }
+}
+
+// 5 秒自动刷新倒计时
+const cntEl = document.getElementById('pump-countdown');
+setInterval(() => {
+    pumpCountdown--;
+    if (pumpCountdown <= 0) {
+        pumpCountdown = 5;
+        refreshPump();
+    }
+    cntEl.textContent = pumpCountdown;
+}, 1000);
+
+// 手动刷新 + 5s 冷却
+function manualRefresh() {
+    if (pumpCooldown) return;
+    pumpCooldown = true;
+    pumpCountdown = 5;
+    refreshPump();
+    const btn = document.getElementById('pump-refresh-btn');
+    let s = 5;
+    btn.disabled = true; btn.style.opacity='.45'; btn.style.cursor='not-allowed';
+    btn.textContent = `⏳ ${s}s`;
+    const t = setInterval(() => {
+        s--;
+        if (s <= 0) {
+            clearInterval(t);
+            pumpCooldown = false;
+            btn.disabled = false; btn.style.opacity='1'; btn.style.cursor='pointer';
+            btn.textContent = '⚡ 刷新';
+        } else {
+            btn.textContent = `⏳ ${s}s`;
+        }
+    }, 1000);
+}
+
+// 页面加载立即拉一次
+refreshPump();
+</script>
+
+</main></body>
+</html>

@@ -19,7 +19,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ApiController {
 
-    private final SmartMoneyService      smartMoneyService;
+    private final SmartMoneyService         smartMoneyService;
+    private final com.deanrobin.aios.dashboard.repository.PumpTokenRepository pumpTokenRepo;
+    private final com.deanrobin.aios.dashboard.service.PumpPortalClient pumpPortalClient;
     private final PortfolioService       portfolioService;
     private final PriceTickerRepository  priceRepo;
 
@@ -100,5 +102,34 @@ public class ApiController {
             @RequestParam(defaultValue = "1") String chain,
             @RequestParam(defaultValue = "3") String timeFrame) {
         return smartMoneyService.getWalletOverview(chain, address, timeFrame);
+    }
+
+    @GetMapping("/pump/tokens")
+    public Object pumpTokens(@RequestParam(defaultValue = "100") int limit) {
+        var list = pumpTokenRepo.findRecent(Math.min(limit, 200));
+        return list.stream().map(t -> {
+            var m = new java.util.LinkedHashMap<String, Object>();
+            m.put("mint",          t.getMint());
+            m.put("name",          t.getName());
+            m.put("symbol",        t.getSymbol());
+            m.put("description",   t.getDescription());
+            m.put("imageUri",      t.getImageUri());
+            m.put("twitter",       t.getTwitter());
+            m.put("telegram",      t.getTelegram());
+            m.put("website",       t.getWebsite());
+            m.put("creator",       t.getCreator());
+            m.put("usdMarketCap",  t.getUsdMarketCap());
+            m.put("receivedAt",    t.getReceivedAt() != null
+                    ? t.getReceivedAt().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")) : "—");
+            return m;
+        }).toList();
+    }
+
+    @GetMapping("/pump/status")
+    public Map<String, Object> pumpStatus() {
+        return Map.of(
+            "connected", pumpPortalClient.isConnected(),
+            "total",     pumpTokenRepo.count()
+        );
     }
 }
