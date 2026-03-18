@@ -23,6 +23,8 @@ public class ApiController {
     private final com.deanrobin.aios.dashboard.repository.PumpTokenRepository          pumpTokenRepo;
     private final com.deanrobin.aios.dashboard.repository.PumpMarketCapSnapshotRepository snapshotRepo;
     private final com.deanrobin.aios.dashboard.service.PumpPortalClient                pumpPortalClient;
+    private final com.deanrobin.aios.dashboard.repository.FourMemeTokenRepository      fourMemeRepo;
+    private final com.deanrobin.aios.dashboard.service.FourMemeClient                  fourMemeClient;
     private final PortfolioService       portfolioService;
     private final PriceTickerRepository  priceRepo;
 
@@ -132,6 +134,45 @@ public class ApiController {
             "connected", pumpPortalClient.isConnected(),
             "total",     pumpTokenRepo.count()
         );
+    }
+
+    @GetMapping("/fourmeme/tokens")
+    public Object fourMemeTokens(@RequestParam(defaultValue = "100") int limit) {
+        return fourMemeRepo.findRecent(Math.min(limit, 200)).stream().map(t -> {
+            var m = new java.util.LinkedHashMap<String, Object>();
+            m.put("tokenAddress", t.getTokenAddress());
+            m.put("name",         t.getName());
+            m.put("symbol",       t.getShortName());
+            m.put("capBnb",       t.getCapBnb());
+            m.put("progress",     t.getProgress());
+            m.put("hold",         t.getHold());
+            m.put("img",          t.getImg());
+            m.put("receivedAt",   t.getReceivedAt() != null
+                    ? t.getReceivedAt().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")) : "—");
+            return m;
+        }).toList();
+    }
+
+    @GetMapping("/fourmeme/status")
+    public Map<String, Object> fourMemeStatus() {
+        return Map.of("connected", fourMemeClient.isConnected(), "total", fourMemeRepo.count());
+    }
+
+    @GetMapping("/fourmeme/survivors")
+    public Object fourMemeSurvivors() {
+        return fourMemeRepo.findSurvivors().stream().map(t -> {
+            var m = new java.util.LinkedHashMap<String, Object>();
+            m.put("tokenAddress",    t.getTokenAddress());
+            m.put("name",            t.getName());
+            m.put("symbol",          t.getShortName());
+            m.put("img",             t.getImg());
+            m.put("currentMarketCap",t.getCurrentMarketCap());
+            m.put("lastCheckedAt",   t.getLastCheckedAt() != null
+                    ? t.getLastCheckedAt().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm")) : "—");
+            m.put("receivedAt",      t.getReceivedAt() != null
+                    ? t.getReceivedAt().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm")) : "—");
+            return m;
+        }).toList();
     }
 
     @GetMapping("/pump/survivors")

@@ -37,6 +37,7 @@ public class PumpSurvivorJob {
     private static final int    SLEEP_MS       = 5_000;
 
     private final PumpTokenRepository              pumpTokenRepo;
+    private final com.deanrobin.aios.dashboard.repository.FourMemeTokenRepository fourMemeRepo;
     private final PumpMarketCapSnapshotRepository  snapshotRepo;
     private final OkxApiClient                     okxApiClient;
 
@@ -66,6 +67,49 @@ public class PumpSurvivorJob {
             log.info("⏱ PumpSurvivor [24h] 检查 {} 个", due24h.size());
             processBatch(due24h, Stage.TWENTY_FOUR_HOUR);
         }
+
+        // ── FourMeme (BSC) 三阶段 ────────────────────
+        processFourMemeBatch(fourMemeRepo.findDueFor10m(now.minusMinutes(10)),  Stage.TEN_MIN,           "56");
+        processFourMemeBatch(fourMemeRepo.findDueFor1h(now.minusHours(1)),      Stage.ONE_HOUR,          "56");
+        processFourMemeBatch(fourMemeRepo.findDueFor24h(now.minusHours(24)),    Stage.TWENTY_FOUR_HOUR,  "56");
+    }
+
+    private void processFourMemeBatch(List<com.deanrobin.aios.dashboard.model.FourMemeToken> tokens,
+                                       Stage stage, String chainIndex) {
+        if (tokens.isEmpty()) return;
+        log.info("⏱ FourMeme [{}] 检查 {} 个", stage, tokens.size());
+        int survived = 0, deleted = 0, skipped = 0;
+        for (int i = 0; i < tokens.size(); i++) {
+            if (i > 0) { try { Thread.sleep(SLEEP_MS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; } }
+            var t = tokens.get(i);
+            try {
+                BigDecimal mc = fetchMarketCap(t.getTokenAddress(), chainIndex);
+                LocalDateTime now = LocalDateTime.now();
+                switch (stage) {
+                    case TEN_MIN  -> t.setChecked10mAt(now);
+                    case ONE_HOUR -> t.setChecked1hAt(now);
+                    case TWENTY_FOUR_HOUR -> t.setLastCheckedAt(now);
+                }
+                boolean ok = mc != null && mc.compareTo(BigDecimal.valueOf(MIN_MARKET_CAP)) >= 0;
+                if (ok) {
+                    t.setStatus("survived"); t.setCurrentMarketCap(mc); fourMemeRepo.save(t); survived++;
+                    log.info("✅ FourMeme [{}] 存活: {} mc=${}", stage, t.getShortName(), mc.toPlainString());
+                } else if (stage == Stage.TWENTY_FOUR_HOUR) {
+                    fourMemeRepo.delete(t); deleted++;
+                } else {
+                    fourMemeRepo.save(t); skipped++;
+                }
+            } catch (Exception e) {
+                log.warn("⚠️ FourMeme [{}] 检查 {} 失败: {}", stage, t.getTokenAddress().substring(0, 10), e.getMessage());
+                switch (stage) {
+                    case TEN_MIN  -> t.setChecked10mAt(LocalDateTime.now());
+                    case ONE_HOUR -> t.setChecked1hAt(LocalDateTime.now());
+                    case TWENTY_FOUR_HOUR -> t.setLastCheckedAt(LocalDateTime.now());
+                }
+                fourMemeRepo.save(t);
+            }
+        }
+        log.info("✔ FourMeme [{}] 完成: 存活={} 删除={} 跳过={}", stage, survived, deleted, skipped);
     }
 
     private enum Stage { TEN_MIN, ONE_HOUR, TWENTY_FOUR_HOUR }
@@ -137,12 +181,14 @@ public class PumpSurvivorJob {
         snapshotRepo.save(snap);
     }
 
+    private BigDecimal fetchMarketCap(String address) { return fetchMarketCap(address, CHAIN_SOL); }
+
     @SuppressWarnings("unchecked")
-    private BigDecimal fetchMarketCap(String mint) {
+    private BigDecimal fetchMarketCap(String address, String chainIndex) {
         try {
             Map<?, ?> resp = okxApiClient.get(
                     BASE_WEB3, TOKEN_DETAIL,
-                    Map.of("chainIndex", CHAIN_SOL, "tokenAddress", mint)
+                    Map.of("chainIndex", chainIndex, "tokenAddress", address)
             );
             if (!"0".equals(String.valueOf(resp.get("code")))) return null;
             Object dataObj = resp.get("data");
@@ -154,7 +200,7 @@ public class PumpSurvivorJob {
             BigDecimal val = new BigDecimal(mc.toString().replace(",", ""));
             return val.compareTo(BigDecimal.ZERO) <= 0 ? null : val;
         } catch (Exception e) {
-            log.debug("fetchMarketCap {} error: {}", mint.substring(0, 10), e.getMessage());
+            log.debug("fetchMarketCap {} error: {}", address.substring(0, 10), e.getMessage());
             return null;
         }
     }

@@ -3,111 +3,76 @@
       th:replace="~{layout :: page('新币发射', ~{::main})}">
 <body><main>
 
-<div class="row g-3">
-
-    <!-- ════════ 左栏：SOL 新币实时流 ════════ -->
-    <div class="col-12 col-xl-7">
-        <!-- 标题栏 -->
-        <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
-            <span class="pulse-dot"></span>
-            <h5 class="fw-7 mb-0 ms-1">🚀 SOL 新币发射流</h5>
-            <span class="chain-badge c-501 ms-1">Solana</span>
-
-            <!-- 连接状态 -->
-            <span id="ws-status" class="info-pill ms-2" style="font-size:.72rem">
-                <span id="ws-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#94a3c0;margin-right:4px"></span>
-                <span id="ws-text">连接中...</span>
-            </span>
-
-            <!-- 倒计时 -->
-            <span id="pump-badge"
-                  style="background:#f5f3ff;border:1px solid #ddd6fe;color:#7c3aed;
-                         border-radius:20px;padding:3px 11px;font-size:.76rem;font-weight:600;
-                         pointer-events:none">
-                🔄 <span id="pump-countdown">5</span>s
-            </span>
-
-            <span class="tag-gray ms-1">共 <span id="pump-count">0</span> 个</span>
-
-            <button id="pump-refresh-btn" class="btn-primary-g ms-auto"
-                    onclick="manualRefresh()"
-                    style="padding:5px 14px;font-size:.78rem;min-width:80px">⚡ 刷新</button>
+<!-- ══════════════════════════════════════════════
+     第一层：连接状态栏
+═══════════════════════════════════════════════ -->
+<div class="card mb-3">
+    <div class="card-body py-2 d-flex flex-wrap gap-3 align-items-center">
+        <!-- SOL 状态 -->
+        <div class="d-flex align-items-center gap-2">
+            <span class="chain-badge c-501">SOL</span>
+            <span id="sol-ws-dot" class="status-dot" style="background:#94a3c0"></span>
+            <span id="sol-ws-text" class="t-dim" style="font-size:.8rem">连接中...</span>
+            <span class="tag-gray" style="font-size:.76rem">累计 <span id="stat-total">—</span></span>
         </div>
 
-        <!-- 新币列表 -->
-        <div class="card">
+        <div style="width:1px;height:20px;background:var(--border)"></div>
+
+        <!-- BSC 状态 -->
+        <div class="d-flex align-items-center gap-2">
+            <span class="chain-badge c-56">BSC</span>
+            <span id="bsc-ws-dot" class="status-dot" style="background:#94a3c0"></span>
+            <span id="bsc-ws-text" class="t-dim" style="font-size:.8rem">连接中...</span>
+            <span class="tag-gray" style="font-size:.76rem">累计 <span id="bsc-stat-total">—</span></span>
+        </div>
+
+        <div class="ms-auto d-flex align-items-center gap-2" style="font-size:.76rem;color:var(--t2)">
+            💡 点合约地址复制 &nbsp;|&nbsp; GMGN 跳行情 &nbsp;|&nbsp; Pump/Four 跳发射台
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     第二层：24H 存活 meme（左 SOL / 右 BSC）
+═══════════════════════════════════════════════ -->
+<div class="row g-3 mb-3">
+
+    <!-- SOL 存活 -->
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center gap-2">
+                <span>🏆 SOL 24H 存活</span>
+                <span class="chain-badge c-501">SOL</span>
+                <span class="tag-gray ms-1" style="font-size:.72rem">市值 ≥ $10K</span>
+                <span id="sol-survivor-count" class="tag-blue ms-1" style="font-size:.72rem">0</span>
+                <span class="t-dim ms-auto" style="font-size:.7rem">每5分钟检查</span>
+            </div>
             <div class="card-body p-0">
-                <table class="table" id="pump-tbl">
-                    <thead><tr>
-                        <th style="width:70px">时间</th>
-                        <th>代币</th>
-                        <th>合约地址</th>
-                        <th>市值</th>
-                        <th>链接</th>
-                    </tr></thead>
-                    <tbody id="pump-tbody">
-                    <tr>
-                        <td colspan="5" class="empty-state">
-                            <div class="ei">⏳</div>
-                            <div>正在接收数据流...</div>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
+                <div id="sol-survivor-list" style="max-height:280px;overflow-y:auto">
+                    <div class="empty-state" style="padding:28px 0">
+                        <div class="ei">⏳</div>
+                        <div style="font-size:.8rem">等待首次检查（超 24H 新币才出现）</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ════════ 右栏：说明 / 预留 ════════ -->
-    <div class="col-12 col-xl-5">
-        <div class="card mb-3">
-            <div class="card-header">📖 数据说明</div>
-            <div class="card-body">
-                <div style="font-size:.84rem;line-height:1.8;color:var(--t2)">
-                    <p>数据来源：<a href="https://pumpportal.fun" target="_blank" class="addr">pumpportal.fun</a> WebSocket 实时流</p>
-                    <p>订阅方式：<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:.78rem">subscribeNewToken</code></p>
-                    <p>接收链：<span class="chain-badge c-501">Solana</span>（pump.fun 只有 SOL）</p>
-                    <p>存储上限：最近 <strong>10 万</strong> 条，超出自动清理</p>
-                </div>
-                <div id="pump-stat" class="mt-3"
-                     style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                    <div class="stat-card sc-purple" style="padding:14px 16px">
-                        <div class="sc-icon" style="font-size:1.1rem">🔌</div>
-                        <div class="sc-val" id="stat-conn" style="font-size:1.2rem">—</div>
-                        <div class="sc-lbl">WSS 状态</div>
-                    </div>
-                    <div class="stat-card sc-cyan" style="padding:14px 16px">
-                        <div class="sc-icon" style="font-size:1.1rem">🪙</div>
-                        <div class="sc-val" id="stat-total" style="font-size:1.2rem">—</div>
-                        <div class="sc-lbl">累计新币</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 快速跳转 -->
-        <div class="card mb-3">
-            <div class="card-header">💡 快速跳转</div>
-            <div class="card-body" style="font-size:.84rem;color:var(--t2);line-height:2">
-                点击合约地址可复制<br>
-                点击 <strong>GMGN</strong> 跳转行情<br>
-                点击 <strong>Pump</strong> 跳转 pump.fun 页面
-            </div>
-        </div>
-
-        <!-- ════ 24H 存活 meme 看板 ════ -->
-        <div class="card">
+    <!-- BSC 存活 -->
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
             <div class="card-header d-flex align-items-center gap-2">
-                <span>🏆 24H 存活 meme</span>
+                <span>🏆 BSC 24H 存活</span>
+                <span class="chain-badge c-56">BSC</span>
                 <span class="tag-gray ms-1" style="font-size:.72rem">市值 ≥ $10K</span>
-                <span id="survivor-count" class="tag-blue ms-1" style="font-size:.72rem">0</span>
-                <span class="t-dim ms-auto" style="font-size:.7rem">每小时检查更新</span>
+                <span id="bsc-survivor-count" class="tag-blue ms-1" style="font-size:.72rem">0</span>
+                <span class="t-dim ms-auto" style="font-size:.7rem">每5分钟检查</span>
             </div>
             <div class="card-body p-0">
-                <div id="survivor-list" style="max-height:460px;overflow-y:auto">
-                    <div class="empty-state" style="padding:30px 0">
+                <div id="bsc-survivor-list" style="max-height:280px;overflow-y:auto">
+                    <div class="empty-state" style="padding:28px 0">
                         <div class="ei">⏳</div>
-                        <div style="font-size:.8rem">等待首次检查（超 24H 新币才会出现）</div>
+                        <div style="font-size:.8rem">等待首次检查</div>
                     </div>
                 </div>
             </div>
@@ -116,175 +81,352 @@
 
 </div>
 
+<!-- ══════════════════════════════════════════════
+     第三层：新币实时流（左 SOL / 右 BSC）
+═══════════════════════════════════════════════ -->
+<div class="row g-3">
+
+    <!-- SOL 新币流 -->
+    <div class="col-12 col-xl-6">
+        <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+            <span class="pulse-dot"></span>
+            <span class="fw-7">🚀 SOL 新币流</span>
+            <span class="chain-badge c-501">pump.fun</span>
+            <span id="sol-badge" class="countdown-badge sol">🔄 <span id="sol-countdown">5</span>s</span>
+            <span class="tag-gray">共 <span id="sol-count">0</span></span>
+            <button id="sol-refresh-btn" class="btn-primary-g ms-auto" onclick="manualRefreshSol()"
+                    style="padding:4px 12px;font-size:.76rem">⚡ 刷新</button>
+        </div>
+        <div class="card">
+            <div class="card-body p-0" style="overflow-x:auto">
+                <table class="table" style="min-width:480px">
+                    <thead><tr>
+                        <th style="width:62px">时间</th>
+                        <th>代币</th>
+                        <th>合约</th>
+                        <th>链接</th>
+                    </tr></thead>
+                    <tbody id="sol-tbody">
+                        <tr><td colspan="4" class="empty-state"><div class="ei">⏳</div><div>接收中...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- BSC 新币流 -->
+    <div class="col-12 col-xl-6">
+        <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+            <span class="pulse-dot" style="background:#f59e0b"></span>
+            <span class="fw-7">🟡 BSC 新币流</span>
+            <span class="chain-badge c-56">four.meme</span>
+            <span id="bsc-badge" class="countdown-badge bsc">🔄 <span id="bsc-countdown">5</span>s</span>
+            <span class="tag-gray">共 <span id="bsc-count">0</span></span>
+            <button id="bsc-refresh-btn" class="btn-primary-g ms-auto" onclick="manualRefreshBsc()"
+                    style="padding:4px 12px;font-size:.76rem">⚡ 刷新</button>
+        </div>
+        <div class="card">
+            <div class="card-body p-0" style="overflow-x:auto">
+                <table class="table" style="min-width:520px">
+                    <thead><tr>
+                        <th style="width:62px">时间</th>
+                        <th>代币</th>
+                        <th>合约</th>
+                        <th style="width:70px">市值(BNB)</th>
+                        <th>进度</th>
+                        <th>链接</th>
+                    </tr></thead>
+                    <tbody id="bsc-tbody">
+                        <tr><td colspan="6" class="empty-state"><div class="ei">⏳</div><div>接收中...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 <style>
-@keyframes pumpFlash {
-    0%   { background: #f5f3ff; }
+.status-dot {
+    display:inline-block; width:8px; height:8px; border-radius:50%;
+    transition: background .3s;
+}
+.countdown-badge {
+    border-radius:20px; padding:2px 10px; font-size:.74rem; font-weight:600; pointer-events:none;
+    transition: background .2s, border-color .2s, color .2s;
+}
+.countdown-badge.sol { background:#f5f3ff; border:1px solid #ddd6fe; color:#7c3aed; }
+.countdown-badge.bsc { background:#fffbeb; border:1px solid #fde68a; color:#b45309; }
+
+@keyframes rowFlash {
+    0%   { background: #e0f2fe; }
     100% { background: transparent; }
 }
-.pump-new { animation: pumpFlash 1.5s ease-out; }
+.row-flash { animation: rowFlash 1.4s ease-out; }
+
 .link-pill {
-    display:inline-block; padding:2px 8px; border-radius:5px;
-    font-size:.68rem; font-weight:600; text-decoration:none;
-    margin-right:3px; white-space:nowrap;
-    transition: opacity .15s;
+    display:inline-block; padding:2px 7px; border-radius:5px;
+    font-size:.66rem; font-weight:600; text-decoration:none; margin-right:3px;
+    transition: opacity .15s; white-space:nowrap;
 }
-.link-pill:hover { opacity:.75; }
+.link-pill:hover { opacity:.72; }
 .lp-gmgn { background:#dcfce7; color:#166534; border:1px solid #86efac; }
-.lp-pump  { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; }
-.lp-copy  { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; cursor:pointer; }
+.lp-pump { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; }
+.lp-four { background:#fffbeb; color:#b45309; border:1px solid #fde68a; }
+.lp-copy { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; cursor:pointer; }
+
+.survivor-item {
+    padding:9px 14px; border-bottom:1px solid var(--border);
+}
+.survivor-item:last-child { border-bottom:none; }
+.prog-bar {
+    background:#e0f2fe; border-radius:6px; height:5px; width:56px; overflow:hidden; display:inline-block;
+}
+.prog-fill { background:#0ea5e9; height:100%; }
 </style>
 
 <script>
-let pumpCooldown = false;
-let pumpCountdown = 5;
+// ─────────────────────────────────────────────────────────
+// 工具函数
+// ─────────────────────────────────────────────────────────
+function fmtMcap(v) {
+    if (!v) return '—';
+    const n = parseFloat(v);
+    if (n >= 1e9)  return '$'+(n/1e9).toFixed(2)+'B';
+    if (n >= 1e6)  return '$'+(n/1e6).toFixed(2)+'M';
+    if (n >= 1e3)  return '$'+(n/1e3).toFixed(1)+'K';
+    return '$'+n.toFixed(0);
+}
 
+function shorten(addr, head=8, tail=6) {
+    return addr && addr.length > head+tail+3 ? addr.substring(0,head)+'...'+addr.slice(-tail) : addr;
+}
+
+function copyAddr(addr) {
+    if (!addr) return;
+    const ta = document.createElement('textarea');
+    ta.value = addr; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+    const t = document.getElementById('_copy_toast');
+    if (t) { t.textContent='✅ 已复制'; t.style.opacity='1'; setTimeout(()=>{t.style.opacity='0';}, 1500); }
+}
+
+function badgeFlash(el, colorClass) {
+    if (!el) return;
+    el.style.background='#dcfce7'; el.style.borderColor='#86efac'; el.style.color='#16a34a';
+    setTimeout(()=>{ el.style.background=''; el.style.borderColor=''; el.style.color=''; }, 700);
+}
+
+function cdBtn(btn, secs, onDone) {
+    btn.disabled=true; btn.style.opacity='.45'; btn.style.cursor='not-allowed';
+    let s=secs; btn.textContent=`⏳ ${s}s`;
+    const t=setInterval(()=>{ s--; if(s<=0){ clearInterval(t); btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer'; btn.textContent='⚡ 刷新'; onDone&&onDone(); } else btn.textContent=`⏳ ${s}s`; }, 1000);
+}
+
+// ─────────────────────────────────────────────────────────
+// SOL pump.fun
+// ─────────────────────────────────────────────────────────
+let solCooldown=false, solCd=5;
+
+async function refreshSol() {
+    try {
+        const [tr, sr] = await Promise.all([fetch('/api/pump/tokens?limit=100'), fetch('/api/pump/status')]);
+        const tokens=await tr.json(), status=await sr.json();
+
+        document.getElementById('sol-count').textContent = tokens.length;
+        document.getElementById('stat-total').textContent = status.total??'—';
+
+        const conn = status.connected;
+        document.getElementById('sol-ws-dot').style.background = conn ? 'var(--green)' : 'var(--red)';
+        document.getElementById('sol-ws-text').textContent = conn ? '实时接收中' : '连接断开';
+
+        badgeFlash(document.getElementById('sol-badge'));
+
+        if (!tokens.length) return;
+        document.getElementById('sol-tbody').innerHTML = tokens.map((t,i) => {
+            const addr=t.mint||'', pr=parseFloat(t.soldRatioPercent||0);
+            const srHtml = t.soldRatioPercent!=null
+                ? `<span class="${pr>50?'dn':'up'}" style="font-size:.7rem;font-weight:600">${pr.toFixed(1)}%</span>` : '';
+            return `<tr class="row-flash">
+                <td class="mono t-dim" style="font-size:.68rem">${t.receivedAt||'—'}</td>
+                <td>
+                    <div class="fw-7" style="font-size:.84rem;cursor:pointer;color:var(--blue)"
+                         data-addr="${addr}" data-chain="501" onclick="openTrade(this)">${t.symbol||'?'}</div>
+                    <div class="t-dim" style="font-size:.66rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name||''}</div>
+                </td>
+                <td>
+                    <span class="addr" style="font-size:.68rem;cursor:pointer" data-addr="${addr}" onclick="copyAddr(this.dataset.addr)">${shorten(addr)}</span>
+                </td>
+                <td>
+                    <a class="link-pill lp-gmgn" href="https://gmgn.ai/sol/token/${addr}" target="_blank" rel="noopener">GMGN↗</a>
+                    <a class="link-pill lp-pump" href="https://pump.fun/${addr}" target="_blank" rel="noopener">Pump↗</a>
+                    ${srHtml}
+                </td>
+            </tr>`;
+        }).join('');
+    } catch(e) { console.warn('refreshSol', e); }
+}
+
+function manualRefreshSol() {
+    if (solCooldown) return; solCooldown=true; solCd=5; refreshSol();
+    cdBtn(document.getElementById('sol-refresh-btn'), 5, ()=>solCooldown=false);
+}
+
+const solCntEl = document.getElementById('sol-countdown');
+setInterval(()=>{ solCd--; if(solCd<=0){solCd=5;refreshSol();} solCntEl.textContent=solCd; }, 1000);
+
+// ─────────────────────────────────────────────────────────
+// BSC four.meme
+// ─────────────────────────────────────────────────────────
+let bscCooldown=false, bscCd=5;
+
+async function refreshBsc() {
+    try {
+        const [tr, sr] = await Promise.all([fetch('/api/fourmeme/tokens?limit=100'), fetch('/api/fourmeme/status')]);
+        const tokens=await tr.json(), status=await sr.json();
+
+        document.getElementById('bsc-count').textContent = tokens.length;
+        document.getElementById('bsc-stat-total').textContent = status.total??'—';
+
+        const conn = status.connected;
+        document.getElementById('bsc-ws-dot').style.background = conn ? 'var(--green)' : 'var(--red)';
+        document.getElementById('bsc-ws-text').textContent = conn ? '实时接收中' : '连接断开';
+
+        badgeFlash(document.getElementById('bsc-badge'));
+
+        if (!tokens.length) return;
+        document.getElementById('bsc-tbody').innerHTML = tokens.map((t,i) => {
+            const addr=t.tokenAddress||'';
+            const cap  = t.capBnb ? parseFloat(t.capBnb).toFixed(2) : '—';
+            const prg  = t.progress!=null ? parseFloat(t.progress) : 0;
+            const prgStr = prg.toFixed(1)+'%';
+            const img  = t.img ? `https://four.meme${t.img}` : '';
+            return `<tr class="row-flash">
+                <td class="mono t-dim" style="font-size:.68rem">${t.receivedAt||'—'}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-1">
+                        ${img?`<img src="${img}" style="width:16px;height:16px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">`:''}
+                        <div>
+                            <div class="fw-7" style="font-size:.84rem">${t.symbol||'?'}</div>
+                            <div class="t-dim" style="font-size:.66rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name||''}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="addr" style="font-size:.68rem;cursor:pointer" data-addr="${addr}" onclick="copyAddr(this.dataset.addr)">${shorten(addr)}</span>
+                </td>
+                <td class="mono t-dim" style="font-size:.74rem">${cap}</td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:4px">
+                        <div class="prog-bar"><div class="prog-fill" style="width:${Math.min(prg,100)}%"></div></div>
+                        <span class="t-dim" style="font-size:.64rem">${prgStr}</span>
+                    </div>
+                </td>
+                <td>
+                    <a class="link-pill lp-gmgn" href="https://gmgn.ai/bsc/token/${addr}" target="_blank" rel="noopener">GMGN↗</a>
+                    <a class="link-pill lp-four" href="https://four.meme/zh-TW/token/${addr}" target="_blank" rel="noopener">Four↗</a>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch(e) { console.warn('refreshBsc', e); }
+}
+
+function manualRefreshBsc() {
+    if (bscCooldown) return; bscCooldown=true; bscCd=5; refreshBsc();
+    cdBtn(document.getElementById('bsc-refresh-btn'), 5, ()=>bscCooldown=false);
+}
+
+const bscCntEl = document.getElementById('bsc-countdown');
+setInterval(()=>{ bscCd--; if(bscCd<=0){bscCd=5;refreshBsc();} bscCntEl.textContent=bscCd; }, 1000);
+
+// ─────────────────────────────────────────────────────────
+// 存活看板
+// ─────────────────────────────────────────────────────────
 async function refreshSurvivors() {
+    // SOL
     try {
         const r = await fetch('/api/pump/survivors');
         const list = await r.json();
-        document.getElementById('survivor-count').textContent = list.length;
-        const el = document.getElementById('survivor-list');
+        document.getElementById('sol-survivor-count').textContent = list.length;
+        const el = document.getElementById('sol-survivor-list');
         if (!list.length) return;
         el.innerHTML = list.map(t => {
-            const mc = t.currentMarketCap ? fmtMcap(t.currentMarketCap) : '—';
-            const mint = t.mint || '';
-            const short = mint.length > 14 ? mint.substring(0,8)+'...'+mint.slice(-6) : mint;
-            const gmgn = `https://gmgn.ai/sol/token/${mint}`;
-            const pump = `https://pump.fun/${mint}`;
-            // 快照趋势（最多 3 条，时间升序排列做趋势）
-            const snaps = (t.snapshots || []).slice().reverse();
-            const trend = snaps.length >= 2 ? (() => {
-                const first = parseFloat(snaps[0].mc || 0);
-                const last  = parseFloat(snaps[snaps.length-1].mc || 0);
-                const pct = first > 0 ? ((last - first) / first * 100).toFixed(1) : null;
-                if (pct === null) return '';
-                const cls = parseFloat(pct) >= 0 ? 'up' : 'dn';
-                return `<span class="${cls}" style="font-size:.7rem;font-weight:600">${parseFloat(pct)>=0?'▲':'▼'}${Math.abs(pct)}%</span>`;
+            const mint=t.mint||'', mc=t.currentMarketCap?fmtMcap(t.currentMarketCap):'—';
+            const snaps = (t.snapshots||[]).slice().reverse();
+            const trend = snaps.length>=2 ? (()=>{
+                const d=parseFloat(snaps[snaps.length-1].mc||0)-parseFloat(snaps[0].mc||0);
+                const pct=parseFloat(snaps[0].mc)>0?(d/parseFloat(snaps[0].mc)*100).toFixed(1):null;
+                return pct===null?'': `<span class="${parseFloat(pct)>=0?'up':'dn'}" style="font-size:.68rem;font-weight:700">${parseFloat(pct)>=0?'▲':'▼'}${Math.abs(pct)}%</span>`;
             })() : '';
-            const snapHtml = snaps.map(s =>
-                `<span class="t-dim" style="font-size:.62rem;white-space:nowrap">${s.at} $${Number(s.mc).toLocaleString('en',{maximumFractionDigits:0})}</span>`
-            ).join(' → ');
-            return `<div style="padding:10px 14px;border-bottom:1px solid var(--border)">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="fw-7" style="font-size:.9rem">${t.symbol||'?'}</span>
-                    <span class="t-dim" style="font-size:.74rem">${t.name||''}</span>
-                    <span class="chain-badge c-501">SOL</span>
-                    <span class="up fw-7 ms-auto" style="font-size:.88rem">${mc}</span>
+            return `<div class="survivor-item">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-7" style="font-size:.88rem;cursor:pointer;color:var(--blue)" data-addr="${mint}" data-chain="501" onclick="openTrade(this)">${t.symbol||'?'}</span>
+                    <span class="t-dim" style="font-size:.72rem">${t.name||''}</span>
+                    <span class="up fw-7 ms-auto" style="font-size:.86rem">${mc}</span>
                     ${trend}
                 </div>
-                <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
-                    <span class="addr" style="font-size:.68rem;cursor:pointer"
-                          data-addr="${mint}" onclick="copyAddr(this.dataset.addr)">${short}</span>
-                    <span class="t-dim" style="font-size:.68rem">发射 ${t.receivedAt} | 检查 ${t.lastCheckedAt}</span>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <span class="addr" style="font-size:.66rem;cursor:pointer" data-addr="${mint}" onclick="copyAddr(this.dataset.addr)">${shorten(mint)}</span>
+                    <span class="t-dim" style="font-size:.65rem">发射 ${t.receivedAt} | 查 ${t.lastCheckedAt}</span>
                 </div>
-                ${snaps.length ? `<div class="mt-1" style="line-height:1.6">${snapHtml}</div>` : ''}
                 <div class="mt-1">
-                    <a class="link-pill lp-gmgn" href="${gmgn}" target="_blank" rel="noopener">GMGN↗</a>
-                    <a class="link-pill lp-pump" href="${pump}" target="_blank" rel="noopener">Pump↗</a>
+                    <a class="link-pill lp-gmgn" href="https://gmgn.ai/sol/token/${mint}" target="_blank" rel="noopener">GMGN↗</a>
+                    <a class="link-pill lp-pump" href="https://pump.fun/${mint}" target="_blank" rel="noopener">Pump↗</a>
                 </div>
             </div>`;
         }).join('');
     } catch(e) { console.warn('refreshSurvivors', e); }
-}
 
-async function refreshPump() {
+    // BSC
     try {
-        const [tr, sr] = await Promise.all([
-            fetch('/api/pump/tokens?limit=100'),
-            fetch('/api/pump/status')
-        ]);
-        const tokens = await tr.json();
-        const status = await sr.json();
-
-        // 更新统计
-        document.getElementById('pump-count').textContent   = tokens.length;
-        document.getElementById('stat-total').textContent   = status.total ?? '—';
-        const isConn = status.connected;
-        document.getElementById('stat-conn').textContent    = isConn ? '已连接' : '断线';
-        document.getElementById('stat-conn').className      = 'sc-val ' + (isConn ? 'up' : 'dn');
-        const dot  = document.getElementById('ws-dot');
-        const text = document.getElementById('ws-text');
-        dot.style.background  = isConn ? 'var(--green)' : 'var(--red)';
-        text.textContent       = isConn ? '实时接收中' : '连接断开';
-
-        // 倒计时徽章闪烁
-        const badge = document.getElementById('pump-badge');
-        badge.style.background = '#dcfce7'; badge.style.borderColor = '#86efac'; badge.style.color = '#16a34a';
-        setTimeout(() => { badge.style.background=''; badge.style.borderColor=''; badge.style.color=''; }, 600);
-
-        if (!tokens.length) return;
-
-        const tbody = document.getElementById('pump-tbody');
-        tbody.innerHTML = tokens.map((t, idx) => {
-            const mint  = t.mint || '';
-            const short = mint.length > 14 ? mint.substring(0,8)+'...'+mint.slice(-6) : mint;
-            const mc    = t.usdMarketCap ? fmtMcap(t.usdMarketCap) : '—';
-            const gmgn  = `https://gmgn.ai/sol/token/${mint}`;
-            const pump  = `https://pump.fun/${mint}`;
-            const links = `
-                <a class="link-pill lp-gmgn" href="${gmgn}" target="_blank" rel="noopener">GMGN↗</a>
-                <a class="link-pill lp-pump" href="${pump}" target="_blank" rel="noopener">Pump↗</a>
-            `;
-            const socials = [
-                t.twitter  ? `<a href="${t.twitter}" target="_blank" class="link-pill" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd" rel="noopener">𝕏</a>` : '',
-                t.telegram ? `<a href="${t.telegram}" target="_blank" class="link-pill" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd" rel="noopener">TG</a>` : '',
-            ].join('');
-            return `<tr class="${idx < 3 ? 'pump-new' : ''}">
-                <td class="mono t-dim" style="font-size:.7rem">${t.receivedAt||'—'}</td>
-                <td>
-                    <div class="fw-7" style="font-size:.88rem">${t.symbol||'?'}</div>
-                    <div class="t-dim" style="font-size:.7rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name||'—'}</div>
-                </td>
-                <td>
-                    <span class="addr" style="font-size:.7rem;cursor:pointer"
-                          data-addr="${mint}" onclick="copyAddr(this.dataset.addr)"
-                          title="点击复制">${short}</span>
-                </td>
-                <td class="mono t-dim" style="font-size:.76rem">${mc}</td>
-                <td>${links}${socials}</td>
-            </tr>`;
+        const r = await fetch('/api/fourmeme/survivors');
+        const list = await r.json();
+        document.getElementById('bsc-survivor-count').textContent = list.length;
+        const el = document.getElementById('bsc-survivor-list');
+        if (!list.length) return;
+        el.innerHTML = list.map(t => {
+            const addr=t.tokenAddress||'', mc=t.currentMarketCap?fmtMcap(t.currentMarketCap):'—';
+            const img = t.img ? `https://four.meme${t.img}` : '';
+            return `<div class="survivor-item">
+                <div class="d-flex align-items-center gap-2">
+                    ${img?`<img src="${img}" style="width:18px;height:18px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">`:''}
+                    <span class="fw-7" style="font-size:.88rem">${t.symbol||'?'}</span>
+                    <span class="t-dim" style="font-size:.72rem">${t.name||''}</span>
+                    <span class="up fw-7 ms-auto" style="font-size:.86rem">${mc}</span>
+                </div>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <span class="addr" style="font-size:.66rem;cursor:pointer" data-addr="${addr}" onclick="copyAddr(this.dataset.addr)">${shorten(addr)}</span>
+                    <span class="t-dim" style="font-size:.65rem">发射 ${t.receivedAt} | 查 ${t.lastCheckedAt}</span>
+                </div>
+                <div class="mt-1">
+                    <a class="link-pill lp-gmgn" href="https://gmgn.ai/bsc/token/${addr}" target="_blank" rel="noopener">GMGN↗</a>
+                    <a class="link-pill lp-four" href="https://four.meme/zh-TW/token/${addr}" target="_blank" rel="noopener">Four↗</a>
+                </div>
+            </div>`;
         }).join('');
-    } catch(e) { console.warn('refreshPump', e); }
+    } catch(e) { console.warn('refreshBscSurvivors', e); }
 }
 
-// 5 秒自动刷新倒计时
-const cntEl = document.getElementById('pump-countdown');
-setInterval(() => {
-    pumpCountdown--;
-    if (pumpCountdown <= 0) {
-        pumpCountdown = 5;
-        refreshPump();
-    }
-    cntEl.textContent = pumpCountdown;
-}, 1000);
-
-// 手动刷新 + 5s 冷却
-function manualRefresh() {
-    if (pumpCooldown) return;
-    pumpCooldown = true;
-    pumpCountdown = 5;
-    refreshPump();
-    const btn = document.getElementById('pump-refresh-btn');
-    let s = 5;
-    btn.disabled = true; btn.style.opacity='.45'; btn.style.cursor='not-allowed';
-    btn.textContent = `⏳ ${s}s`;
-    const t = setInterval(() => {
-        s--;
-        if (s <= 0) {
-            clearInterval(t);
-            pumpCooldown = false;
-            btn.disabled = false; btn.style.opacity='1'; btn.style.cursor='pointer';
-            btn.textContent = '⚡ 刷新';
-        } else {
-            btn.textContent = `⏳ ${s}s`;
-        }
-    }, 1000);
+// ─────────────────────────────────────────────────────────
+// GMGN/OKX 跳转（复用首页逻辑）
+// ─────────────────────────────────────────────────────────
+let sigTab = 'gmgn';
+function openTrade(el) {
+    const addr=el.dataset.addr, chain=el.dataset.chain;
+    let url='';
+    if (sigTab==='gmgn')     url = chain==='501' ? `https://gmgn.ai/sol/token/${addr}` : `https://gmgn.ai/bsc/token/${addr}`;
+    else if (sigTab==='okx') url = chain==='501' ? `https://web3.okx.com/zh-hans/token/solana/${addr}` : `https://web3.okx.com/zh-hans/token/bsc/${addr}`;
+    if (url) window.open(url, '_blank', 'noopener');
 }
 
-// 页面加载立即拉一次
-refreshPump();
+// ─────────────────────────────────────────────────────────
+// 初始化
+// ─────────────────────────────────────────────────────────
+refreshSol();
+refreshBsc();
 refreshSurvivors();
-// survivors 每 60 秒刷新（数据由 1H Job 更新，高频无意义）
 setInterval(refreshSurvivors, 60_000);
 </script>
 
