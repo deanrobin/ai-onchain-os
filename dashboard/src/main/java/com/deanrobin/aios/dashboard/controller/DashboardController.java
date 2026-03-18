@@ -40,6 +40,16 @@ public class DashboardController {
     }
 
     // ──────────────────────────────────────────────────────────────
+    // 买入信号专页：SSR 初始数据，前端 10 秒自动刷新
+    // ──────────────────────────────────────────────────────────────
+    @GetMapping("/signals")
+    public String signals(Model model) {
+        model.addAttribute("activePage", "signals");
+        model.addAttribute("recentSignals", smartMoneyService.getRecentSignals(null, 50));
+        return "signals";
+    }
+
+    // ──────────────────────────────────────────────────────────────
     // 聪明钱看板：数据来自 DB（Job 已写好），不打 OKX
     // ──────────────────────────────────────────────────────────────
     @GetMapping("/smart-money")

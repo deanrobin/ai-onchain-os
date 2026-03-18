@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('买入信号', ~{::main})}">
+<body><main>
+
+<!-- 顶部控制栏 -->
+<div class="d-flex align-items-center flex-wrap gap-3 mb-3">
+
+    <!-- 标题 + 脉冲 -->
+    <span class="pulse-dot"></span>
+    <h5 class="fw-7 mb-0 ms-1">实时买入信号</h5>
+
+    <!-- 平台选项卡 -->
+    <div class="tab-row" style="background:#f8faff">
+        <div id="tab-gmgn"   class="tab-item active" onclick="setSigTab('gmgn')"   style="font-size:.8rem">GMGN</div>
+        <div id="tab-okx"    class="tab-item"        onclick="setSigTab('okx')"    style="font-size:.8rem">OKX</div>
+        <div id="tab-custom" class="tab-item"
+             style="font-size:.8rem;opacity:.42;cursor:not-allowed"
+             title="敬请期待">自定义</div>
+    </div>
+
+    <!-- 自动刷新倒计时 -->
+    <span id="auto-badge"
+          style="background:#f0f4ff;border:1px solid #c7d7fa;color:#3b82f6;
+                 border-radius:20px;padding:3px 12px;font-size:.76rem;font-weight:600;
+                 pointer-events:none;user-select:none">
+        🔄 <span id="auto-countdown">10</span>s
+    </span>
+
+    <!-- 手动刷新 -->
+    <button id="refresh-btn" class="btn-primary-g ms-auto"
+            onclick="manualRefresh()"
+            style="padding:5px 16px;font-size:.8rem;min-width:90px">⚡ 刷新</button>
+</div>
+
+<!-- 统计小徽章 -->
+<div class="d-flex gap-2 mb-3" style="flex-wrap:wrap">
+    <span class="tag-gray">共 <span id="sig-count">0</span> 条信号</span>
+    <span class="tag-gray">最后更新 <span id="last-update-time">—</span></span>
+</div>
+
+<!-- 信号表格 -->
+<div class="card">
+    <div class="card-body p-0">
+        <div id="sig-wrap">
+            <!-- SSR 初始渲染 -->
+            <div th:if="${recentSignals.isEmpty()}" class="empty-state">
+                <div class="ei">📭</div><div>暂无信号</div>
+            </div>
+            <table th:unless="${recentSignals.isEmpty()}" class="table" id="sig-tbl">
+                <thead><tr>
+                    <th>时间</th>
+                    <th>代币 <span style="font-size:.62rem;color:var(--t3);font-weight:400">↗ 点击交易</span></th>
+                    <th>链</th>
+                    <th>买入额</th>
+                    <th>市值</th>
+                    <th>信号价</th>
+                    <th>🧠 钱包数</th>
+                    <th>卖出比</th>
+                </tr></thead>
+                <tbody id="sig-tbody">
+                <tr th:each="s : ${recentSignals}" class="sig-row">
+                    <td class="mono t-dim" style="font-size:.72rem"
+                        th:text="${#temporals.format(s.signalTime,'MM-dd HH:mm')}"></td>
+                    <td>
+                        <div class="fw-7 sig-token-link" style="cursor:pointer;color:var(--blue)"
+                             th:attr="data-addr=${s.tokenAddress},data-chain=${s.chainIndex}"
+                             onclick="openTrade(this)"
+                             th:text="${s.tokenSymbol}"></div>
+                        <div class="addr sig-token-link" style="font-size:.65rem;cursor:pointer"
+                             th:attr="data-addr=${s.tokenAddress},data-chain=${s.chainIndex}"
+                             onclick="openTrade(this)"
+                             th:text="${#strings.substring(s.tokenAddress,0,10)+'...'}"></div>
+                    </td>
+                    <td><span class="chain-badge" th:classappend="'c-'+${s.chainIndex}"
+                              th:text="${s.chainIndex=='56'?'BSC':s.chainIndex=='501'?'SOL':s.chainIndex}"></span></td>
+                    <td><span class="up fw-7" style="font-size:.84rem"
+                              th:text="${'$'+#numbers.formatDecimal(s.amountUsd,1,0)}"></span></td>
+                    <td class="mono t-dim mc-cell" style="font-size:.78rem"
+                        th:attr="data-mc=${s.marketCapUsd!=null?s.marketCapUsd:0}"></td>
+                    <td class="mono" style="font-size:.78rem"
+                        th:with="p=${s.priceAtSignal!=null?s.priceAtSignal.doubleValue():0}"
+                        th:text="${p>0?(p>=1?'$'+#numbers.formatDecimal(p,1,4):'$'+p):'—'}"></td>
+                    <td><span class="tag-blue" style="font-size:.74rem"
+                              th:text="${s.triggerWalletCount}"></span></td>
+                    <td>
+                        <span th:if="${s.soldRatioPercent!=null}"
+                              th:with="sr=${s.soldRatioPercent.doubleValue()}"
+                              th:class="${sr>50?'dn':'up'}"
+                              style="font-size:.78rem;font-weight:600"
+                              th:text="${#numbers.formatDecimal(sr,1,1)+'%'}"></span>
+                        <span th:unless="${s.soldRatioPercent!=null}" class="t-dim">—</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── mc-cell SSR 格式化 ───
+document.querySelectorAll('.mc-cell[data-mc]').forEach(td => {
+    td.textContent = fmtMcap(td.dataset.mc);
+});
+
+// 初始化计数
+const initCount = document.querySelectorAll('#sig-tbody tr').length;
+document.getElementById('sig-count').textContent = initCount;
+updateLastTime();
+
+// ─── 平台选项卡 ───
+let sigTab = 'gmgn';
+function setSigTab(tab) {
+    if (tab === 'custom') return;
+    sigTab = tab;
+    ['gmgn','okx','custom'].forEach(t => {
+        const el = document.getElementById('tab-'+t);
+        if (el) el.classList.toggle('active', t === tab);
+    });
+}
+
+function tradeUrl(addr, chain, tab) {
+    const isSol = chain === '501';
+    if (tab === 'gmgn') return isSol ? `https://gmgn.ai/sol/token/${addr}` : `https://gmgn.ai/bsc/token/${addr}`;
+    if (tab === 'okx')  return isSol ? `https://web3.okx.com/zh-hans/token/solana/${addr}` : `https://web3.okx.com/zh-hans/token/bsc/${addr}`;
+    return '#';
+}
+function openTrade(el) {
+    const url = tradeUrl(el.dataset.addr, el.dataset.chain, sigTab);
+    if (url && url !== '#') window.open(url, '_blank', 'noopener');
+}
+
+// ─── 刷新信号 ───
+async function refreshSignals() {
+    try {
+        const r = await fetch('/api/signals/db?limit=50');
+        const sigs = await r.json();
+        if (!sigs || !sigs.length) return;
+
+        document.getElementById('sig-count').textContent = sigs.length;
+        updateLastTime();
+
+        const tbody = document.getElementById('sig-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = sigs.map(s => {
+            const addr  = s.tokenAddress || '';
+            const chain = s.chainIndex==='56'?'BSC':s.chainIndex==='501'?'SOL':s.chainIndex;
+            const ts    = s.signalTimeStr || '';
+            const mcStr = fmtMcap(s.marketCapUsd);
+            const pr    = parseFloat(s.priceAtSignal||0);
+            const prStr = pr>0 ? (pr>=1 ? '$'+pr.toFixed(4) : '$'+pr.toPrecision(4)) : '—';
+            const sr    = parseFloat(s.soldRatioPercent||0);
+            const srStr = s.soldRatioPercent!=null ? `<span class="${sr>50?'dn':'up'}" style="font-size:.78rem;font-weight:600">${sr.toFixed(1)}%</span>` : '<span class="t-dim">—</span>';
+            return `<tr class="sig-row">
+                <td class="mono t-dim" style="font-size:.72rem">${ts}</td>
+                <td>
+                    <div class="fw-7" style="cursor:pointer;color:var(--blue)"
+                         data-addr="${addr}" data-chain="${s.chainIndex}" onclick="openTrade(this)">${s.tokenSymbol||'?'}</div>
+                    <div class="addr" style="font-size:.65rem;cursor:pointer"
+                         data-addr="${addr}" data-chain="${s.chainIndex}" onclick="openTrade(this)">${addr.substring(0,10)}...</div>
+                </td>
+                <td><span class="chain-badge c-${s.chainIndex}">${chain}</span></td>
+                <td><span class="up fw-7" style="font-size:.84rem">$${parseFloat(s.amountUsd||0).toLocaleString('en',{maximumFractionDigits:0})}</span></td>
+                <td class="mono t-dim" style="font-size:.78rem">${mcStr}</td>
+                <td class="mono" style="font-size:.78rem">${prStr}</td>
+                <td><span class="tag-blue" style="font-size:.74rem">${s.triggerWalletCount||0}</span></td>
+                <td>${srStr}</td>
+            </tr>`;
+        }).join('');
+    } catch(e) { console.warn('refreshSignals', e); }
+}
+
+// ─── 自动刷新 10s 倒计时 ───
+let countdown = 10;
+const countEl = document.getElementById('auto-countdown');
+setInterval(() => {
+    countdown--;
+    if (countdown <= 0) {
+        countdown = 10;
+        refreshSignals();
+    }
+    countEl.textContent = countdown;
+}, 1000);
+
+// ─── 手动刷新 + 5s 冷却 ───
+let cooldown = false;
+function manualRefresh() {
+    if (cooldown) return;
+    cooldown = true;
+    countdown = 10; // 重置自动倒计时
+    refreshSignals();
+    const btn = document.getElementById('refresh-btn');
+    let secs = 5;
+    btn.disabled = true; btn.style.opacity = '0.45'; btn.style.cursor = 'not-allowed';
+    btn.textContent = `⏳ ${secs}s`;
+    const t = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+            clearInterval(t);
+            cooldown = false;
+            btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+            btn.textContent = '⚡ 刷新';
+        } else {
+            btn.textContent = `⏳ ${secs}s`;
+        }
+    }, 1000);
+}
+
+function updateLastTime() {
+    const now = new Date().toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai', hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+    document.getElementById('last-update-time').textContent = now;
+}
+</script>
+
+</main></body>
+</html>
