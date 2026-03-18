@@ -61,7 +61,7 @@
                 <tbody id="sig-tbody">
                 <tr th:each="s : ${recentSignals}" class="sig-row">
                     <td class="mono t-dim" style="font-size:.72rem"
-                        th:text="${#temporals.format(s.signalTime,'MM-dd HH:mm')}"></td>
+                        th:text="${#temporals.format(s.signalTime,'MM-dd HH:mm:ss')}"></td>
                     <td>
                         <div class="fw-7 sig-token-link" style="cursor:pointer;color:var(--blue)"
                              th:attr="data-addr=${s.tokenAddress},data-chain=${s.chainIndex}"

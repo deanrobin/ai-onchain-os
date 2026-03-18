@@ -37,7 +37,7 @@ public class ApiController {
     }
 
     private static final DateTimeFormatter SIG_FMT =
-        DateTimeFormatter.ofPattern("MM-dd HH:mm");
+        DateTimeFormatter.ofPattern("MM-dd HH:mm:ss");
 
     /** 从 DB 读最新信号，供首页 AJAX 刷新使用（含格式化时间字符串） */
     @GetMapping("/signals/db")
