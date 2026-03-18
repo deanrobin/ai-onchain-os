@@ -98,6 +98,14 @@
     </div>
 </div>
 
+<style>
+@keyframes rowFlash {
+    0%   { background: #e0f2fe; }
+    100% { background: transparent; }
+}
+.row-flash { animation: rowFlash 1.2s ease-out; }
+</style>
+
 <script>
 // ─── mc-cell SSR 格式化 ───
 document.querySelectorAll('.mc-cell[data-mc]').forEach(td => {
@@ -140,9 +148,14 @@ async function refreshSignals() {
 
         document.getElementById('sig-count').textContent = sigs.length;
         updateLastTime();
+        // 刷新成功视觉反馈：倒计时重置为绿色闪一下
+        const badge = document.getElementById('auto-badge');
+        badge.style.background = '#dcfce7'; badge.style.borderColor = '#86efac'; badge.style.color = '#16a34a';
+        setTimeout(() => { badge.style.background=''; badge.style.borderColor=''; badge.style.color=''; }, 800);
 
         const tbody = document.getElementById('sig-tbody');
         if (!tbody) return;
+        const now = Date.now();
         tbody.innerHTML = sigs.map(s => {
             const addr  = s.tokenAddress || '';
             const chain = s.chainIndex==='56'?'BSC':s.chainIndex==='501'?'SOL':s.chainIndex;
@@ -152,8 +165,16 @@ async function refreshSignals() {
             const prStr = pr>0 ? (pr>=1 ? '$'+pr.toFixed(4) : '$'+pr.toPrecision(4)) : '—';
             const sr    = parseFloat(s.soldRatioPercent||0);
             const srStr = s.soldRatioPercent!=null ? `<span class="${sr>50?'dn':'up'}" style="font-size:.78rem;font-weight:600">${sr.toFixed(1)}%</span>` : '<span class="t-dim">—</span>';
-            return `<tr class="sig-row">
-                <td class="mono t-dim" style="font-size:.72rem">${ts}</td>
+            // 2分钟内更新的行标为"新"
+            const isNew = s.signalTimeStr && (() => {
+                try {
+                    const d = new Date('2026-' + s.signalTimeStr.replace('-',' ').replace(' ',' '));
+                    return (now - d.getTime()) < 120000;
+                } catch { return false; }
+            })();
+            const newBadge = isNew ? '<span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:4px;font-size:.6rem;font-weight:700;padding:1px 5px;margin-left:4px;vertical-align:middle">NEW</span>' : '';
+            return `<tr class="sig-row row-flash">
+                <td class="mono t-dim" style="font-size:.72rem">${ts}${newBadge}</td>
                 <td>
                     <div class="fw-7" style="cursor:pointer;color:var(--blue)"
                          data-addr="${addr}" data-chain="${s.chainIndex}" onclick="openTrade(this)">${s.tokenSymbol||'?'}</div>
