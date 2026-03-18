@@ -20,7 +20,7 @@ import java.util.List;
 public class KeyLoaderService {
 
     private static final Logger log = LoggerFactory.getLogger(KeyLoaderService.class);
-    private static final String KEY_FILE = "/root/.key";
+    private static final String KEY_FILE = "/root/.xkey";
 
     @Async
     @EventListener(ApplicationReadyEvent.class)
