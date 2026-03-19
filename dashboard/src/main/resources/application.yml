@@ -1,6 +1,10 @@
 spring:
   application:
     name: aios-dashboard
+  task:
+    scheduling:
+      pool:
+        size: 4   # 多个 Job 并发，防止 PumpSurvivorJob 阻塞 SignalFetchJob
   datasource:
     url: jdbc:mysql://${DB_HOST:43.134.118.142}:${DB_PORT:33066}/oc_os?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
     username: ${DB_USER:arb}
