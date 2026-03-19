@@ -47,14 +47,23 @@ public class PumpSurvivorJob {
     public void run() {
         LocalDateTime now = LocalDateTime.now();
 
-        // ── 10 分钟阶段 ──────────────────────────────────
+        // ── 积压清理：超过 2h 的 10m backlog / 超过 6h 的 1h backlog 直接批量跳过 ──
+        int skip10m = pumpTokenRepo.skipStale10m(now.minusHours(2));
+        int skip1h  = pumpTokenRepo.skipStale1h(now.minusHours(6));
+        int bskip10m = fourMemeRepo.skipStale10m(now.minusHours(2));
+        int bskip1h  = fourMemeRepo.skipStale1h(now.minusHours(6));
+        if (skip10m + skip1h + bskip10m + bskip1h > 0) {
+            log.info("🧹 积压清理 SOL 10m={} 1h={} | BSC 10m={} 1h={}", skip10m, skip1h, bskip10m, bskip1h);
+        }
+
+        // ── 10 分钟阶段（LIMIT 20）──────────────────────
         List<PumpToken> due10m = pumpTokenRepo.findDueFor10m(now.minusMinutes(10));
         if (!due10m.isEmpty()) {
             log.info("⏱ PumpSurvivor [10min] 检查 {} 个", due10m.size());
             processBatch(due10m, Stage.TEN_MIN);
         }
 
-        // ── 1 小时阶段 ──────────────────────────────────
+        // ── 1 小时阶段（LIMIT 20）──────────────────────
         List<PumpToken> due1h = pumpTokenRepo.findDueFor1h(now.minusHours(1));
         if (!due1h.isEmpty()) {
             log.info("⏱ PumpSurvivor [1h] 检查 {} 个", due1h.size());

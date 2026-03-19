@@ -16,17 +16,29 @@ public interface PumpTokenRepository extends JpaRepository<PumpToken, Long> {
 
     boolean existsByMint(String mint);
 
-    /** 到了 10 分钟但还没做过 10min 检查的 token */
-    @Query("SELECT t FROM PumpToken t WHERE t.receivedAt < :before AND t.checked10mAt IS NULL")
+    /** 到了 10 分钟但还没做过 10min 检查的 token（每批最多 20 个，按时间正序优先处理老的）*/
+    @Query(value = "SELECT * FROM pump_token WHERE received_at < :before AND checked_10m_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
     List<PumpToken> findDueFor10m(LocalDateTime before);
 
-    /** 到了 1 小时但还没做过 1h 检查的 token */
-    @Query("SELECT t FROM PumpToken t WHERE t.receivedAt < :before AND t.checked1hAt IS NULL")
+    /** 到了 1 小时但还没做过 1h 检查的 token（每批最多 20 个）*/
+    @Query(value = "SELECT * FROM pump_token WHERE received_at < :before AND checked_1h_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
     List<PumpToken> findDueFor1h(LocalDateTime before);
 
-    /** 到了 24 小时但还没做过 24H 检查（或需要再次检查）的 token */
-    @Query("SELECT t FROM PumpToken t WHERE t.receivedAt < :before AND t.lastCheckedAt IS NULL")
+    /** 到了 24 小时但还没做过 24H 检查的 token（每批最多 20 个）*/
+    @Query(value = "SELECT * FROM pump_token WHERE received_at < :before AND last_checked_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
     List<PumpToken> findDueFor24h(LocalDateTime before);
+
+    /** 批量跳过：超过 2 小时的积压 10m token，直接标记跳过（不调 API）*/
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE pump_token SET checked_10m_at = NOW() WHERE received_at < :before AND checked_10m_at IS NULL", nativeQuery = true)
+    int skipStale10m(LocalDateTime before);
+
+    /** 批量跳过：超过 6 小时的积压 1h token，直接标记跳过 */
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE pump_token SET checked_1h_at = NOW() WHERE received_at < :before AND checked_1h_at IS NULL", nativeQuery = true)
+    int skipStale1h(LocalDateTime before);
 
     /** 已存活 token，按最新市值倒序 */
     @Query("SELECT t FROM PumpToken t WHERE t.status = 'survived' ORDER BY t.currentMarketCap DESC NULLS LAST")
