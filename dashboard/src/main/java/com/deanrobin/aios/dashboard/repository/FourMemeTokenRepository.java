@@ -18,21 +18,27 @@ public interface FourMemeTokenRepository extends JpaRepository<FourMemeToken, Lo
 
     @Query(value = "SELECT * FROM four_meme_token WHERE received_at < :before AND checked_10m_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
     List<FourMemeToken> findDueFor10m(LocalDateTime before);
-
+    @Query(value = "SELECT * FROM four_meme_token WHERE received_at < :before AND checked_20m_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
+    List<FourMemeToken> findDueFor20m(LocalDateTime before);
+    @Query(value = "SELECT * FROM four_meme_token WHERE received_at < :before AND checked_30m_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
+    List<FourMemeToken> findDueFor30m(LocalDateTime before);
+    @Query(value = "SELECT * FROM four_meme_token WHERE received_at < :before AND checked_45m_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
+    List<FourMemeToken> findDueFor45m(LocalDateTime before);
     @Query(value = "SELECT * FROM four_meme_token WHERE received_at < :before AND checked_1h_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
     List<FourMemeToken> findDueFor1h(LocalDateTime before);
-
+    @Query(value = "SELECT * FROM four_meme_token WHERE received_at < :before AND checked_4h_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
+    List<FourMemeToken> findDueFor4h(LocalDateTime before);
+    @Query(value = "SELECT * FROM four_meme_token WHERE received_at < :before AND checked_12h_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
+    List<FourMemeToken> findDueFor12h(LocalDateTime before);
     @Query(value = "SELECT * FROM four_meme_token WHERE received_at < :before AND last_checked_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
     List<FourMemeToken> findDueFor24h(LocalDateTime before);
 
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE four_meme_token SET checked_10m_at = NOW() WHERE received_at < :before AND checked_10m_at IS NULL", nativeQuery = true)
+    @Modifying @Transactional
+    @Query(value = "UPDATE four_meme_token SET checked_10m_at=NOW(),checked_20m_at=NOW(),checked_30m_at=NOW(),checked_45m_at=NOW(),checked_1h_at=NOW() WHERE received_at < :before AND checked_1h_at IS NULL", nativeQuery = true)
     int skipStale10m(LocalDateTime before);
 
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE four_meme_token SET checked_1h_at = NOW() WHERE received_at < :before AND checked_1h_at IS NULL", nativeQuery = true)
+    @Modifying @Transactional
+    @Query(value = "UPDATE four_meme_token SET checked_4h_at=NOW() WHERE received_at < :before AND checked_4h_at IS NULL", nativeQuery = true)
     int skipStale1h(LocalDateTime before);
 
     @Query("SELECT t FROM FourMemeToken t WHERE t.status = 'survived' ORDER BY t.currentMarketCap DESC NULLS LAST")

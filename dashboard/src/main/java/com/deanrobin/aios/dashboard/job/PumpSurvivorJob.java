@@ -47,40 +47,34 @@ public class PumpSurvivorJob {
     public void run() {
         LocalDateTime now = LocalDateTime.now();
 
-        // ── 积压清理：超过 2h 的 10m backlog / 超过 6h 的 1h backlog 直接批量跳过 ──
+        // ── 积压清理（超过 2h 未到 1h 阶段 → 直接标记跳过；超过 6h 未到 4h → 跳过）──
         int skip10m = pumpTokenRepo.skipStale10m(now.minusHours(2));
         int skip1h  = pumpTokenRepo.skipStale1h(now.minusHours(6));
         int bskip10m = fourMemeRepo.skipStale10m(now.minusHours(2));
         int bskip1h  = fourMemeRepo.skipStale1h(now.minusHours(6));
         if (skip10m + skip1h + bskip10m + bskip1h > 0) {
-            log.info("🧹 积压清理 SOL 10m={} 1h={} | BSC 10m={} 1h={}", skip10m, skip1h, bskip10m, bskip1h);
+            log.info("🧹 积压清理 SOL={}/{} BSC={}/{}", skip10m, skip1h, bskip10m, bskip1h);
         }
 
-        // ── 10 分钟阶段（LIMIT 20）──────────────────────
-        List<PumpToken> due10m = pumpTokenRepo.findDueFor10m(now.minusMinutes(10));
-        if (!due10m.isEmpty()) {
-            log.info("⏱ PumpSurvivor [10min] 检查 {} 个", due10m.size());
-            processBatch(due10m, Stage.TEN_MIN);
-        }
+        // ── SOL (pump.fun) 八阶段 ────────────────────────────────────────────
+        runStage(pumpTokenRepo.findDueFor10m(now.minusMinutes(10)),  Stage.TEN_MIN);
+        runStage(pumpTokenRepo.findDueFor20m(now.minusMinutes(20)),  Stage.TWENTY_MIN);
+        runStage(pumpTokenRepo.findDueFor30m(now.minusMinutes(30)),  Stage.THIRTY_MIN);
+        runStage(pumpTokenRepo.findDueFor45m(now.minusMinutes(45)),  Stage.FORTY_FIVE_MIN);
+        runStage(pumpTokenRepo.findDueFor1h(now.minusHours(1)),      Stage.ONE_HOUR);
+        runStage(pumpTokenRepo.findDueFor4h(now.minusHours(4)),      Stage.FOUR_HOUR);
+        runStage(pumpTokenRepo.findDueFor12h(now.minusHours(12)),    Stage.TWELVE_HOUR);
+        runStage(pumpTokenRepo.findDueFor24h(now.minusHours(24)),    Stage.TWENTY_FOUR_HOUR);
 
-        // ── 1 小时阶段（LIMIT 20）──────────────────────
-        List<PumpToken> due1h = pumpTokenRepo.findDueFor1h(now.minusHours(1));
-        if (!due1h.isEmpty()) {
-            log.info("⏱ PumpSurvivor [1h] 检查 {} 个", due1h.size());
-            processBatch(due1h, Stage.ONE_HOUR);
-        }
-
-        // ── 24 小时阶段 ─────────────────────────────────
-        List<PumpToken> due24h = pumpTokenRepo.findDueFor24h(now.minusHours(24));
-        if (!due24h.isEmpty()) {
-            log.info("⏱ PumpSurvivor [24h] 检查 {} 个", due24h.size());
-            processBatch(due24h, Stage.TWENTY_FOUR_HOUR);
-        }
-
-        // ── FourMeme (BSC) 三阶段 ────────────────────
-        processFourMemeBatch(fourMemeRepo.findDueFor10m(now.minusMinutes(10)),  Stage.TEN_MIN,           "56");
-        processFourMemeBatch(fourMemeRepo.findDueFor1h(now.minusHours(1)),      Stage.ONE_HOUR,          "56");
-        processFourMemeBatch(fourMemeRepo.findDueFor24h(now.minusHours(24)),    Stage.TWENTY_FOUR_HOUR,  "56");
+        // ── BSC (four.meme) 八阶段 ───────────────────────────────────────────
+        processFourMemeBatch(fourMemeRepo.findDueFor10m(now.minusMinutes(10)),  Stage.TEN_MIN,          "56");
+        processFourMemeBatch(fourMemeRepo.findDueFor20m(now.minusMinutes(20)),  Stage.TWENTY_MIN,       "56");
+        processFourMemeBatch(fourMemeRepo.findDueFor30m(now.minusMinutes(30)),  Stage.THIRTY_MIN,       "56");
+        processFourMemeBatch(fourMemeRepo.findDueFor45m(now.minusMinutes(45)),  Stage.FORTY_FIVE_MIN,   "56");
+        processFourMemeBatch(fourMemeRepo.findDueFor1h(now.minusHours(1)),      Stage.ONE_HOUR,         "56");
+        processFourMemeBatch(fourMemeRepo.findDueFor4h(now.minusHours(4)),      Stage.FOUR_HOUR,        "56");
+        processFourMemeBatch(fourMemeRepo.findDueFor12h(now.minusHours(12)),    Stage.TWELVE_HOUR,      "56");
+        processFourMemeBatch(fourMemeRepo.findDueFor24h(now.minusHours(24)),    Stage.TWENTY_FOUR_HOUR, "56");
     }
 
     private void processFourMemeBatch(List<com.deanrobin.aios.dashboard.model.FourMemeToken> tokens,
@@ -94,11 +88,7 @@ public class PumpSurvivorJob {
             try {
                 BigDecimal mc = fetchMarketCap(t.getTokenAddress(), chainIndex);
                 LocalDateTime now = LocalDateTime.now();
-                switch (stage) {
-                    case TEN_MIN  -> t.setChecked10mAt(now);
-                    case ONE_HOUR -> t.setChecked1hAt(now);
-                    case TWENTY_FOUR_HOUR -> t.setLastCheckedAt(now);
-                }
+                markFourMemeStageTime(t, stage, now);
                 boolean ok = mc != null && mc.compareTo(BigDecimal.valueOf(MIN_MARKET_CAP)) >= 0;
                 if (ok) {
                     t.setStatus("survived"); t.setCurrentMarketCap(mc); fourMemeRepo.save(t); survived++;
@@ -110,20 +100,17 @@ public class PumpSurvivorJob {
                 }
             } catch (Exception e) {
                 log.warn("⚠️ FourMeme [{}] 检查 {} 失败: {}", stage, t.getTokenAddress().substring(0, 10), e.getMessage());
-                switch (stage) {
-                    case TEN_MIN  -> t.setChecked10mAt(LocalDateTime.now());
-                    case ONE_HOUR -> t.setChecked1hAt(LocalDateTime.now());
-                    case TWENTY_FOUR_HOUR -> t.setLastCheckedAt(LocalDateTime.now());
-                }
+                markFourMemeStageTime(t, stage, LocalDateTime.now());
                 fourMemeRepo.save(t);
             }
         }
         log.info("✔ FourMeme [{}] 完成: 存活={} 删除={} 跳过={}", stage, survived, deleted, skipped);
     }
 
-    private enum Stage { TEN_MIN, ONE_HOUR, TWENTY_FOUR_HOUR }
+    private enum Stage { TEN_MIN, TWENTY_MIN, THIRTY_MIN, FORTY_FIVE_MIN, ONE_HOUR, FOUR_HOUR, TWELVE_HOUR, TWENTY_FOUR_HOUR }
 
-    private void processBatch(List<PumpToken> tokens, Stage stage) {
+    private void runStage(List<PumpToken> tokens, Stage stage) {
+        if (tokens.isEmpty()) return;
         int survived = 0, deleted = 0, skipped = 0;
         for (int i = 0; i < tokens.size(); i++) {
             if (i > 0) {
@@ -134,50 +121,52 @@ public class PumpSurvivorJob {
             PumpToken t = tokens.get(i);
             try {
                 BigDecimal mc = fetchMarketCap(t.getMint());
-                LocalDateTime now = LocalDateTime.now();
-
-                switch (stage) {
-                    case TEN_MIN  -> t.setChecked10mAt(now);
-                    case ONE_HOUR -> t.setChecked1hAt(now);
-                    case TWENTY_FOUR_HOUR -> t.setLastCheckedAt(now);
-                }
-
+                markStageTime(t, stage, LocalDateTime.now());
                 boolean aboveMin = mc != null && mc.compareTo(BigDecimal.valueOf(MIN_MARKET_CAP)) >= 0;
-
                 if (aboveMin) {
-                    // 市值达标 → 标记存活
-                    t.setStatus("survived");
-                    t.setCurrentMarketCap(mc);
-                    pumpTokenRepo.save(t);
-
-                    // 只有 24H 阶段写快照（避免 3 个阶段都写）
-                    if (stage == Stage.TWENTY_FOUR_HOUR) {
-                        saveSnapshot(t, mc, now);
-                    }
+                    t.setStatus("survived"); t.setCurrentMarketCap(mc); pumpTokenRepo.save(t);
+                    if (stage == Stage.TWENTY_FOUR_HOUR) saveSnapshot(t, mc, LocalDateTime.now());
                     survived++;
                     log.info("✅ [{}] 存活: {} mc=${}", stage, t.getSymbol(), mc.toPlainString());
                 } else if (stage == Stage.TWENTY_FOUR_HOUR) {
-                    // 24H 阶段 + 不达标 → 删除
-                    pumpTokenRepo.delete(t);
-                    deleted++;
-                    log.info("🗑 [24h] 删除: {} mc={}", t.getSymbol(), mc);
+                    pumpTokenRepo.delete(t); deleted++;
                 } else {
-                    // 10min / 1h 不达标 → 只记录检查时间，不删
-                    pumpTokenRepo.save(t);
-                    skipped++;
+                    pumpTokenRepo.save(t); skipped++;
                 }
             } catch (Exception e) {
-                log.warn("⚠️ [{}] 检查 {} 失败: {}", stage, t.getMint().substring(0, 10), e.getMessage());
-                // 出错也记录检查时间，避免死循环
-                switch (stage) {
-                    case TEN_MIN  -> t.setChecked10mAt(LocalDateTime.now());
-                    case ONE_HOUR -> t.setChecked1hAt(LocalDateTime.now());
-                    case TWENTY_FOUR_HOUR -> t.setLastCheckedAt(LocalDateTime.now());
-                }
+                log.warn("⚠️ [{}] {} 失败: {}", stage, t.getMint().substring(0, 10), e.getMessage());
+                markStageTime(t, stage, LocalDateTime.now());
                 pumpTokenRepo.save(t);
             }
         }
-        log.info("✔ [{}] 完成: 存活={} 删除={} 不达标跳过={}", stage, survived, deleted, skipped);
+        log.info("✔ SOL [{}] 存活={} 删除={} 跳过={}", stage, survived, deleted, skipped);
+    }
+
+    private void markFourMemeStageTime(com.deanrobin.aios.dashboard.model.FourMemeToken t, Stage stage, LocalDateTime now) {
+        switch (stage) {
+            case TEN_MIN         -> t.setChecked10mAt(now);
+            case TWENTY_MIN      -> t.setChecked20mAt(now);
+            case THIRTY_MIN      -> t.setChecked30mAt(now);
+            case FORTY_FIVE_MIN  -> t.setChecked45mAt(now);
+            case ONE_HOUR        -> t.setChecked1hAt(now);
+            case FOUR_HOUR       -> t.setChecked4hAt(now);
+            case TWELVE_HOUR     -> t.setChecked12hAt(now);
+            case TWENTY_FOUR_HOUR-> t.setLastCheckedAt(now);
+        }
+    }
+
+    /** 根据阶段设置对应的时间戳字段 */
+    private void markStageTime(PumpToken t, Stage stage, LocalDateTime now) {
+        switch (stage) {
+            case TEN_MIN         -> t.setChecked10mAt(now);
+            case TWENTY_MIN      -> t.setChecked20mAt(now);
+            case THIRTY_MIN      -> t.setChecked30mAt(now);
+            case FORTY_FIVE_MIN  -> t.setChecked45mAt(now);
+            case ONE_HOUR        -> t.setChecked1hAt(now);
+            case FOUR_HOUR       -> t.setChecked4hAt(now);
+            case TWELVE_HOUR     -> t.setChecked12hAt(now);
+            case TWENTY_FOUR_HOUR-> t.setLastCheckedAt(now);
+        }
     }
 
     private void saveSnapshot(PumpToken t, BigDecimal mc, LocalDateTime at) {

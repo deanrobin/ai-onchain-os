@@ -40,12 +40,13 @@ public class FourMemeToken {
     @Column(length = 20)
     private String status = "new";
 
-    @Column(name = "checked_10m_at")
-    private LocalDateTime checked10mAt;
-
-    @Column(name = "checked_1h_at")
-    private LocalDateTime checked1hAt;
-
-    private LocalDateTime lastCheckedAt;
+    @Column(name = "checked_10m_at")  private LocalDateTime checked10mAt;
+    @Column(name = "checked_20m_at")  private LocalDateTime checked20mAt;
+    @Column(name = "checked_30m_at")  private LocalDateTime checked30mAt;
+    @Column(name = "checked_45m_at")  private LocalDateTime checked45mAt;
+    @Column(name = "checked_1h_at")   private LocalDateTime checked1hAt;
+    @Column(name = "checked_4h_at")   private LocalDateTime checked4hAt;
+    @Column(name = "checked_12h_at")  private LocalDateTime checked12hAt;
+    private LocalDateTime lastCheckedAt;   // 24H
     private BigDecimal currentMarketCap;
 }
