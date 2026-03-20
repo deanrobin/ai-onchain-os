@@ -7,6 +7,7 @@ import com.deanrobin.aios.dashboard.repository.PumpTokenRepository;
 import com.deanrobin.aios.dashboard.service.OkxApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +44,6 @@ public class PumpSurvivorJob {
 
     /** 每 5 分钟轮一次，覆盖三个检查节点 */
     @Scheduled(initialDelay = 120_000, fixedDelay = 300_000)
-    @Transactional
     public void run() {
         LocalDateTime now = LocalDateTime.now();
 
@@ -81,7 +81,7 @@ public class PumpSurvivorJob {
                                        Stage stage, String chainIndex) {
         if (tokens.isEmpty()) return;
         log.info("⏱ FourMeme [{}] 检查 {} 个", stage, tokens.size());
-        int survived = 0, deleted = 0, skipped = 0;
+        int survived = 0, deleted = 0, skipped = 0, conflicts = 0;
         for (int i = 0; i < tokens.size(); i++) {
             if (i > 0) { try { Thread.sleep(SLEEP_MS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; } }
             var t = tokens.get(i);
@@ -91,27 +91,35 @@ public class PumpSurvivorJob {
                 markFourMemeStageTime(t, stage, now);
                 boolean ok = mc != null && mc.compareTo(BigDecimal.valueOf(MIN_MARKET_CAP)) >= 0;
                 if (ok) {
-                    t.setStatus("survived"); t.setCurrentMarketCap(mc); fourMemeRepo.save(t); survived++;
+                    t.setStatus("survived"); t.setCurrentMarketCap(mc);
+                    fourMemeRepo.save(t); survived++;
                     log.info("✅ FourMeme [{}] 存活: {} mc=${}", stage, t.getShortName(), mc.toPlainString());
                 } else if (stage == Stage.TWENTY_FOUR_HOUR) {
                     fourMemeRepo.delete(t); deleted++;
                 } else {
                     fourMemeRepo.save(t); skipped++;
                 }
+            } catch (OptimisticLockingFailureException e) {
+                conflicts++;
+                log.debug("🔀 FourMeme [{}] 版本冲突跳过: {}", stage, t.getTokenAddress().substring(0, 10));
             } catch (Exception e) {
                 log.warn("⚠️ FourMeme [{}] 检查 {} 失败: {}", stage, t.getTokenAddress().substring(0, 10), e.getMessage());
-                markFourMemeStageTime(t, stage, LocalDateTime.now());
-                fourMemeRepo.save(t);
+                try {
+                    markFourMemeStageTime(t, stage, LocalDateTime.now());
+                    fourMemeRepo.save(t);
+                } catch (OptimisticLockingFailureException ignored) { conflicts++; }
             }
         }
-        log.info("✔ FourMeme [{}] 完成: 存活={} 删除={} 跳过={}", stage, survived, deleted, skipped);
+        log.info("✔ FourMeme [{}] 完成: 存活={} 删除={} 跳过={} 冲突跳过={}", stage, survived, deleted, skipped, conflicts);
     }
+
+
 
     private enum Stage { TEN_MIN, TWENTY_MIN, THIRTY_MIN, FORTY_FIVE_MIN, ONE_HOUR, FOUR_HOUR, TWELVE_HOUR, TWENTY_FOUR_HOUR }
 
     private void runStage(List<PumpToken> tokens, Stage stage) {
         if (tokens.isEmpty()) return;
-        int survived = 0, deleted = 0, skipped = 0;
+        int survived = 0, deleted = 0, skipped = 0, conflicts = 0;
         for (int i = 0; i < tokens.size(); i++) {
             if (i > 0) {
                 try { Thread.sleep(SLEEP_MS); } catch (InterruptedException e) {
@@ -124,7 +132,8 @@ public class PumpSurvivorJob {
                 markStageTime(t, stage, LocalDateTime.now());
                 boolean aboveMin = mc != null && mc.compareTo(BigDecimal.valueOf(MIN_MARKET_CAP)) >= 0;
                 if (aboveMin) {
-                    t.setStatus("survived"); t.setCurrentMarketCap(mc); pumpTokenRepo.save(t);
+                    t.setStatus("survived"); t.setCurrentMarketCap(mc);
+                    pumpTokenRepo.save(t);
                     if (stage == Stage.TWENTY_FOUR_HOUR) saveSnapshot(t, mc, LocalDateTime.now());
                     survived++;
                     log.info("✅ [{}] 存活: {} mc=${}", stage, t.getSymbol(), mc.toPlainString());
@@ -133,14 +142,22 @@ public class PumpSurvivorJob {
                 } else {
                     pumpTokenRepo.save(t); skipped++;
                 }
+            } catch (OptimisticLockingFailureException e) {
+                // 版本冲突：其他线程已更新该行，本次跳过，下轮会重新抓到正确版本
+                conflicts++;
+                log.debug("🔀 [{}] 版本冲突跳过: {}", stage, t.getMint().substring(0, 10));
             } catch (Exception e) {
                 log.warn("⚠️ [{}] {} 失败: {}", stage, t.getMint().substring(0, 10), e.getMessage());
-                markStageTime(t, stage, LocalDateTime.now());
-                pumpTokenRepo.save(t);
+                try {
+                    markStageTime(t, stage, LocalDateTime.now());
+                    pumpTokenRepo.save(t);
+                } catch (OptimisticLockingFailureException ignored) { conflicts++; }
             }
         }
-        log.info("✔ SOL [{}] 存活={} 删除={} 跳过={}", stage, survived, deleted, skipped);
+        log.info("✔ SOL [{}] 存活={} 删除={} 跳过={} 冲突跳过={}", stage, survived, deleted, skipped, conflicts);
     }
+
+
 
     private void markFourMemeStageTime(com.deanrobin.aios.dashboard.model.FourMemeToken t, Stage stage, LocalDateTime now) {
         switch (stage) {

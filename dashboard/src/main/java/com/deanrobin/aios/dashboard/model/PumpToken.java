@@ -5,12 +5,16 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+
 @Data
 @Entity
 @Table(name = "pump_token")
 public class PumpToken {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @jakarta.persistence.Version
+    private Integer version;
 
     @Column(unique = true)
     private String mint;          // 合约地址

@@ -12,6 +12,9 @@ public class FourMemeToken {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @jakarta.persistence.Version
+    private Integer version;
+
     private Long tokenId;
 
     @Column(unique = true)
