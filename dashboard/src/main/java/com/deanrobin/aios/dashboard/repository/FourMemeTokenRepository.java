@@ -34,11 +34,11 @@ public interface FourMemeTokenRepository extends JpaRepository<FourMemeToken, Lo
     List<FourMemeToken> findDueFor24h(LocalDateTime before);
 
     @Modifying @Transactional
-    @Query(value = "UPDATE four_meme_token SET checked_10m_at=NOW(),checked_20m_at=NOW(),checked_30m_at=NOW(),checked_45m_at=NOW(),checked_1h_at=NOW() WHERE received_at < :before AND checked_1h_at IS NULL", nativeQuery = true)
+    @Query(value = "UPDATE four_meme_token SET checked_10m_at=NOW(),checked_20m_at=NOW(),checked_30m_at=NOW(),checked_45m_at=NOW(),checked_1h_at=NOW() WHERE received_at < :before AND checked_1h_at IS NULL LIMIT 500", nativeQuery = true)
     int skipStale10m(LocalDateTime before);
 
     @Modifying @Transactional
-    @Query(value = "UPDATE four_meme_token SET checked_4h_at=NOW() WHERE received_at < :before AND checked_4h_at IS NULL", nativeQuery = true)
+    @Query(value = "UPDATE four_meme_token SET checked_4h_at=NOW() WHERE received_at < :before AND checked_4h_at IS NULL LIMIT 500", nativeQuery = true)
     int skipStale1h(LocalDateTime before);
 
     @Query("SELECT t FROM FourMemeToken t WHERE t.status = 'survived' ORDER BY t.currentMarketCap DESC NULLS LAST")

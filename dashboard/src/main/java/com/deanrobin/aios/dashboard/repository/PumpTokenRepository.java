@@ -34,14 +34,14 @@ public interface PumpTokenRepository extends JpaRepository<PumpToken, Long> {
     @Query(value = "SELECT * FROM pump_token WHERE received_at < :before AND last_checked_at IS NULL ORDER BY received_at ASC LIMIT 20", nativeQuery = true)
     List<PumpToken> findDueFor24h(LocalDateTime before);
 
-    // ── 积压跳过（超时未检查直接标记，不调 API）───────────────────────────
+    // ── 积压跳过（分批 UPDATE，每次最多 500 行，避免大锁）───────────────────
     @Modifying @Transactional
-    @Query(value = "UPDATE pump_token SET checked_10m_at=NOW(),checked_20m_at=NOW(),checked_30m_at=NOW(),checked_45m_at=NOW(),checked_1h_at=NOW() WHERE received_at < :before AND checked_1h_at IS NULL", nativeQuery = true)
-    int skipStale10m(LocalDateTime before);  // 超过 2h 的，直接跳过前5个阶段
+    @Query(value = "UPDATE pump_token SET checked_10m_at=NOW(),checked_20m_at=NOW(),checked_30m_at=NOW(),checked_45m_at=NOW(),checked_1h_at=NOW() WHERE received_at < :before AND checked_1h_at IS NULL LIMIT 500", nativeQuery = true)
+    int skipStale10m(LocalDateTime before);
 
     @Modifying @Transactional
-    @Query(value = "UPDATE pump_token SET checked_4h_at=NOW() WHERE received_at < :before AND checked_4h_at IS NULL", nativeQuery = true)
-    int skipStale1h(LocalDateTime before);   // 超过 6h 的跳过 4h 阶段
+    @Query(value = "UPDATE pump_token SET checked_4h_at=NOW() WHERE received_at < :before AND checked_4h_at IS NULL LIMIT 500", nativeQuery = true)
+    int skipStale1h(LocalDateTime before);
 
     /** 已存活 token，按最新市值倒序 */
     @Query("SELECT t FROM PumpToken t WHERE t.status = 'survived' ORDER BY t.currentMarketCap DESC NULLS LAST")

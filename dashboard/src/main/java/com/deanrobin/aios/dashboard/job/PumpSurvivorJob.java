@@ -47,11 +47,12 @@ public class PumpSurvivorJob {
     public void run() {
         LocalDateTime now = LocalDateTime.now();
 
-        // ── 积压清理（超过 2h 未到 1h 阶段 → 直接标记跳过；超过 6h 未到 4h → 跳过）──
-        int skip10m = pumpTokenRepo.skipStale10m(now.minusHours(2));
-        int skip1h  = pumpTokenRepo.skipStale1h(now.minusHours(6));
-        int bskip10m = fourMemeRepo.skipStale10m(now.minusHours(2));
-        int bskip1h  = fourMemeRepo.skipStale1h(now.minusHours(6));
+        // ── 积压清理（每次最多 500 行，循环直到清完，避免一次性大锁）──────────
+        int skip10m = 0, skip1h = 0, bskip10m = 0, bskip1h = 0, r;
+        while ((r = pumpTokenRepo.skipStale10m(now.minusHours(2))) > 0) { skip10m += r; }
+        while ((r = pumpTokenRepo.skipStale1h(now.minusHours(6)))  > 0) { skip1h  += r; }
+        while ((r = fourMemeRepo.skipStale10m(now.minusHours(2)))  > 0) { bskip10m += r; }
+        while ((r = fourMemeRepo.skipStale1h(now.minusHours(6)))   > 0) { bskip1h  += r; }
         if (skip10m + skip1h + bskip10m + bskip1h > 0) {
             log.info("🧹 积压清理 SOL={}/{} BSC={}/{}", skip10m, skip1h, bskip10m, bskip1h);
         }
