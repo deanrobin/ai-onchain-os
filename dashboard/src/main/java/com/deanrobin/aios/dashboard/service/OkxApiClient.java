@@ -23,24 +23,43 @@ public class OkxApiClient {
     private final OkxApiConfig cfg;
     private static final DateTimeFormatter TS_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
+    private static final int MAX_RETRIES = 3;
+    private static final long INITIAL_BACKOFF_MS = 1000;
 
     // ─── Public GET helper ────────────────────────────────────
     public Map<?, ?> get(String base, String path, Map<String, String> params) {
         String qs = buildQs(params);
         String fullPath = path + (qs.isEmpty() ? "" : "?" + qs);
+
+        return doGet(base, fullPath, 0);
+    }
+
+    private Map<?, ?> doGet(String base, String fullPath, int attempt) {
         String ts = TS_FMT.format(Instant.now());
         String sig = sign(ts, "GET", fullPath, "");
 
-        return WebClient.create(base)
-                .get().uri(fullPath)
-                .headers(h -> applyHeaders(h, ts, sig))
-                .retrieve()
-                .bodyToMono(Map.class)
-                .onErrorResume(e -> {
-                    log.error("OKX GET {} failed: {}", fullPath, e.getMessage());
-                    return Mono.just(Map.of("code", "-1", "msg", e.getMessage()));
-                })
-                .block();
+        try {
+            Map<?, ?> response = WebClient.create(base)
+                    .get().uri(fullPath)
+                    .headers(h -> applyHeaders(h, ts, sig))
+                    .retrieve()
+                    .onStatus(status -> status.value() == 429, clientResponse -> {
+                        log.warn("⚠️ OKX 429 限流 GET {} attempt={}", fullPath, attempt + 1);
+                        return Mono.error(new RuntimeException("429 Too Many Requests"));
+                    })
+                    .bodyToMono(Map.class)
+                    .block();
+            return response != null ? response : Map.of("code", "-1", "msg", "empty response");
+        } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("429") && attempt < MAX_RETRIES) {
+                long waitMs = INITIAL_BACKOFF_MS * (long) Math.pow(2, attempt); // 1s, 2s, 4s
+                log.warn("⏳ OKX 429 退避等待 {}ms，attempt={}/{} path={}", waitMs, attempt + 1, MAX_RETRIES, fullPath);
+                try { Thread.sleep(waitMs); } catch (InterruptedException ignored) {}
+                return doGet(base, fullPath, attempt + 1);
+            }
+            log.error("❌ OKX GET {} failed after {} attempts: {}", fullPath, attempt + 1, e.getMessage());
+            return Map.of("code", "-1", "msg", e.getMessage());
+        }
     }
 
     // ─── Public POST helper ───────────────────────────────────

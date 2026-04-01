@@ -1,0 +1,45 @@
+name: Doc Review — 文档同步检查
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      # 只有 Java 代码或配置变动时才触发，纯文档改动不触发
+      - 'dashboard/src/**/*.java'
+      - 'dashboard/src/main/resources/application.yml'
+      - 'db/schema.sql'
+
+jobs:
+  doc-review:
+    name: 检查文档是否需要更新
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # 需要获取上一个 commit 用于 diff
+
+      - name: 获取本次变更的文件列表
+        id: changed
+        run: |
+          CHANGED=$(git diff HEAD~1 --name-only | tr '\n' ',')
+          echo "files=$CHANGED" >> $GITHUB_OUTPUT
+          echo "📝 本次变更文件: $CHANGED"
+
+      - name: 触发 AI 文档审查
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          CHANGED_FILES="${{ steps.changed.outputs.files }}"
+
+          curl -s -X POST http://43.134.118.142:9999/hooks/agent \
+            -H "Authorization: Bearer 09b2bc31d4ed8b757e5a89b65b0f852e7f996de52aeab0d8" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"message\": \"ai-onchain-os 有新 commit。\\n\\ncommit 信息: ${COMMIT_MSG}\\n变更文件: ${CHANGED_FILES}\\n\\n请判断以下文档是否需要更新（只需说明需要改哪里，不需要直接修改）：README.md、AGENTS.md、CLAUDE.md、架构.md\\n如果不需要更新，回复 DOCS_OK 即可。\",
+              \"name\": \"DocReview\",
+              \"deliver\": true,
+              \"channel\": \"telegram\"
+            }"
+
+          echo "✅ 已触发 AI 文档审查"
