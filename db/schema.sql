@@ -82,7 +82,49 @@ CREATE TABLE IF NOT EXISTS perp_instrument (
     INDEX idx_exchange_rate (exchange, latest_funding_rate)
 );
 
--- ── Perps 资金费率快照表 ──────────────────────────────────────────
+-- ── QMT 量化行情追踪模块 ────────────────────────────────────────────
+-- 详细设计见 docs/QMT.md
+
+-- 品种配置表（4 个固定品种，可扩展）
+CREATE TABLE IF NOT EXISTS qmt_symbol (
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    symbol       VARCHAR(20)  NOT NULL COMMENT 'Binance 交易对，如 BTCUSDT',
+    base_asset   VARCHAR(10)  NOT NULL COMMENT '基础资产，如 BTC',
+    display_name VARCHAR(10)  NOT NULL COMMENT '页面展示名称',
+    is_active    TINYINT(1)   NOT NULL DEFAULT 1,
+    sort_order   INT          NOT NULL DEFAULT 0 COMMENT '页面排序',
+    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_symbol (symbol)
+) COMMENT='QMT 监控品种';
+
+INSERT IGNORE INTO qmt_symbol (symbol, base_asset, display_name, sort_order) VALUES
+('BTCUSDT',  'BTC',  'BTC',  1),
+('ETHUSDT',  'ETH',  'ETH',  2),
+('PAXGUSDT', 'PAXG', 'PAXG', 3),
+('XAUTUSDT', 'XAUT', 'XAUT', 4);
+
+-- K 线数据表（OHLCV，按 symbol + interval_code + open_time 唯一）
+CREATE TABLE IF NOT EXISTS qmt_kline (
+    id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    symbol         VARCHAR(20)    NOT NULL COMMENT 'Binance 交易对',
+    interval_code  VARCHAR(5)     NOT NULL COMMENT '周期：15m/1h/4h/12h/1d/1w',
+    open_time      DATETIME(3)    NOT NULL COMMENT 'K 线开盘时间（毫秒精度）',
+    open_price     DECIMAL(24,8)  NOT NULL COMMENT '开盘价',
+    high_price     DECIMAL(24,8)  NOT NULL COMMENT '最高价',
+    low_price      DECIMAL(24,8)  NOT NULL COMMENT '最低价',
+    close_price    DECIMAL(24,8)  NOT NULL COMMENT '收盘价',
+    volume         DECIMAL(32,8)  NOT NULL COMMENT '基础资产成交量',
+    quote_volume   DECIMAL(32,8)  NOT NULL COMMENT 'USDT 成交额',
+    trades         INT UNSIGNED   NOT NULL DEFAULT 0 COMMENT '成交笔数',
+    taker_buy_vol  DECIMAL(32,8)  NOT NULL DEFAULT 0 COMMENT '主动买入量（买压）',
+    close_time     DATETIME(3)    NOT NULL COMMENT 'K 线收盘时间',
+    is_closed      TINYINT(1)     NOT NULL DEFAULT 0 COMMENT '0=未收盘 1=已收盘',
+    fetched_at     DATETIME       NOT NULL COMMENT '最后抓取时间',
+    UNIQUE KEY uk_kline (symbol, interval_code, open_time),
+    INDEX idx_sym_ivl_time (symbol, interval_code, open_time DESC),
+    INDEX idx_close_time   (close_time)
+) COMMENT='QMT K 线数据';
+
 CREATE TABLE IF NOT EXISTS perp_funding_rate (
     id                BIGINT PRIMARY KEY AUTO_INCREMENT,
     exchange          VARCHAR(20)   NOT NULL,
