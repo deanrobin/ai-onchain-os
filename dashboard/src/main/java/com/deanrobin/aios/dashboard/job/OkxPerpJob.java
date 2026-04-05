@@ -12,6 +12,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import jakarta.annotation.PostConstruct;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -48,10 +51,17 @@ public class OkxPerpJob {
     /** 全量资金费率任务防并发重入 */
     private final AtomicBoolean rateAllRunning = new AtomicBoolean(false);
 
+    @PostConstruct
+    public void init() {
+        ThreadMXBean tmx = ManagementFactory.getThreadMXBean();
+        log.info("✅ OkxPerpJob 初始化完成 | DELAY_MS={} | JVM线程数={}", DELAY_MS, tmx.getThreadCount());
+    }
+
     // ═══ 品种同步（每 5 min，initialDelay 10s）═══════════════════════
     @Scheduled(initialDelay = 10_000, fixedDelay = 300_000)
     public void syncInstruments() {
         List<Map<String, Object>> instruments = perpApiClient.fetchOkxInstruments();
+        log.info("🔍 OKX syncInstruments 触发 | 拉取品种数={}", instruments.size());
         if (instruments.isEmpty()) return;
 
         int newCount = 0;
@@ -110,8 +120,10 @@ public class OkxPerpJob {
             log.warn("⚠️ OKX 全量费率任务上次未完成，跳过本次");
             return;
         }
+        long start = System.currentTimeMillis();
         try {
             List<PerpInstrument> list = instrumentRepo.findByExchangeAndIsActiveTrue(EXCHANGE);
+            log.info("🔄 OKX 资金费率全量开始 | 品种数={} | thread={}", list.size(), Thread.currentThread().getName());
             LocalDateTime now = LocalDateTime.now();
             int saved = 0;
             for (PerpInstrument inst : list) {
@@ -125,7 +137,7 @@ public class OkxPerpJob {
                     log.warn("⚠️ OKX 费率获取失败 {}: {}", inst.getSymbol(), e.getMessage());
                 }
             }
-            if (saved > 0) log.info("📊 OKX 资金费率全量更新 {} 条", saved);
+            log.info("📊 OKX 资金费率全量完成 | 更新={} 条 | 耗时={}s", saved, (System.currentTimeMillis() - start) / 1000);
         } finally {
             rateAllRunning.set(false);
         }
