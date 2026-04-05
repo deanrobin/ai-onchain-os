@@ -93,6 +93,13 @@
         🔄 <span id="perps-countdown">60</span>s
     </span>
     <span id="last-updated" style="color:var(--t3)">—</span>
+    <button id="report-btn" onclick="sendReport()"
+            style="margin-left:auto;padding:4px 14px;font-size:.75rem;font-weight:600;
+                   border:1px solid #c7d7fa;border-radius:20px;background:#f0f4ff;
+                   color:#3b82f6;cursor:pointer;transition:opacity .2s">
+        📤 立刻汇报
+    </button>
+    <span id="report-msg" style="font-size:.72rem;color:var(--t3);display:none"></span>
 </div>
 
 <!-- BTC / ETH 固定展示区 -->
@@ -349,6 +356,31 @@ function loadFeatured() {
             });
         })
         .catch(() => {});
+}
+
+// ── 立刻汇报 ─────────────────────────────────────────────────────
+function sendReport() {
+    const btn = document.getElementById('report-btn');
+    const msg = document.getElementById('report-msg');
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    fetch('/api/perps/report', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            msg.textContent = data.msg || '';
+            msg.style.display = 'inline';
+            setTimeout(() => { msg.style.display = 'none'; }, 4000);
+            if (!data.ok) {
+                // 限流：4 秒后恢复按钮
+                setTimeout(() => { btn.disabled = false; btn.style.opacity = '1'; }, 4000);
+            } else {
+                // 成功：5 分钟后才恢复
+                setTimeout(() => { btn.disabled = false; btn.style.opacity = '1'; }, 300_000);
+            }
+        })
+        .catch(() => {
+            btn.disabled = false; btn.style.opacity = '1';
+        });
 }
 
 // ── 初始化 ───────────────────────────────────────────────────────

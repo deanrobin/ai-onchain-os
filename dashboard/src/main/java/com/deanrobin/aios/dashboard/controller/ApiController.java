@@ -5,6 +5,7 @@ import com.deanrobin.aios.dashboard.model.PriceTicker;
 import com.deanrobin.aios.dashboard.model.SmartMoneySignal;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
 import com.deanrobin.aios.dashboard.repository.PriceTickerRepository;
+import com.deanrobin.aios.dashboard.service.PerpAlertService;
 import com.deanrobin.aios.dashboard.service.PerpService;
 import com.deanrobin.aios.dashboard.service.PortfolioService;
 import com.deanrobin.aios.dashboard.service.SmartMoneyService;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 public class ApiController {
 
     private final PerpService               perpService;
+    private final PerpAlertService          perpAlertService;
     private final PerpInstrumentRepository  perpInstrumentRepo;
     private final SmartMoneyService         smartMoneyService;
     private final com.deanrobin.aios.dashboard.repository.PumpTokenRepository          pumpTokenRepo;
@@ -229,6 +231,19 @@ public class ApiController {
         result.put("updatedAt",   java.time.LocalDateTime.now().format(
                 java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm:ss")));
         return result;
+    }
+
+    /**
+     * POST /api/perps/report
+     * 立刻发送三所 Top10 飞书汇报。5 分钟内只能触发一次。
+     */
+    @PostMapping("/perps/report")
+    public Map<String, Object> perpReport() {
+        boolean sent = perpAlertService.triggerManualReport();
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("ok",  sent);
+        r.put("msg", sent ? "已发送到飞书" : "5 分钟内已发送过，请稍后再试");
+        return r;
     }
 
     private static Map<String, Object> toRateMap(PerpInstrument p) {

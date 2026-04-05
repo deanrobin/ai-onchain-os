@@ -4,6 +4,7 @@ import com.deanrobin.aios.dashboard.model.PerpFundingRate;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.repository.PerpFundingRateRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
+import com.deanrobin.aios.dashboard.service.PerpAlertService;
 import com.deanrobin.aios.dashboard.service.PerpApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -43,6 +44,7 @@ public class OkxPerpJob {
     private final PerpApiClient             perpApiClient;
     private final PerpInstrumentRepository  instrumentRepo;
     private final PerpFundingRateRepository fundingRateRepo;
+    private final PerpAlertService          perpAlertService;
     private final WebClient.Builder         webClientBuilder;
 
     @Value("${perp.alert-url:}")
@@ -109,12 +111,18 @@ public class OkxPerpJob {
                 newSymbols.add(symbol);
             } else {
                 PerpInstrument pi = opt.get();
-                // 只有状态变化时才写 DB，避免每 5min 300+ 次无谓 save
+                boolean changed = false;
                 if (!Boolean.TRUE.equals(pi.getIsActive())) {
                     pi.setIsActive(true);
                     pi.setLastSeenAt(now);
-                    instrumentRepo.save(pi);
+                    changed = true;
                 }
+                // 兜底修复历史记录 quoteCurrency 为空（导致 Top10 查询被过滤掉）
+                if (pi.getQuoteCurrency() == null || pi.getQuoteCurrency().isBlank()) {
+                    pi.setQuoteCurrency(quote.isBlank() ? settle : quote);
+                    changed = true;
+                }
+                if (changed) instrumentRepo.save(pi);
             }
         }
         log.info("🔍 OKX syncInstruments 完成 | USDT品种={} 新增={}", usdtCount, newCount);
@@ -123,8 +131,8 @@ public class OkxPerpJob {
         }
     }
 
-    // ═══ 全量资金费率（每 10 min，initialDelay 60s）══════════════════
-    @Scheduled(initialDelay = 60_000, fixedDelay = 600_000)
+    // ═══ 全量资金费率（每 5 min，initialDelay 60s）═══════════════════
+    @Scheduled(initialDelay = 60_000, fixedDelay = 300_000)
     public void fetchAllRates() {
         if (!rateAllRunning.compareAndSet(false, true)) {
             log.warn("⚠️ OKX 全量费率任务上次未完成，跳过本次");
@@ -148,6 +156,7 @@ public class OkxPerpJob {
                 }
             }
             log.info("📊 OKX 资金费率全量完成 | 更新={} 条 | 耗时={}s", saved, (System.currentTimeMillis() - start) / 1000);
+            perpAlertService.checkSpikes(EXCHANGE);
         } finally {
             rateAllRunning.set(false);
         }
@@ -172,7 +181,10 @@ public class OkxPerpJob {
                 log.warn("⚠️ OKX 关注品种费率失败 {}: {}", inst.getSymbol(), e.getMessage());
             }
         }
-        if (saved > 0) log.debug("⭐ OKX 关注品种费率更新 {} 条", saved);
+        if (saved > 0) {
+            log.debug("⭐ OKX 关注品种费率更新 {} 条", saved);
+            perpAlertService.checkSpikes(EXCHANGE);
+        }
     }
 
     // ─── 内部：单品种拉取并保存 ──────────────────────────────────────

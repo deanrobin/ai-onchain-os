@@ -4,6 +4,7 @@ import com.deanrobin.aios.dashboard.model.PerpFundingRate;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.repository.PerpFundingRateRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
+import com.deanrobin.aios.dashboard.service.PerpAlertService;
 import com.deanrobin.aios.dashboard.service.PerpApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -38,6 +39,7 @@ public class BinancePerpJob {
     private final PerpApiClient             perpApiClient;
     private final PerpInstrumentRepository  instrumentRepo;
     private final PerpFundingRateRepository fundingRateRepo;
+    private final PerpAlertService          perpAlertService;
     private final WebClient.Builder         webClientBuilder;
 
     @Value("${perp.alert-url:}")
@@ -88,12 +90,15 @@ public class BinancePerpJob {
         }
     }
 
-    // ═══ 全量资金费率（每 10 min，initialDelay 90s）══════════════════
-    @Scheduled(initialDelay = 90_000, fixedDelay = 600_000)
+    // ═══ 全量资金费率（每 5 min，initialDelay 90s）═══════════════════
+    @Scheduled(initialDelay = 90_000, fixedDelay = 300_000)
     public void fetchAllRates() {
         LocalDateTime now = LocalDateTime.now();
         int saved = saveRates(perpApiClient.fetchBinanceFundingRates(), now);
-        if (saved > 0) log.info("📊 Binance 资金费率全量更新 {} 条", saved);
+        if (saved > 0) {
+            log.info("📊 Binance 资金费率全量更新 {} 条", saved);
+            perpAlertService.checkSpikes(EXCHANGE);
+        }
     }
 
     // ═══ 关注品种资金费率（每 1 min，initialDelay 40s）═══════════════
@@ -124,7 +129,10 @@ public class BinancePerpJob {
                 }
             }
         }
-        if (saved > 0) log.debug("⭐ Binance 关注品种费率更新 {} 条", saved);
+        if (saved > 0) {
+            log.debug("⭐ Binance 关注品种费率更新 {} 条", saved);
+            perpAlertService.checkSpikes(EXCHANGE);
+        }
     }
 
     // ─── 内部：批量保存费率 ───────────────────────────────────────────

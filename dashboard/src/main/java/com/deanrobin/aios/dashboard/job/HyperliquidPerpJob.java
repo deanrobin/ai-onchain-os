@@ -4,6 +4,7 @@ import com.deanrobin.aios.dashboard.model.PerpFundingRate;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.repository.PerpFundingRateRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
+import com.deanrobin.aios.dashboard.service.PerpAlertService;
 import com.deanrobin.aios.dashboard.service.PerpApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -40,6 +41,7 @@ public class HyperliquidPerpJob {
     private final PerpApiClient             perpApiClient;
     private final PerpInstrumentRepository  instrumentRepo;
     private final PerpFundingRateRepository fundingRateRepo;
+    private final PerpAlertService          perpAlertService;
     private final WebClient.Builder         webClientBuilder;
 
     @Value("${perp.alert-url:}")
@@ -97,7 +99,10 @@ public class HyperliquidPerpJob {
             log.info("🆕 Hyperliquid 新增永续合约 {} 个: {}", newCount, newSymbols);
             triggerAlert(newSymbols.size(), String.join(",", newSymbols.subList(0, Math.min(3, newSymbols.size()))));
         }
-        if (rateSaved > 0) log.info("📊 Hyperliquid 资金费率更新 {} 条", rateSaved);
+        if (rateSaved > 0) {
+            log.info("📊 Hyperliquid 资金费率更新 {} 条", rateSaved);
+            perpAlertService.checkSpikes(EXCHANGE);
+        }
     }
 
     // ═══ 关注品种资金费率（每 1 min，initialDelay 50s）═══════════════
@@ -127,7 +132,10 @@ public class HyperliquidPerpJob {
                 }
             }
         }
-        if (saved > 0) log.debug("⭐ Hyperliquid 关注品种费率更新 {} 条", saved);
+        if (saved > 0) {
+            log.debug("⭐ Hyperliquid 关注品种费率更新 {} 条", saved);
+            perpAlertService.checkSpikes(EXCHANGE);
+        }
     }
 
     // ─── 飞书报警 ────────────────────────────────────────────────────
