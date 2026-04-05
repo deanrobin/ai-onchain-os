@@ -109,12 +109,18 @@ public class OkxPerpJob {
                 newSymbols.add(symbol);
             } else {
                 PerpInstrument pi = opt.get();
-                // 只有状态变化时才写 DB，避免每 5min 300+ 次无谓 save
+                boolean changed = false;
                 if (!Boolean.TRUE.equals(pi.getIsActive())) {
                     pi.setIsActive(true);
                     pi.setLastSeenAt(now);
-                    instrumentRepo.save(pi);
+                    changed = true;
                 }
+                // 兜底修复历史记录 quoteCurrency 为空（导致 Top10 查询被过滤掉）
+                if (pi.getQuoteCurrency() == null || pi.getQuoteCurrency().isBlank()) {
+                    pi.setQuoteCurrency(quote.isBlank() ? settle : quote);
+                    changed = true;
+                }
+                if (changed) instrumentRepo.save(pi);
             }
         }
         log.info("🔍 OKX syncInstruments 完成 | USDT品种={} 新增={}", usdtCount, newCount);
