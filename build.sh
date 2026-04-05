@@ -1,9 +1,14 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────────
 #  aios-dashboard 构建脚本
-#  用法：sh build.sh
+#  用法：sh build.sh  或  bash build.sh
 #  依赖：JDK 17+、Maven 3.x
 # ─────────────────────────────────────────────────────────────────
+
+# 若以 sh 调用（dash）则自动切换为 bash 执行
+if [ -z "$BASH_VERSION" ]; then
+    exec bash "$0" "$@"
+fi
 
 set -e
 
@@ -22,12 +27,12 @@ echo -e "${CYAN}${BOLD}╚══════════════════
 echo ""
 
 # ── 检查 JDK ──────────────────────────────────────────────────────
-if ! command -v java &>/dev/null; then
+if ! command -v java >/dev/null 2>&1; then
     echo -e "${RED}❌ 未找到 java，请安装 JDK 17+${RESET}"
     exit 1
 fi
 JAVA_FULL=$(java -version 2>&1 | head -1)
-# 兼容各种格式：openjdk version "17.0.x"、java version "17"、Zulu17 等
+# 兼容各种格式：openjdk version "17.0.x"、Zulu17 等
 JAVA_VER=$(echo "$JAVA_FULL" | sed 's/.*version "\([0-9]*\).*/\1/')
 if [ -z "$JAVA_VER" ] || [ "$JAVA_VER" -lt 17 ] 2>/dev/null; then
     echo -e "${RED}❌ JDK 版本过低或无法识别（${JAVA_FULL}），需要 JDK 17+${RESET}"
@@ -36,7 +41,7 @@ fi
 echo -e "☕ Java:   ${JAVA_FULL}"
 
 # ── 检查 Maven ────────────────────────────────────────────────────
-if ! command -v mvn &>/dev/null; then
+if ! command -v mvn >/dev/null 2>&1; then
     echo -e "${RED}❌ 未找到 mvn，请先安装 Maven：${RESET}"
     echo -e "   ${BOLD}apt-get install -y maven${RESET}  (Debian/Ubuntu)"
     echo -e "   ${BOLD}yum install -y maven${RESET}       (CentOS/RHEL)"
@@ -59,9 +64,8 @@ echo ""
 echo -e "${YELLOW}▶ 开始构建...${RESET}"
 START_TIME=$(date +%s)
 
-# 构建失败时显示完整错误，不用 -q
 if ! mvn -pl dashboard -am clean package -DskipTests \
-        -f "$PROJECT_ROOT/pom.xml" 2>&1; then
+        -f "$PROJECT_ROOT/pom.xml"; then
     echo ""
     echo -e "${RED}❌ Maven 构建失败，请查看上方错误信息${RESET}"
     exit 1
