@@ -164,21 +164,32 @@ public class PerpInstrumentSyncJob {
         return newCount;
     }
 
-    // ─── 报警 ────────────────────────────────────────────────────────
+    // ─── 飞书报警（POST JSON）────────────────────────────────────────
     private void triggerAlert(String exchange, int count, String sampleSymbols) {
         if (alertUrl == null || alertUrl.isBlank()) return;
         try {
-            String url = alertUrl + "?exchange=" + exchange + "&count=" + count + "&symbols=" + sampleSymbols;
+            String text = String.format("🆕 Perps 新增永续合约\n交易所：%s\n新增数量：%d 个\n示例：%s",
+                    exchange, count, sampleSymbols);
+            // 飞书自定义机器人 Webhook 格式
+            Map<String, Object> body = Map.of(
+                "msg_type", "text",
+                "content",  Map.of("text", text)
+            );
             webClientBuilder.build()
-                    .get().uri(url)
+                    .post().uri(alertUrl)
+                    .header("Content-Type", "application/json")
+                    .bodyValue(body)
                     .retrieve()
                     .bodyToMono(String.class)
                     .timeout(java.time.Duration.ofSeconds(5))
-                    .onErrorResume(e -> reactor.core.publisher.Mono.empty())
+                    .onErrorResume(e -> {
+                        log.warn("⚠️ 飞书报警发送失败: {}", e.getMessage());
+                        return reactor.core.publisher.Mono.empty();
+                    })
                     .subscribe();
-            log.info("🔔 Perps 报警已发送 exchange={} count={}", exchange, count);
+            log.info("🔔 飞书报警已发送 exchange={} count={}", exchange, count);
         } catch (Exception e) {
-            log.warn("⚠️ Perps 报警发送失败: {}", e.getMessage());
+            log.warn("⚠️ 飞书报警发送异常: {}", e.getMessage());
         }
     }
 }

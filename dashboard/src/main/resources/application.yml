@@ -55,8 +55,8 @@ smart-money:
 
 # ── Perps 永续合约配置 ────────────────────────────────────────────
 perp:
-  # 新品种发现时的 HTTP 报警地址（GET 请求，带 ?exchange=XX&count=N&symbols=XX）
-  alert-url: ${PERP_ALERT_URL:}
+  # 新品种发现时飞书 Webhook 报警地址（POST JSON）
+  alert-url: https://open.feishu.cn/open-apis/bot/v2/hook/41e5313b-9dae-413f-aaf7-6d293d2feb55
 
   # ── 详情页缓存配置（Web 触发，缓存过期才打 OKX API）──────────
   cache:
