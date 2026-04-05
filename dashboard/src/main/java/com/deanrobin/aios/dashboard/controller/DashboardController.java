@@ -140,6 +140,24 @@ public class DashboardController {
     }
 
     // ──────────────────────────────────────────────────────────────
+    // Perps 看板
+    // ──────────────────────────────────────────────────────────────
+    @GetMapping("/perps")
+    public String perps(Model model) {
+        model.addAttribute("activePage", "perps");
+        return "perps";
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // QMT 看板
+    // ──────────────────────────────────────────────────────────────
+    @GetMapping("/qmt")
+    public String qmt(Model model) {
+        model.addAttribute("activePage", "qmt");
+        return "qmt";
+    }
+
+    // ──────────────────────────────────────────────────────────────
     // 我的地址管理：查看 + 新增（最多 4 个）
     // ──────────────────────────────────────────────────────────────
     private static final int MAX_ADDRESSES = 4;
