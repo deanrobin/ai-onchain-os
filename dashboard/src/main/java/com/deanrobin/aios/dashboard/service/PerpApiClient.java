@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
@@ -28,9 +29,22 @@ public class PerpApiClient {
     private static final String BINANCE_BASE     = "https://fapi.binance.com";
     private static final String HYPERLIQUID_BASE = "https://api.hyperliquid.xyz";
     private static final Duration TIMEOUT        = Duration.ofSeconds(15);
+    /** 响应体最大缓冲 10MB，防止大 JSON 触发 DataBufferLimitException */
+    private static final int MAX_BUFFER_BYTES    = 10 * 1024 * 1024;
 
     private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
+
+    /** 构建带大缓冲区的 WebClient */
+    private WebClient client(String baseUrl) {
+        return webClientBuilder
+                .clone()
+                .baseUrl(baseUrl)
+                .exchangeStrategies(ExchangeStrategies.builder()
+                        .codecs(c -> c.defaultCodecs().maxInMemorySize(MAX_BUFFER_BYTES))
+                        .build())
+                .build();
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // OKX
@@ -44,7 +58,7 @@ public class PerpApiClient {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> fetchOkxInstruments() {
         try {
-            Map<?, ?> resp = webClientBuilder.baseUrl(OKX_BASE).build()
+            Map<?, ?> resp = client(OKX_BASE)
                     .get()
                     .uri("/api/v5/public/instruments?instType=SWAP")
                     .retrieve()
@@ -71,7 +85,7 @@ public class PerpApiClient {
     @SuppressWarnings("unchecked")
     public Map<String, Object> fetchOkxFundingRate(String instId) {
         try {
-            Map<?, ?> resp = webClientBuilder.baseUrl(OKX_BASE).build()
+            Map<?, ?> resp = client(OKX_BASE)
                     .get()
                     .uri("/api/v5/public/funding-rate?instId=" + instId)
                     .retrieve()
@@ -100,7 +114,7 @@ public class PerpApiClient {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> fetchBinanceInstruments() {
         try {
-            Map<?, ?> resp = webClientBuilder.baseUrl(BINANCE_BASE).build()
+            Map<?, ?> resp = client(BINANCE_BASE)
                     .get()
                     .uri("/fapi/v1/exchangeInfo")
                     .retrieve()
@@ -132,7 +146,7 @@ public class PerpApiClient {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> fetchBinanceFundingRates() {
         try {
-            List<?> resp = webClientBuilder.baseUrl(BINANCE_BASE).build()
+            List<?> resp = client(BINANCE_BASE)
                     .get()
                     .uri("/fapi/v1/premiumIndex")
                     .retrieve()
@@ -160,7 +174,7 @@ public class PerpApiClient {
     @SuppressWarnings("unchecked")
     public List<HyperliquidAsset> fetchHyperliquidAll() {
         try {
-            List<?> resp = webClientBuilder.baseUrl(HYPERLIQUID_BASE).build()
+            List<?> resp = client(HYPERLIQUID_BASE)
                     .post()
                     .uri("/info")
                     .header("Content-Type", "application/json")

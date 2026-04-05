@@ -70,7 +70,7 @@
 <div id="panel-OKX" class="exch-panel active">
     <div class="top10-grid">
         <div class="card">
-            <div class="card-header">🔺 资金费率 Top 10 最高</div>
+            <div class="card-header" style="color:var(--green)">🔺 资金费率 <span style="color:var(--green)">Top 10 最高</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
                     <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
@@ -80,7 +80,7 @@
             </div>
         </div>
         <div class="card">
-            <div class="card-header">🔻 资金费率 Top 10 最低</div>
+            <div class="card-header" style="color:var(--red)">🔻 资金费率 <span style="color:var(--red)">Top 10 最低</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
                     <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
@@ -96,7 +96,7 @@
 <div id="panel-BINANCE" class="exch-panel">
     <div class="top10-grid">
         <div class="card">
-            <div class="card-header">🔺 资金费率 Top 10 最高</div>
+            <div class="card-header" style="color:var(--green)">🔺 资金费率 <span style="color:var(--green)">Top 10 最高</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
                     <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
@@ -106,7 +106,7 @@
             </div>
         </div>
         <div class="card">
-            <div class="card-header">🔻 资金费率 Top 10 最低</div>
+            <div class="card-header" style="color:var(--red)">🔻 资金费率 <span style="color:var(--red)">Top 10 最低</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
                     <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
@@ -122,7 +122,7 @@
 <div id="panel-HYPERLIQUID" class="exch-panel">
     <div class="top10-grid">
         <div class="card">
-            <div class="card-header">🔺 资金费率 Top 10 最高</div>
+            <div class="card-header" style="color:var(--green)">🔺 资金费率 <span style="color:var(--green)">Top 10 最高</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
                     <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
@@ -132,7 +132,7 @@
             </div>
         </div>
         <div class="card">
-            <div class="card-header">🔻 资金费率 Top 10 最低</div>
+            <div class="card-header" style="color:var(--red)">🔻 资金费率 <span style="color:var(--red)">Top 10 最低</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
                     <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
@@ -183,15 +183,17 @@ function renderTable(tbodyId, rows) {
     const tbody = document.getElementById('tbl-' + tbodyId);
     if (!tbody) return;
     if (!rows.length) { renderEmpty(tbodyId); return; }
+    // high 表统一绿色，low 表统一红色
+    const isHigh  = tbodyId.endsWith('-high');
+    const rateCls = isHigh ? 'rate-pos' : 'rate-neg';
     tbody.innerHTML = rows.map((r, i) => {
         const rate    = parseFloat(r.rate) || 0;
         const pct     = (rate * 100).toFixed(4) + '%';
-        const cls     = rate > 0 ? 'rate-pos' : rate < 0 ? 'rate-neg' : 'rate-zero';
         const watched = r.isWatched ? '<span class="watched-badge">⭐</span>' : '';
         return `<tr>
             <td class="t-dim fw-7">${i + 1}</td>
             <td class="mono fw-7" style="font-size:.8rem">${escHtml(r.symbol || '—')}${watched}</td>
-            <td class="${cls}">${pct}</td>
+            <td class="${rateCls}">${pct}</td>
             <td class="t-dim" style="font-size:.72rem">${escHtml(r.updatedAt || '—')}</td>
         </tr>`;
     }).join('');
