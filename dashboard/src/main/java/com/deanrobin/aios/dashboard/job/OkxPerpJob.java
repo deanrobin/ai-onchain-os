@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class OkxPerpJob {
 
     private static final String   EXCHANGE    = "OKX";
-    private static final long     DELAY_MS    = 1200L;
+    private static final long     DELAY_MS    = 500L;  // OKX 限速 20req/2s，500ms 安全裕量充足，原 1200ms 导致 300 种 × 1.2s = 6min 阻塞
 
     private final PerpApiClient             perpApiClient;
     private final PerpInstrumentRepository  instrumentRepo;
@@ -89,9 +89,12 @@ public class OkxPerpJob {
                 newSymbols.add(symbol);
             } else {
                 PerpInstrument pi = opt.get();
-                pi.setIsActive(true);
-                pi.setLastSeenAt(now);
-                instrumentRepo.save(pi);
+                // 只有状态变化时才写 DB，避免每 5min 300+ 次无谓 save
+                if (!Boolean.TRUE.equals(pi.getIsActive())) {
+                    pi.setIsActive(true);
+                    pi.setLastSeenAt(now);
+                    instrumentRepo.save(pi);
+                }
             }
         }
         if (newCount > 0) {

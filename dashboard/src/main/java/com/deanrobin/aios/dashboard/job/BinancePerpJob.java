@@ -74,9 +74,12 @@ public class BinancePerpJob {
                 newSymbols.add(symbol);
             } else {
                 PerpInstrument pi = opt.get();
-                pi.setIsActive(true);
-                pi.setLastSeenAt(now);
-                instrumentRepo.save(pi);
+                // 只有状态变化时才写 DB
+                if (!Boolean.TRUE.equals(pi.getIsActive())) {
+                    pi.setIsActive(true);
+                    pi.setLastSeenAt(now);
+                    instrumentRepo.save(pi);
+                }
             }
         }
         if (newCount > 0) {
