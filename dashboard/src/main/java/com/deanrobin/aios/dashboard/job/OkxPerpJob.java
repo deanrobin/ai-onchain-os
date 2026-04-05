@@ -65,17 +65,26 @@ public class OkxPerpJob {
         if (instruments.isEmpty()) return;
 
         int newCount = 0;
+        int usdtCount = 0;
         List<String> newSymbols = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
-        for (Map<String, Object> item : instruments) {
-            String symbol = String.valueOf(item.getOrDefault("instId", ""));
-            if (symbol.isBlank()) continue;
-            String base  = String.valueOf(item.getOrDefault("baseCcy",  ""));
-            String quote = String.valueOf(item.getOrDefault("quoteCcy", ""));
+        // 打印前 3 个品种的原始字段，便于确认 quoteCcy / settleCcy 实际值
+        instruments.stream().limit(3).forEach(item ->
+            log.info("🔬 OKX instrument sample | instId={} baseCcy={} quoteCcy={} settleCcy={}",
+                item.get("instId"), item.get("baseCcy"), item.get("quoteCcy"), item.get("settleCcy"))
+        );
 
-            // 只保留 USDT 结算（过滤 BTC-USD-SWAP 等币本位）
-            if (!"USDT".equalsIgnoreCase(quote)) {
+        for (Map<String, Object> item : instruments) {
+            String symbol   = String.valueOf(item.getOrDefault("instId",    ""));
+            if (symbol.isBlank()) continue;
+            String base     = String.valueOf(item.getOrDefault("baseCcy",   ""));
+            String quote    = String.valueOf(item.getOrDefault("quoteCcy",  ""));
+            String settle   = String.valueOf(item.getOrDefault("settleCcy", ""));
+
+            // 只保留 USDT 结算：quoteCcy=USDT 或 settleCcy=USDT（双重兜底）
+            boolean isUsdt  = "USDT".equalsIgnoreCase(quote) || "USDT".equalsIgnoreCase(settle);
+            if (!isUsdt) {
                 instrumentRepo.findByExchangeAndSymbol(EXCHANGE, symbol).ifPresent(pi -> {
                     if (Boolean.TRUE.equals(pi.getIsActive())) {
                         pi.setIsActive(false);
@@ -84,6 +93,7 @@ public class OkxPerpJob {
                 });
                 continue;
             }
+            usdtCount++;
 
             var opt = instrumentRepo.findByExchangeAndSymbol(EXCHANGE, symbol);
             if (opt.isEmpty()) {
@@ -91,7 +101,7 @@ public class OkxPerpJob {
                 pi.setExchange(EXCHANGE);
                 pi.setSymbol(symbol);
                 pi.setBaseCurrency(base);
-                pi.setQuoteCurrency(quote);
+                pi.setQuoteCurrency(quote.isBlank() ? settle : quote);
                 pi.setFirstSeenAt(now);
                 pi.setLastSeenAt(now);
                 instrumentRepo.save(pi);
@@ -107,8 +117,7 @@ public class OkxPerpJob {
                 }
             }
         }
-        if (newCount > 0) {
-            log.info("🆕 OKX 新增永续合约 {} 个: {}", newCount, newSymbols);
+        log.info("🔍 OKX syncInstruments 完成 | USDT品种={} 新增={}", usdtCount, newCount);
             triggerAlert(newSymbols.size(), String.join(",", newSymbols.subList(0, Math.min(3, newSymbols.size()))));
         }
     }
