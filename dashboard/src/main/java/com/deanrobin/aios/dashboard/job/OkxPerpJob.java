@@ -118,6 +118,7 @@ public class OkxPerpJob {
             }
         }
         log.info("🔍 OKX syncInstruments 完成 | USDT品种={} 新增={}", usdtCount, newCount);
+        if (newCount > 0) {
             triggerAlert(newSymbols.size(), String.join(",", newSymbols.subList(0, Math.min(3, newSymbols.size()))));
         }
     }
