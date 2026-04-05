@@ -16,13 +16,21 @@ public interface PerpInstrumentRepository extends JpaRepository<PerpInstrument, 
 
     List<PerpInstrument> findByIsWatchedTrue();
 
-    /** Top N 资金费率最高（DESC） */
-    @Query("SELECT p FROM PerpInstrument p WHERE p.exchange = :exchange AND p.isActive = true AND p.latestFundingRate IS NOT NULL ORDER BY p.latestFundingRate DESC LIMIT 10")
+    /** Top 10 费率最高（DESC），仅 U本位（USDT/USD 结算） */
+    @Query("SELECT p FROM PerpInstrument p WHERE p.exchange = :exchange AND p.isActive = true " +
+           "AND p.latestFundingRate IS NOT NULL AND UPPER(p.quoteCurrency) IN ('USDT','USD') " +
+           "ORDER BY p.latestFundingRate DESC LIMIT 10")
     List<PerpInstrument> findTop10HighByExchange(@Param("exchange") String exchange);
 
-    /** Top N 资金费率最低（ASC） */
-    @Query("SELECT p FROM PerpInstrument p WHERE p.exchange = :exchange AND p.isActive = true AND p.latestFundingRate IS NOT NULL ORDER BY p.latestFundingRate ASC LIMIT 10")
+    /** Top 10 费率最低（ASC），仅 U本位 */
+    @Query("SELECT p FROM PerpInstrument p WHERE p.exchange = :exchange AND p.isActive = true " +
+           "AND p.latestFundingRate IS NOT NULL AND UPPER(p.quoteCurrency) IN ('USDT','USD') " +
+           "ORDER BY p.latestFundingRate ASC LIMIT 10")
     List<PerpInstrument> findTop10LowByExchange(@Param("exchange") String exchange);
+
+    /** 固定展示：按 exchange + symbol 列表查（BTC/ETH 精确匹配） */
+    @Query("SELECT p FROM PerpInstrument p WHERE p.exchange = :exchange AND p.symbol IN :symbols AND p.isActive = true")
+    List<PerpInstrument> findFeatured(@Param("exchange") String exchange, @Param("symbols") List<String> symbols);
 
     long countByExchangeAndIsActiveTrue(String exchange);
 }
