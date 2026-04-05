@@ -83,6 +83,7 @@ fi
 
 JAR_SIZE=$(du -sh "$JAR_PATH" | cut -f1)
 BUILD_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+SHA256=$(sha256sum "$JAR_PATH" | awk '{print $1}')
 
 echo ""
 echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
@@ -92,6 +93,7 @@ echo ""
 echo -e "  🏷  版本号：  ${BOLD}${VERSION}${RESET}"
 echo -e "  📄 JAR 文件：${JAR_PATH}"
 echo -e "  📦 文件大小：${JAR_SIZE}"
+echo -e "  🔐 SHA-256：  ${BOLD}${SHA256}${RESET}"
 echo -e "  🕐 构建时间：${BUILD_TIME}"
 echo -e "  ⏱  耗时：    ${ELAPSED}s"
 echo ""
