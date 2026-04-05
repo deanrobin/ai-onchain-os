@@ -62,3 +62,34 @@ CREATE TABLE IF NOT EXISTS transfer_whitelist (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_address (address)
 );
+
+-- ── Perps 永续合约品种表 ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS perp_instrument (
+    id                        BIGINT PRIMARY KEY AUTO_INCREMENT,
+    exchange                  VARCHAR(20)   NOT NULL COMMENT 'OKX / BINANCE / HYPERLIQUID',
+    symbol                    VARCHAR(100)  NOT NULL COMMENT '原始交易对（如 BTC-USDT-SWAP）',
+    base_currency             VARCHAR(20)            COMMENT '基础货币',
+    quote_currency            VARCHAR(20)            COMMENT '计价货币',
+    is_watched                TINYINT(1)    DEFAULT 0 COMMENT '特别关注标记',
+    is_active                 TINYINT(1)    DEFAULT 1 COMMENT '是否仍在交易所存在',
+    latest_funding_rate       DECIMAL(20,10)         COMMENT '最新资金费率（缓存）',
+    latest_funding_updated_at DATETIME               COMMENT '最新费率更新时间',
+    first_seen_at             DATETIME      NOT NULL  COMMENT '首次发现时间',
+    last_seen_at              DATETIME      NOT NULL  COMMENT '最后同步时间',
+    created_at                DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at                DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_exchange_symbol (exchange, symbol),
+    INDEX idx_exchange_rate (exchange, latest_funding_rate)
+);
+
+-- ── Perps 资金费率快照表 ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS perp_funding_rate (
+    id                BIGINT PRIMARY KEY AUTO_INCREMENT,
+    exchange          VARCHAR(20)   NOT NULL,
+    symbol            VARCHAR(100)  NOT NULL,
+    funding_rate      DECIMAL(20,10),
+    next_funding_time DATETIME,
+    fetched_at        DATETIME      NOT NULL,
+    INDEX idx_exchange_symbol (exchange, symbol),
+    INDEX idx_fetched_at (fetched_at)
+);

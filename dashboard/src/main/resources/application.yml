@@ -4,7 +4,7 @@ spring:
   task:
     scheduling:
       pool:
-        size: 4   # 多个 Job 并发，防止 PumpSurvivorJob 阻塞 SignalFetchJob
+        size: 8   # 多个 Job 并发：原有4个 + Perps 3个（Instrument/FundingRate/Cleanup）
   datasource:
     url: jdbc:mysql://${DB_HOST:43.134.118.142}:${DB_PORT:33066}/oc_os?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
     username: ${DB_USER:arb}
@@ -52,6 +52,11 @@ smart-money:
       interval-minutes: 5          # 每 5 分钟分析一批
       time-frame: "3"
       max-wallets: 20              # 每次 20 个，限流了就等下次
+
+# ── Perps 永续合约配置 ────────────────────────────────────────────
+perp:
+  # 新品种发现时飞书 Webhook 报警地址（POST JSON）
+  alert-url: https://open.feishu.cn/open-apis/bot/v2/hook/41e5313b-9dae-413f-aaf7-6d293d2feb55
 
   # ── 详情页缓存配置（Web 触发，缓存过期才打 OKX API）──────────
   cache:

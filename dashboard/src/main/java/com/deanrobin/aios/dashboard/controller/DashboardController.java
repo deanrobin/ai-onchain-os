@@ -4,6 +4,7 @@ import com.deanrobin.aios.dashboard.model.MyAddress;
 import com.deanrobin.aios.dashboard.model.WalletTxCache;
 import com.deanrobin.aios.dashboard.repository.MyAddressRepository;
 import com.deanrobin.aios.dashboard.service.PortfolioService;
+import com.deanrobin.aios.dashboard.service.PerpService;
 import com.deanrobin.aios.dashboard.service.SmartMoneyService;
 import com.deanrobin.aios.dashboard.service.WalletCacheService;
 import com.deanrobin.aios.dashboard.vo.OverviewVO;
@@ -27,6 +28,7 @@ public class DashboardController {
     private final PortfolioService    portfolioService;
     private final WalletCacheService  walletCacheService;   // 详情页缓存服务
     private final MyAddressRepository myAddressRepo;
+    private final PerpService         perpService;
 
     // ──────────────────────────────────────────────────────────────
     // 首页：数据来自 DB（Job 已写好），不打 OKX
@@ -137,6 +139,28 @@ public class DashboardController {
         model.addAttribute("portfolioData", portfolioData);
         model.addAttribute("hasAddresses", !addresses.isEmpty());
         return "portfolio";
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Perps 看板
+    // ──────────────────────────────────────────────────────────────
+    @GetMapping("/perps")
+    public String perps(Model model) {
+        model.addAttribute("activePage", "perps");
+        // 品种总数（给页面头部展示）
+        model.addAttribute("okxCount",        perpService.getInstrumentCount("OKX"));
+        model.addAttribute("binanceCount",     perpService.getInstrumentCount("BINANCE"));
+        model.addAttribute("hyperliquidCount", perpService.getInstrumentCount("HYPERLIQUID"));
+        return "perps";
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // QMT 看板
+    // ──────────────────────────────────────────────────────────────
+    @GetMapping("/qmt")
+    public String qmt(Model model) {
+        model.addAttribute("activePage", "qmt");
+        return "qmt";
     }
 
     // ──────────────────────────────────────────────────────────────

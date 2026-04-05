@@ -1,8 +1,10 @@
 package com.deanrobin.aios.dashboard.controller;
 
+import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.model.PriceTicker;
 import com.deanrobin.aios.dashboard.model.SmartMoneySignal;
 import com.deanrobin.aios.dashboard.repository.PriceTickerRepository;
+import com.deanrobin.aios.dashboard.service.PerpService;
 import com.deanrobin.aios.dashboard.service.PortfolioService;
 import com.deanrobin.aios.dashboard.service.SmartMoneyService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ApiController {
 
+    private final PerpService               perpService;
     private final SmartMoneyService         smartMoneyService;
     private final com.deanrobin.aios.dashboard.repository.PumpTokenRepository          pumpTokenRepo;
     private final com.deanrobin.aios.dashboard.repository.PumpMarketCapSnapshotRepository snapshotRepo;
@@ -168,6 +171,40 @@ public class ApiController {
                     ? t.getReceivedAt().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")) : "—");
             return m;
         }).toList();
+    }
+
+    // ─── Perps ────────────────────────────────────────────────────────
+    /**
+     * GET /api/perps/rates?exchange=OKX
+     * 返回指定交易所最新费率 top10高 / top10低，供页面 AJAX 自动刷新。
+     */
+    @GetMapping("/perps/rates")
+    public Map<String, Object> perpRates(@RequestParam(defaultValue = "OKX") String exchange) {
+        String ex = exchange.toUpperCase();
+        List<Map<String, Object>> high = perpService.getTop10High(ex).stream()
+                .map(ApiController::toRateMap).collect(Collectors.toList());
+        List<Map<String, Object>> low  = perpService.getTop10Low(ex).stream()
+                .map(ApiController::toRateMap).collect(Collectors.toList());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("exchange",    ex);
+        result.put("topHigh",     high);
+        result.put("topLow",      low);
+        result.put("total",       perpService.getInstrumentCount(ex));
+        result.put("updatedAt",   java.time.LocalDateTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm:ss")));
+        return result;
+    }
+
+    private static Map<String, Object> toRateMap(PerpInstrument p) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("symbol",      p.getSymbol());
+        m.put("base",        p.getBaseCurrency());
+        m.put("rate",        p.getLatestFundingRate());
+        m.put("isWatched",   Boolean.TRUE.equals(p.getIsWatched()));
+        m.put("updatedAt",   p.getLatestFundingUpdatedAt() != null
+                ? p.getLatestFundingUpdatedAt().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))
+                : "—");
+        return m;
     }
 
     @GetMapping("/fourmeme/status")
