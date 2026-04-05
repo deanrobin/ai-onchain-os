@@ -26,16 +26,20 @@ if ! command -v java &>/dev/null; then
     echo -e "${RED}❌ 未找到 java，请安装 JDK 17+${RESET}"
     exit 1
 fi
-JAVA_VER=$(java -version 2>&1 | head -1 | grep -oP '"\K[^"]+' | cut -d. -f1)
-if [ "$JAVA_VER" -lt 17 ] 2>/dev/null; then
-    echo -e "${RED}❌ JDK 版本过低（当前 ${JAVA_VER}），需要 JDK 17+${RESET}"
+JAVA_FULL=$(java -version 2>&1 | head -1)
+# 兼容各种格式：openjdk version "17.0.x"、java version "17"、Zulu17 等
+JAVA_VER=$(echo "$JAVA_FULL" | sed 's/.*version "\([0-9]*\).*/\1/')
+if [ -z "$JAVA_VER" ] || [ "$JAVA_VER" -lt 17 ] 2>/dev/null; then
+    echo -e "${RED}❌ JDK 版本过低或无法识别（${JAVA_FULL}），需要 JDK 17+${RESET}"
     exit 1
 fi
-echo -e "☕ Java:   $(java -version 2>&1 | head -1)"
+echo -e "☕ Java:   ${JAVA_FULL}"
 
 # ── 检查 Maven ────────────────────────────────────────────────────
 if ! command -v mvn &>/dev/null; then
-    echo -e "${RED}❌ 未找到 mvn，请安装 Maven 3.x${RESET}"
+    echo -e "${RED}❌ 未找到 mvn，请先安装 Maven：${RESET}"
+    echo -e "   ${BOLD}apt-get install -y maven${RESET}  (Debian/Ubuntu)"
+    echo -e "   ${BOLD}yum install -y maven${RESET}       (CentOS/RHEL)"
     exit 1
 fi
 echo -e "📦 Maven:  $(mvn -version 2>&1 | head -1)"
@@ -43,7 +47,7 @@ echo ""
 
 # ── 从 pom.xml 读取版本号 ─────────────────────────────────────────
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
-VERSION=$(grep -m1 '<version>' "$PROJECT_ROOT/pom.xml" | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d '[:space:]')
+VERSION=$(sed -n 's/.*<version>\(.*\)<\/version>.*/\1/p' "$PROJECT_ROOT/pom.xml" | head -1 | tr -d '[:space:]')
 ARTIFACT="dashboard-${VERSION}.jar"
 OUTPUT_DIR="$PROJECT_ROOT/dashboard/target"
 
@@ -55,8 +59,13 @@ echo ""
 echo -e "${YELLOW}▶ 开始构建...${RESET}"
 START_TIME=$(date +%s)
 
-mvn -pl dashboard -am clean package -DskipTests -q \
-    -f "$PROJECT_ROOT/pom.xml"
+# 构建失败时显示完整错误，不用 -q
+if ! mvn -pl dashboard -am clean package -DskipTests \
+        -f "$PROJECT_ROOT/pom.xml" 2>&1; then
+    echo ""
+    echo -e "${RED}❌ Maven 构建失败，请查看上方错误信息${RESET}"
+    exit 1
+fi
 
 END_TIME=$(date +%s)
 ELAPSED=$((END_TIME - START_TIME))
