@@ -58,6 +58,18 @@ public class PerpInstrumentSyncJob {
             String base  = String.valueOf(item.getOrDefault("baseCcy",  ""));
             String quote = String.valueOf(item.getOrDefault("quoteCcy", ""));
 
+            // ── 过滤币本位：只保留 USDT 结算 ──
+            if (!"USDT".equalsIgnoreCase(quote)) {
+                // 若库里已有此币本位品种，标记为 inactive
+                instrumentRepo.findByExchangeAndSymbol("OKX", symbol).ifPresent(pi -> {
+                    if (Boolean.TRUE.equals(pi.getIsActive())) {
+                        pi.setIsActive(false);
+                        instrumentRepo.save(pi);
+                    }
+                });
+                continue;
+            }
+
             var opt = instrumentRepo.findByExchangeAndSymbol("OKX", symbol);
             if (opt.isEmpty()) {
                 PerpInstrument pi = new PerpInstrument();
@@ -98,6 +110,8 @@ public class PerpInstrumentSyncJob {
             String base   = String.valueOf(item.getOrDefault("baseAsset",  ""));
             String quote  = String.valueOf(item.getOrDefault("quoteAsset", ""));
             if (symbol.isBlank()) continue;
+            // fapi 本身是 USDT-M，但保险起见过滤
+            if (!"USDT".equalsIgnoreCase(quote)) continue;
 
             var opt = instrumentRepo.findByExchangeAndSymbol("BINANCE", symbol);
             if (opt.isEmpty()) {

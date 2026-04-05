@@ -3,6 +3,7 @@ package com.deanrobin.aios.dashboard.controller;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.model.PriceTicker;
 import com.deanrobin.aios.dashboard.model.SmartMoneySignal;
+import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
 import com.deanrobin.aios.dashboard.repository.PriceTickerRepository;
 import com.deanrobin.aios.dashboard.service.PerpService;
 import com.deanrobin.aios.dashboard.service.PortfolioService;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 public class ApiController {
 
     private final PerpService               perpService;
+    private final PerpInstrumentRepository  perpInstrumentRepo;
     private final SmartMoneyService         smartMoneyService;
     private final com.deanrobin.aios.dashboard.repository.PumpTokenRepository          pumpTokenRepo;
     private final com.deanrobin.aios.dashboard.repository.PumpMarketCapSnapshotRepository snapshotRepo;
@@ -174,6 +176,40 @@ public class ApiController {
     }
 
     // ─── Perps ────────────────────────────────────────────────────────
+    /**
+     * GET /api/perps/featured
+     * 返回三所 BTC + ETH 的最新资金费率，供页面顶部固定展示区使用。
+     */
+    @GetMapping("/perps/featured")
+    public Map<String, Object> perpFeatured() {
+        // 各交易所 BTC/ETH 的原始 symbol
+        var okxSymbols  = List.of("BTC-USDT-SWAP", "ETH-USDT-SWAP");
+        var bnSymbols   = List.of("BTCUSDT", "ETHUSDT");
+        var hlSymbols   = List.of("BTC", "ETH");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (var entry : List.of(
+                Map.entry("OKX",         okxSymbols),
+                Map.entry("BINANCE",     bnSymbols),
+                Map.entry("HYPERLIQUID", hlSymbols))) {
+            String exch = entry.getKey();
+            List<String> syms = entry.getValue();
+            List<PerpInstrument> found = perpInstrumentRepo.findFeatured(exch, syms);
+            Map<String, Object> exchMap = new LinkedHashMap<>();
+            for (String target : syms) {
+                found.stream()
+                     .filter(p -> target.equals(p.getSymbol()))
+                     .findFirst()
+                     .ifPresentOrElse(
+                         p -> exchMap.put(p.getBaseCurrency() != null ? p.getBaseCurrency() : target,
+                                         toRateMap(p)),
+                         () -> exchMap.put(target, null)
+                     );
+            }
+            result.put(exch, exchMap);
+        }
+        return result;
+    }
     /**
      * GET /api/perps/rates?exchange=OKX
      * 返回指定交易所最新费率 top10高 / top10低，供页面 AJAX 自动刷新。

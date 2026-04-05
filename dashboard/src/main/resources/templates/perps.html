@@ -7,6 +7,42 @@
 .rate-pos { color: var(--green); font-weight: 700; font-family: 'JetBrains Mono'; }
 .rate-neg { color: var(--red);   font-weight: 700; font-family: 'JetBrains Mono'; }
 .rate-zero{ color: var(--t3);    font-weight: 600; font-family: 'JetBrains Mono'; }
+
+/* ── 固定展示区 ── */
+.featured-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+}
+@media(max-width:800px){ .featured-grid{ grid-template-columns:1fr; } }
+.featured-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: var(--sh-0);
+}
+.featured-exch {
+    font-size: .7rem; font-weight: 700; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--t3); margin-bottom: 10px;
+}
+.featured-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 0; border-bottom: 1px solid #f0f3fb;
+}
+.featured-row:last-child { border-bottom: none; }
+.featured-coin {
+    font-weight: 700; font-size: .82rem; color: var(--t1);
+    display: flex; align-items: center; gap: 6px;
+}
+.featured-rate {
+    font-family: 'JetBrains Mono'; font-size: .85rem; font-weight: 700;
+}
+.featured-next {
+    font-size: .68rem; color: var(--t3); margin-top: 1px;
+}
+
 .watched-badge {
     display:inline-block; width:14px; height:14px; line-height:14px;
     text-align:center; font-size:.65rem; margin-left:4px;
@@ -57,6 +93,68 @@
         🔄 <span id="perps-countdown">60</span>s
     </span>
     <span id="last-updated" style="color:var(--t3)">—</span>
+</div>
+
+<!-- BTC / ETH 固定展示区 -->
+<div class="featured-grid" id="featured-grid">
+    <!-- OKX -->
+    <div class="featured-card">
+        <div class="featured-exch">🟡 OKX</div>
+        <div class="featured-row">
+            <div class="featured-coin">
+                <span style="font-size:.9rem">₿</span> BTC
+            </div>
+            <div style="text-align:right">
+                <div class="featured-rate" id="f-OKX-BTC-rate">—</div>
+                <div class="featured-next" id="f-OKX-BTC-upd">—</div>
+            </div>
+        </div>
+        <div class="featured-row">
+            <div class="featured-coin">
+                <span style="font-size:.9rem">Ξ</span> ETH
+            </div>
+            <div style="text-align:right">
+                <div class="featured-rate" id="f-OKX-ETH-rate">—</div>
+                <div class="featured-next" id="f-OKX-ETH-upd">—</div>
+            </div>
+        </div>
+    </div>
+    <!-- Binance -->
+    <div class="featured-card">
+        <div class="featured-exch">🟠 Binance</div>
+        <div class="featured-row">
+            <div class="featured-coin"><span style="font-size:.9rem">₿</span> BTC</div>
+            <div style="text-align:right">
+                <div class="featured-rate" id="f-BINANCE-BTC-rate">—</div>
+                <div class="featured-next" id="f-BINANCE-BTC-upd">—</div>
+            </div>
+        </div>
+        <div class="featured-row">
+            <div class="featured-coin"><span style="font-size:.9rem">Ξ</span> ETH</div>
+            <div style="text-align:right">
+                <div class="featured-rate" id="f-BINANCE-ETH-rate">—</div>
+                <div class="featured-next" id="f-BINANCE-ETH-upd">—</div>
+            </div>
+        </div>
+    </div>
+    <!-- Hyperliquid -->
+    <div class="featured-card">
+        <div class="featured-exch">🔵 Hyperliquid</div>
+        <div class="featured-row">
+            <div class="featured-coin"><span style="font-size:.9rem">₿</span> BTC</div>
+            <div style="text-align:right">
+                <div class="featured-rate" id="f-HYPERLIQUID-BTC-rate">—</div>
+                <div class="featured-next" id="f-HYPERLIQUID-BTC-upd">—</div>
+            </div>
+        </div>
+        <div class="featured-row">
+            <div class="featured-coin"><span style="font-size:.9rem">Ξ</span> ETH</div>
+            <div style="text-align:right">
+                <div class="featured-rate" id="f-HYPERLIQUID-ETH-rate">—</div>
+                <div class="featured-next" id="f-HYPERLIQUID-ETH-upd">—</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- 交易所标签页 -->
@@ -215,13 +313,46 @@ function resetCountdown() {
         const el = document.getElementById('perps-countdown');
         if (el) el.textContent = countdownVal;
         if (countdownVal <= 0) {
+            loadFeatured();
             loadRates(currentExch);
             resetCountdown();
         }
     }, 1000);
 }
 
+// ── 加载 BTC/ETH 固定展示区 ─────────────────────────────────────
+function loadFeatured() {
+    fetch('/api/perps/featured')
+        .then(r => r.json())
+        .then(data => {
+            const exchanges = ['OKX', 'BINANCE', 'HYPERLIQUID'];
+            const coins     = ['BTC', 'ETH'];
+            exchanges.forEach(exch => {
+                const exchData = data[exch] || {};
+                coins.forEach(coin => {
+                    const info   = exchData[coin];
+                    const rateEl = document.getElementById('f-' + exch + '-' + coin + '-rate');
+                    const updEl  = document.getElementById('f-' + exch + '-' + coin + '-upd');
+                    if (!rateEl) return;
+                    if (!info || info.rate == null) {
+                        rateEl.textContent = '—';
+                        rateEl.className   = 'featured-rate';
+                        if (updEl) updEl.textContent = '暂无数据';
+                        return;
+                    }
+                    const rate = parseFloat(info.rate) || 0;
+                    const pct  = (rate * 100).toFixed(4) + '%';
+                    rateEl.textContent = pct;
+                    rateEl.className   = 'featured-rate ' + (rate > 0 ? 'rate-pos' : rate < 0 ? 'rate-neg' : 'rate-zero');
+                    if (updEl) updEl.textContent = info.updatedAt || '—';
+                });
+            });
+        })
+        .catch(() => {});
+}
+
 // ── 初始化 ───────────────────────────────────────────────────────
+loadFeatured();
 loadRates('OKX');
 // 其他两个交易所预加载（数据已在服务端，静默加载）
 setTimeout(() => loadRates('BINANCE'),     800);
