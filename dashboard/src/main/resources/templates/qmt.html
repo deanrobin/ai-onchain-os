@@ -154,6 +154,16 @@
     <span id="valid-hint" style="color:var(--t2);"></span>
 </div>
 
+<!-- K线积累状态提示（首次部署时可见，数据就绪后自动隐藏） -->
+<div id="kline-status-bar" style="display:none;
+     background:var(--yellow-l);border:1px solid var(--yellow-b);
+     border-radius:10px;padding:10px 16px;margin-bottom:16px;
+     font-size:.8rem;color:var(--t1);align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:1rem">⏳</span>
+    <span id="kline-status-text">K 线历史数据积累中，首次启动约需 1-2 分钟完成补录…</span>
+    <span id="kline-bar-counts" style="color:var(--t3);font-family:'JetBrains Mono';font-size:.72rem;margin-left:auto;"></span>
+</div>
+
 <!-- 价格卡片 -->
 <div class="price-grid" id="price-grid">
     <div class="price-card pc-btc"><div class="pc-sym">BTC</div><div class="pc-price" id="p-BTC">--</div><div class="pc-change" id="c-BTC">--</div><div class="pc-vol">24h Vol: <span id="v-BTC">--</span></div><div class="pc-updated" id="u-BTC"></div></div>
@@ -403,9 +413,37 @@
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
+    // ── K线状态检查 ──────────────────────────────────────────────
+    function loadStatus() {
+        fetch('/api/qmt/status')
+            .then(r => r.json())
+            .then(s => {
+                const bar = document.getElementById('kline-status-bar');
+                const txt = document.getElementById('kline-status-text');
+                const cnt = document.getElementById('kline-bar-counts');
+                if (!bar) return;
+                const total = s.totalKlineBars || 0;
+                if (total === 0) {
+                    bar.style.display = 'flex';
+                    if (txt) txt.textContent = '⚠️ K 线表为空 — 请确认已执行 db/schema.sql 中的 DDL，并等待 KlineFetchJob 补录数据（启动约 15s 后开始）';
+                    if (cnt) cnt.textContent = '0 条';
+                } else if (!s.klineReady) {
+                    bar.style.display = 'flex';
+                    if (txt) txt.textContent = '⏳ K 线数据积累中… 等待均线指标就绪（需至少 20 根 K 线）';
+                    if (cnt) cnt.textContent = total + ' 条';
+                } else {
+                    bar.style.display = 'none'; // 数据就绪，隐藏提示
+                }
+            })
+            .catch(() => {});
+    }
+
     // ── 启动 ───────────────────────────────────────────────────
+    loadStatus();
     loadData();
     startCountdown();
+    // 每30s刷一次状态（直到数据就绪）
+    setInterval(loadStatus, 30_000);
 
 })();
 </script>

@@ -53,10 +53,57 @@ public class OkxPerpJob {
     /** 全量资金费率任务防并发重入 */
     private final AtomicBoolean rateAllRunning = new AtomicBoolean(false);
 
+    /** 优先关注的 OKX 核心合约（USDT本位）—— 启动 5s 后立即写库并打上 isWatched */
+    private static final List<String[]> KEY_CONTRACTS = List.of(
+        new String[]{"BTC-USDT-SWAP", "BTC", "USDT"},
+        new String[]{"ETH-USDT-SWAP", "ETH", "USDT"},
+        new String[]{"BNB-USDT-SWAP", "BNB", "USDT"},
+        new String[]{"SOL-USDT-SWAP", "SOL", "USDT"}
+    );
+
     @PostConstruct
     public void init() {
         ThreadMXBean tmx = ManagementFactory.getThreadMXBean();
         log.info("✅ OkxPerpJob 初始化完成 | DELAY_MS={} | JVM线程数={}", DELAY_MS, tmx.getThreadCount());
+    }
+
+    /**
+     * 启动 5s 后立即对 BTC/ETH/BNB/SOL USDT 永续合约做：
+     *   1. upsert perp_instrument（确保记录存在 + isWatched=true）
+     *   2. 立刻拉取并写入 latestFundingRate
+     * 之后 fetchWatchedRates()（每 1 min）会持续刷新这几个合约。
+     */
+    @Scheduled(initialDelay = 5_000, fixedDelay = Long.MAX_VALUE)
+    public void seedKeyInstruments() {
+        log.info("⭐ OKX 核心合约初始化（seed）开始");
+        LocalDateTime now = LocalDateTime.now();
+        for (String[] kc : KEY_CONTRACTS) {
+            String instId = kc[0], base = kc[1], quote = kc[2];
+            try {
+                PerpInstrument pi = instrumentRepo.findByExchangeAndSymbol(EXCHANGE, instId)
+                        .orElseGet(() -> {
+                            PerpInstrument n = new PerpInstrument();
+                            n.setExchange(EXCHANGE);
+                            n.setSymbol(instId);
+                            n.setFirstSeenAt(now);
+                            return n;
+                        });
+                pi.setBaseCurrency(base);
+                pi.setQuoteCurrency(quote);
+                pi.setIsActive(true);
+                pi.setIsWatched(true);   // 标记关注 → fetchWatchedRates 每分钟刷新
+                pi.setLastSeenAt(now);
+                instrumentRepo.save(pi);
+
+                // 立刻拉一次费率
+                fetchAndSave(pi, now);
+                log.info("⭐ OKX seed {} 完成", instId);
+            } catch (Exception e) {
+                log.warn("⚠️ OKX seed {} 失败: {}", instId, e.getMessage());
+            }
+            sleepMs(300);
+        }
+        log.info("⭐ OKX 核心合约初始化完成");
     }
 
     // ═══ 品种同步（每 5 min，initialDelay 10s）═══════════════════════
@@ -228,5 +275,9 @@ public class OkxPerpJob {
     private BigDecimal parseBD(Object obj) {
         if (obj == null) return null;
         try { return new BigDecimal(String.valueOf(obj)); } catch (Exception e) { return null; }
+    }
+
+    private static void sleepMs(long ms) {
+        try { Thread.sleep(ms); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
     }
 }
