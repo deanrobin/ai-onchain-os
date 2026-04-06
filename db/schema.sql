@@ -120,3 +120,36 @@ CREATE TABLE IF NOT EXISTS kline_bar (
     INDEX idx_symbol_bar (symbol, bar),
     INDEX idx_open_time  (open_time)
 );
+
+-- ── 链上持仓监控任务表 ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS onchain_watch (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    token_name       VARCHAR(50)   NOT NULL COMMENT '代币名称，如 STO',
+    contract_addr    VARCHAR(42)   NOT NULL COMMENT '合约地址 0x...',
+    network          VARCHAR(10)   NOT NULL COMMENT 'ETH | BSC',
+    token_decimals   TINYINT       NOT NULL DEFAULT 18 COMMENT '代币精度',
+    threshold_mode   VARCHAR(10)   NOT NULL DEFAULT 'USD' COMMENT 'TOKEN | USD',
+    threshold_amount DECIMAL(30,4) COMMENT '代币数量阈值（TOKEN 模式）',
+    threshold_usd    DECIMAL(20,2) NOT NULL DEFAULT 50000 COMMENT 'USD 阈值（默认 50000）',
+    watched_addrs    JSON          NOT NULL COMMENT '["0xABC","0xDEF"]',
+    is_active        TINYINT(1)    NOT NULL DEFAULT 1,
+    created_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_network (network),
+    INDEX idx_active  (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── 链上持仓余额快照表 ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS onchain_holder_snapshot (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    watch_id       BIGINT        NOT NULL COMMENT 'FK -> onchain_watch.id',
+    wallet_addr    VARCHAR(42)   NOT NULL COMMENT '钱包地址',
+    balance_raw    DECIMAL(40,0) NOT NULL COMMENT '原始余额（未除精度）',
+    balance_token  DECIMAL(30,6) NOT NULL COMMENT '余额（除精度后）',
+    price_usd      DECIMAL(20,8) COMMENT '快照时代币 USD 价格',
+    value_usd      DECIMAL(20,2) COMMENT '折算 USD 市值',
+    block_number   BIGINT        NOT NULL COMMENT '取余额时的区块高度',
+    snapped_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_watch_wallet (watch_id, wallet_addr),
+    INDEX idx_snapped_at   (snapped_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

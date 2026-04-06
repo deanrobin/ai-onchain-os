@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('链上持仓', ~{::main})}">
+<body>
+<main>
+<style>
+/* ── 链状态卡片 ── */
+.chain-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.chain-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.chain-icon {
+    font-size: 28px;
+    line-height: 1;
+}
+.chain-info { flex: 1; min-width: 0; }
+.chain-name { font-weight: 600; font-size: 15px; color: var(--t1); }
+.chain-block { font-size: 13px; color: var(--t2); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+.chain-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--t3); flex-shrink: 0;
+}
+.chain-dot.online { background: var(--green); box-shadow: 0 0 0 3px rgba(16,185,129,.2); }
+
+/* ── 添加表单 ── */
+.add-form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+}
+.add-form-card h5 { font-weight: 600; font-size: 15px; margin-bottom: 16px; color: var(--t1); }
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.form-row-full { margin-bottom: 12px; }
+.form-label-sm { font-size: 12px; color: var(--t2); margin-bottom: 4px; font-weight: 500; }
+.form-control-sm, .form-select-sm {
+    font-size: 13px;
+    border: 1px solid var(--border-m);
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: var(--bg-page);
+    color: var(--t1);
+    width: 100%;
+    outline: none;
+    transition: border .15s;
+}
+.form-control-sm:focus, .form-select-sm:focus {
+    border-color: var(--blue);
+    background: #fff;
+}
+.threshold-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.threshold-row .tmode-btn {
+    padding: 5px 14px; font-size: 12px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--border-m); background: var(--bg-page); color: var(--t2);
+    font-weight: 500; transition: all .15s;
+}
+.threshold-row .tmode-btn.active {
+    background: var(--blue); color: #fff; border-color: var(--blue);
+}
+#addr-list { display: flex; flex-direction: column; gap: 8px; }
+.addr-row { display: flex; gap: 8px; align-items: center; }
+.addr-row .remove-addr {
+    color: var(--t3); cursor: pointer; font-size: 16px; line-height: 1;
+    padding: 0 4px; flex-shrink: 0;
+}
+.addr-row .remove-addr:hover { color: var(--red, #ef4444); }
+.btn-add-addr {
+    font-size: 12px; color: var(--blue); cursor: pointer;
+    background: none; border: none; padding: 0; margin-top: 4px;
+    display: inline-flex; align-items: center; gap: 4px;
+}
+.btn-save {
+    background: var(--blue); color: #fff; border: none;
+    padding: 9px 24px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: opacity .15s; margin-top: 12px;
+}
+.btn-save:hover { opacity: .85; }
+.btn-save:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── 监控任务列表 ── */
+.watch-list-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+.watch-list-card .list-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600; font-size: 15px; color: var(--t1);
+    display: flex; align-items: center; justify-content: space-between;
+}
+.watch-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.watch-table th {
+    background: var(--bg-page); color: var(--t3); font-weight: 500;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+    padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border);
+}
+.watch-table td {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    color: var(--t1); vertical-align: middle;
+}
+.watch-table tr:last-child td { border-bottom: none; }
+.watch-table tr:hover td { background: var(--bg-hover); }
+.tag-network {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: .03em;
+}
+.tag-eth { background: #eff6ff; color: #2563eb; }
+.tag-bsc { background: #fefce8; color: #ca8a04; }
+.status-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px;
+}
+.status-dot.on { background: var(--green); }
+.status-dot.off { background: var(--t3); }
+.addr-list-cell { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--t2); }
+.btn-icon {
+    background: none; border: none; cursor: pointer; color: var(--t3);
+    font-size: 15px; padding: 2px 5px; border-radius: 4px; transition: all .15s;
+}
+.btn-icon:hover { color: var(--t1); background: var(--bg-hover); }
+.btn-icon.del:hover { color: #ef4444; }
+.empty-hint { text-align: center; padding: 32px; color: var(--t3); font-size: 13px; }
+
+/* ── 响应式 ── */
+@media (max-width: 768px) {
+    .chain-status-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="container" style="max-width:900px; padding: 24px 16px;">
+
+    <!-- 页面标题 -->
+    <div style="margin-bottom:20px;">
+        <h1 style="font-size:22px;font-weight:700;color:var(--t1);margin:0;">🔍 链上持仓监控</h1>
+        <p style="font-size:13px;color:var(--t2);margin:4px 0 0;">监控 ERC20 代币大额持仓变动，超阈值自动飞书告警</p>
+    </div>
+
+    <!-- 链状态 -->
+    <div class="chain-status-grid">
+        <div class="chain-card">
+            <div class="chain-icon">⛓</div>
+            <div class="chain-info">
+                <div class="chain-name">Ethereum (ETH)</div>
+                <div class="chain-block" id="eth-block">区块: 加载中...</div>
+            </div>
+            <div class="chain-dot" id="eth-dot"></div>
+        </div>
+        <div class="chain-card">
+            <div class="chain-icon">⛓</div>
+            <div class="chain-info">
+                <div class="chain-name">BNB Chain (BSC)</div>
+                <div class="chain-block" id="bsc-block">区块: 加载中...</div>
+            </div>
+            <div class="chain-dot" id="bsc-dot"></div>
+        </div>
+    </div>
+
+    <!-- 添加监控任务 -->
+    <div class="add-form-card">
+        <h5>＋ 添加监控任务</h5>
+
+        <div class="form-row">
+            <div>
+                <div class="form-label-sm">代币名称</div>
+                <input type="text" id="f-token-name" class="form-control-sm" placeholder="如 STO">
+            </div>
+            <div>
+                <div class="form-label-sm">网络</div>
+                <select id="f-network" class="form-select-sm">
+                    <option value="ETH">Ethereum (ETH)</option>
+                    <option value="BSC">BNB Chain (BSC)</option>
+                </select>
+            </div>
+            <div>
+                <div class="form-label-sm">告警模式</div>
+                <div class="threshold-row" style="margin-top:4px;">
+                    <button class="tmode-btn active" data-mode="USD" onclick="setMode('USD')">USD 金额</button>
+                    <button class="tmode-btn" data-mode="TOKEN" onclick="setMode('TOKEN')">代币数量</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row-full">
+            <div class="form-label-sm">合约地址</div>
+            <input type="text" id="f-contract" class="form-control-sm" placeholder="0x...">
+        </div>
+
+        <div class="form-row">
+            <div id="wrap-usd">
+                <div class="form-label-sm">USD 阈值（默认 50K）</div>
+                <input type="number" id="f-threshold-usd" class="form-control-sm" value="50000" min="1">
+            </div>
+            <div id="wrap-token" style="display:none;">
+                <div class="form-label-sm">代币数量阈值</div>
+                <input type="number" id="f-threshold-amount" class="form-control-sm" placeholder="如 10000" min="0">
+            </div>
+            <div></div>
+        </div>
+
+        <div class="form-label-sm" style="margin-bottom:6px;">关注地址（最多 20 个）</div>
+        <div id="addr-list">
+            <div class="addr-row">
+                <input type="text" class="form-control-sm addr-input" placeholder="0x...">
+            </div>
+        </div>
+        <button class="btn-add-addr" onclick="addAddrRow()">＋ 添加更多地址</button>
+
+        <div>
+            <button class="btn-save" id="btn-save" onclick="saveWatch()">保存监控任务</button>
+            <span id="save-msg" style="font-size:12px;color:var(--t2);margin-left:10px;"></span>
+        </div>
+    </div>
+
+    <!-- 监控任务列表 -->
+    <div class="watch-list-card">
+        <div class="list-header">
+            <span>监控任务列表</span>
+            <span id="watch-count" style="font-size:12px;color:var(--t3);font-weight:400;"></span>
+        </div>
+        <div id="watch-list-body">
+            <div class="empty-hint">暂无监控任务</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+let thresholdMode = 'USD';
+
+// ── 阈值模式切换 ──────────────────────────────────────
+function setMode(m) {
+    thresholdMode = m;
+    document.querySelectorAll('.tmode-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === m);
+    });
+    document.getElementById('wrap-usd').style.display   = m === 'USD'   ? '' : 'none';
+    document.getElementById('wrap-token').style.display = m === 'TOKEN' ? '' : 'none';
+}
+
+// ── 地址行管理 ───────────────────────────────────────
+function addAddrRow() {
+    const list = document.getElementById('addr-list');
+    if (list.children.length >= 20) return;
+    const row = document.createElement('div');
+    row.className = 'addr-row';
+    row.innerHTML = `<input type="text" class="form-control-sm addr-input" placeholder="0x...">
+        <span class="remove-addr" onclick="this.parentElement.remove()">×</span>`;
+    list.appendChild(row);
+}
+
+// ── 保存监控任务 ─────────────────────────────────────
+async function saveWatch() {
+    const btn = document.getElementById('btn-save');
+    const msg = document.getElementById('save-msg');
+
+    const tokenName   = document.getElementById('f-token-name').value.trim();
+    const contractAddr = document.getElementById('f-contract').value.trim();
+    const network     = document.getElementById('f-network').value;
+    const thresholdUsd    = parseFloat(document.getElementById('f-threshold-usd').value) || 50000;
+    const thresholdAmount = parseFloat(document.getElementById('f-threshold-amount').value) || null;
+    const watchedAddrs = [...document.querySelectorAll('.addr-input')]
+        .map(i => i.value.trim()).filter(v => v.length > 0);
+
+    if (!tokenName) { msg.textContent = '请填写代币名称'; return; }
+    if (!contractAddr) { msg.textContent = '请填写合约地址'; return; }
+    if (watchedAddrs.length === 0) { msg.textContent = '至少填写一个关注地址'; return; }
+
+    btn.disabled = true;
+    msg.textContent = '保存中...';
+
+    const body = { tokenName, contractAddr, network, thresholdMode,
+                   thresholdUsd, thresholdAmount, watchedAddrs };
+
+    try {
+        const resp = await fetch('/api/onchain-holder/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            msg.textContent = '✅ 保存成功';
+            setTimeout(() => { msg.textContent = ''; }, 3000);
+            resetForm();
+            loadWatchList();
+        } else {
+            msg.textContent = '❌ ' + (data.error || '保存失败');
+        }
+    } catch(e) {
+        msg.textContent = '❌ 网络错误';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function resetForm() {
+    document.getElementById('f-token-name').value = '';
+    document.getElementById('f-contract').value = '';
+    document.getElementById('f-threshold-usd').value = '50000';
+    document.getElementById('f-threshold-amount').value = '';
+    document.getElementById('addr-list').innerHTML =
+        `<div class="addr-row"><input type="text" class="form-control-sm addr-input" placeholder="0x..."></div>`;
+    setMode('USD');
+}
+
+// ── 加载监控任务列表 ──────────────────────────────────
+async function loadWatchList() {
+    try {
+        const data = await fetch('/api/onchain-holder/list').then(r => r.json());
+        const cnt  = document.getElementById('watch-count');
+        const body = document.getElementById('watch-list-body');
+        cnt.textContent = data.length + ' 个任务';
+
+        if (data.length === 0) {
+            body.innerHTML = '<div class="empty-hint">暂无监控任务，请添加</div>';
+            return;
+        }
+
+        const rows = data.map(w => {
+            const addrs = (w.watchedAddrs || []).map(a =>
+                a.substring(0,6) + '...' + a.substring(a.length-4)).join('<br>');
+            const threshold = w.thresholdMode === 'TOKEN'
+                ? (w.thresholdAmount ? fmtNum(w.thresholdAmount) + ' ' + w.tokenName : '—')
+                : '$' + fmtNum(w.thresholdUsd) + ' USD';
+            const netTag = w.network === 'BSC'
+                ? '<span class="tag-network tag-bsc">BSC</span>'
+                : '<span class="tag-network tag-eth">ETH</span>';
+            const activeBtn = w.isActive
+                ? `<button class="btn-icon" title="禁用" onclick="toggleWatch(${w.id})">⏸</button>`
+                : `<button class="btn-icon" title="启用" onclick="toggleWatch(${w.id})">▶️</button>`;
+            return `<tr>
+                <td><strong>${escHtml(w.tokenName)}</strong></td>
+                <td>${netTag}</td>
+                <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2);">${escHtml(w.contractAddr.substring(0,6)+'...'+w.contractAddr.substring(w.contractAddr.length-4))}</td>
+                <td class="addr-list-cell">${addrs}</td>
+                <td>${threshold}</td>
+                <td><span class="status-dot ${w.isActive?'on':'off'}"></span>${w.isActive?'运行中':'已暂停'}</td>
+                <td>${activeBtn}<button class="btn-icon del" title="删除" onclick="deleteWatch(${w.id})">🗑</button></td>
+            </tr>`;
+        }).join('');
+
+        body.innerHTML = `<table class="watch-table">
+            <thead><tr>
+                <th>代币</th><th>网络</th><th>合约</th>
+                <th>关注地址</th><th>告警阈值</th><th>状态</th><th>操作</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    } catch(e) {
+        console.error('加载监控任务失败', e);
+    }
+}
+
+async function deleteWatch(id) {
+    if (!confirm('确认删除这个监控任务？')) return;
+    await fetch(`/api/onchain-holder/${id}`, { method: 'DELETE' });
+    loadWatchList();
+}
+
+async function toggleWatch(id) {
+    await fetch(`/api/onchain-holder/${id}/toggle`, { method: 'PATCH' });
+    loadWatchList();
+}
+
+// ── 链状态 ────────────────────────────────────────────
+async function loadChainStatus() {
+    try {
+        const data = await fetch('/api/onchain-holder/status').then(r => r.json());
+        setChain('eth', data.eth);
+        setChain('bsc', data.bsc);
+    } catch(e) {}
+}
+
+function setChain(chain, info) {
+    const block = document.getElementById(chain + '-block');
+    const dot   = document.getElementById(chain + '-dot');
+    if (info && info.ok) {
+        block.textContent = '区块: #' + info.blockNumber.toLocaleString();
+        dot.className = 'chain-dot online';
+    } else {
+        block.textContent = '区块: 连接失败';
+        dot.className = 'chain-dot';
+    }
+}
+
+// ── 工具函数 ──────────────────────────────────────────
+function fmtNum(v) {
+    return Number(v).toLocaleString('en-US', {maximumFractionDigits: 0});
+}
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── 初始化 ────────────────────────────────────────────
+loadWatchList();
+loadChainStatus();
+setInterval(loadChainStatus, 30_000);
+setInterval(loadWatchList,   60_000);
+</script>
+</main>
+</body>
+</html>
