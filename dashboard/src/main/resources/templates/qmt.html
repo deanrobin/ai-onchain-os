@@ -10,11 +10,12 @@
 /* 价格卡片行 */
 .price-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 14px;
     margin-bottom: 20px;
 }
-@media (max-width: 900px) { .price-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1100px) { .price-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px)  { .price-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .price-card {
     background: var(--bg-card);
@@ -31,10 +32,11 @@
     top: 0; left: 0; right: 0; height: 3px;
     background: var(--pc-accent, var(--blue));
 }
-.pc-btc { --pc-accent: #f7931a; }
-.pc-eth { --pc-accent: #627eea; }
-.pc-bnb { --pc-accent: #f3ba2f; }
-.pc-sol { --pc-accent: #9945ff; }
+.pc-btc  { --pc-accent: #f7931a; }
+.pc-eth  { --pc-accent: #627eea; }
+.pc-bnb  { --pc-accent: #f3ba2f; }
+.pc-sol  { --pc-accent: #9945ff; }
+.pc-xaut { --pc-accent: #d4a017; }
 
 .pc-sym  { font-size: .75rem; font-weight: 700; color: var(--t3); letter-spacing: 1px; margin-bottom: 6px; }
 .pc-price { font-size: 1.55rem; font-weight: 800; color: var(--t1); font-family: 'JetBrains Mono'; line-height: 1.15; }
@@ -64,11 +66,12 @@
 /* 策略信号卡片 */
 .sig-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 14px;
     margin-bottom: 20px;
 }
-@media (max-width: 900px) { .sig-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1100px) { .sig-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px)  { .sig-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .sig-card {
     background: var(--bg-card);
@@ -170,6 +173,7 @@
     <div class="price-card pc-eth"><div class="pc-sym">ETH</div><div class="pc-price" id="p-ETH">--</div><div class="pc-change" id="c-ETH">--</div><div class="pc-vol">24h Vol: <span id="v-ETH">--</span></div><div class="pc-updated" id="u-ETH"></div></div>
     <div class="price-card pc-bnb"><div class="pc-sym">BNB</div><div class="pc-price" id="p-BNB">--</div><div class="pc-change" id="c-BNB">--</div><div class="pc-vol">24h Vol: <span id="v-BNB">--</span></div><div class="pc-updated" id="u-BNB"></div></div>
     <div class="price-card pc-sol"><div class="pc-sym">SOL</div><div class="pc-price" id="p-SOL">--</div><div class="pc-change" id="c-SOL">--</div><div class="pc-vol">24h Vol: <span id="v-SOL">--</span></div><div class="pc-updated" id="u-SOL"></div></div>
+    <div class="price-card pc-xaut"><div class="pc-sym">XAUT <span style="font-size:.55rem;color:var(--t3);font-weight:400">黄金</span></div><div class="pc-price" id="p-XAUT">--</div><div class="pc-change" id="c-XAUT">--</div><div class="pc-vol">24h Vol: <span id="v-XAUT">--</span></div><div class="pc-updated" id="u-XAUT"></div></div>
 </div>
 
 <!-- 时间周期 Tab -->
@@ -187,6 +191,7 @@
     <div class="sig-card" id="sig-ETH"><div class="sig-sym">ETH</div><div class="sig-label">--</div><div class="sig-score">--</div><div class="sig-validity">--</div><div class="sig-reasons"></div></div>
     <div class="sig-card" id="sig-BNB"><div class="sig-sym">BNB</div><div class="sig-label">--</div><div class="sig-score">--</div><div class="sig-validity">--</div><div class="sig-reasons"></div></div>
     <div class="sig-card" id="sig-SOL"><div class="sig-sym">SOL</div><div class="sig-label">--</div><div class="sig-score">--</div><div class="sig-validity">--</div><div class="sig-reasons"></div></div>
+    <div class="sig-card" id="sig-XAUT"><div class="sig-sym">XAUT <span style="font-size:.6rem;font-weight:400;color:var(--t3)">黄金</span></div><div class="sig-label">--</div><div class="sig-score">--</div><div class="sig-validity">--</div><div class="sig-reasons"></div></div>
 </div>
 
 <!-- 均线数值表 -->
@@ -220,7 +225,7 @@
 <script>
 (function () {
     const REFRESH_INTERVAL = 10; // 秒
-    const SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL'];
+    const SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XAUT'];
 
     let currentBar = '15m';
     let refreshTimer = null;
@@ -385,7 +390,7 @@
     // ── 格式化工具 ──────────────────────────────────────────────
     function fmtPrice(v, sym) {
         const n = parseFloat(v) || 0;
-        if (sym === 'BTC') return '$' + n.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        if (sym === 'BTC' || sym === 'XAUT') return '$' + n.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
         if (n >= 1000) return '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         if (n >= 10)   return '$' + n.toFixed(3);
         if (n >= 1)    return '$' + n.toFixed(4);

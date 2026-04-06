@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class QmtController {
 
-    private static final List<String> SYMBOLS = List.of("BTC", "ETH", "BNB", "SOL");
+    private static final List<String> SYMBOLS = List.of("BTC", "ETH", "BNB", "SOL", "XAUT");
     private static final List<String> VALID_BARS =
             List.of("15m", "1H", "4H", "1D", "1W");
 

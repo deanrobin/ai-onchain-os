@@ -31,7 +31,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class KlineFetchJob {
 
-    private static final List<String> SYMBOLS = List.of("BTC", "ETH", "BNB", "SOL");
+    private static final List<String> SYMBOLS = List.of("BTC", "ETH", "BNB", "SOL", "XAUT");
     private static final List<String> BARS    = List.of("15m", "1H", "4H", "1D", "1W");
 
     private static final String BASE_URL = "https://www.okx.com";
