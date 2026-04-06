@@ -1,6 +1,7 @@
 package com.deanrobin.aios.dashboard.controller;
 
 import com.deanrobin.aios.dashboard.model.PriceTicker;
+import com.deanrobin.aios.dashboard.repository.KlineBarRepository;
 import com.deanrobin.aios.dashboard.repository.PriceTickerRepository;
 import com.deanrobin.aios.dashboard.service.KlineService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class QmtController {
             List.of("15m", "1H", "4H", "1D", "1W");
 
     private final PriceTickerRepository priceRepo;
+    private final KlineBarRepository    klineRepo;
     private final KlineService          klineService;
 
     /**
@@ -63,6 +65,38 @@ public class QmtController {
         result.put("bar",        bar);
         result.put("validHours", KlineService.validHours(bar));
         result.put("serverTime", java.time.LocalDateTime.now().toString());
+        return result;
+    }
+
+    /**
+     * GET /api/qmt/status
+     * 返回 K 线数据积累情况，供页面状态栏展示。
+     */
+    @GetMapping("/status")
+    public Map<String, Object> status() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        // 各 symbol × bar 的 K 线条数
+        Map<String, Object> counts = new LinkedHashMap<>();
+        long totalBars = 0;
+        for (String symbol : SYMBOLS) {
+            Map<String, Long> barCounts = new LinkedHashMap<>();
+            for (String bar : VALID_BARS) {
+                long cnt = klineRepo.countBySymbolAndBar(symbol, bar);
+                barCounts.put(bar, cnt);
+                totalBars += cnt;
+            }
+            counts.put(symbol, barCounts);
+        }
+        // 价格最后更新时间
+        String priceUpdated = priceRepo.findBySymbol("BTC")
+                .map(p -> p.getUpdatedAt() != null ? p.getUpdatedAt().toString() : null)
+                .orElse(null);
+
+        result.put("totalKlineBars",  totalBars);
+        result.put("klineReady",      totalBars >= 80); // 至少有一些 15m 数据
+        result.put("klineCounts",     counts);
+        result.put("priceUpdatedAt",  priceUpdated);
+        result.put("serverTime",      java.time.LocalDateTime.now().toString());
         return result;
     }
 }
