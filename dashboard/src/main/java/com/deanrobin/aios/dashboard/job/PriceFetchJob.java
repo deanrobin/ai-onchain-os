@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 每 30 秒从 OKX 公开市场 API 拉 BTC/ETH/BNB/SOL 价格，写入 price_ticker 表。
+ * 每 10 秒从 OKX 公开市场 API 拉 BTC/ETH/BNB/SOL 价格及 24h 交易量，写入 price_ticker 表。
  * OKX 公开端点无需签名：GET https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT
  */
 @Log4j2
@@ -32,13 +32,13 @@ public class PriceFetchJob {
     private final PriceTickerRepository priceRepo;
     private final WebClient.Builder webClientBuilder;
 
-    @Scheduled(initialDelay = 5000, fixedDelay = 30000)
+    @Scheduled(initialDelay = 5_000, fixedDelay = 10_000)
     public void fetchPrices() {
         WebClient client = webClientBuilder.baseUrl("https://www.okx.com").build();
         int updated = 0;
         for (String[] pair : TARGETS) {
-            String symbol  = pair[0];
-            String instId  = pair[1];
+            String symbol = pair[0];
+            String instId = pair[1];
             try {
                 Map<?, ?> resp = client.get()
                     .uri("/api/v5/market/ticker?instId=" + instId)
@@ -51,8 +51,10 @@ public class PriceFetchJob {
                 if (!(data instanceof List<?> list) || list.isEmpty()) continue;
                 Map<?, ?> tick = (Map<?, ?>) list.get(0);
 
-                BigDecimal price  = parseBD(tick.get("last"));
-                BigDecimal open24 = parseBD(tick.get("open24h"));
+                BigDecimal price   = parseBD(tick.get("last"));
+                BigDecimal open24  = parseBD(tick.get("open24h"));
+                BigDecimal vol24h  = parseBD(tick.get("volCcy24h")); // USDT 成交额
+
                 BigDecimal change24h = null;
                 if (price != null && open24 != null && open24.compareTo(BigDecimal.ZERO) != 0) {
                     change24h = price.subtract(open24)
@@ -66,6 +68,7 @@ public class PriceFetchJob {
                 });
                 pt.setPriceUsd(price);
                 pt.setChange24h(change24h);
+                pt.setVolume24h(vol24h);
                 pt.setUpdatedAt(LocalDateTime.now());
                 priceRepo.save(pt);
                 updated++;

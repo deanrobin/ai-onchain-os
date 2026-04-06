@@ -3,11 +3,412 @@
       th:replace="~{layout :: page('QMT', ~{::section})}">
 <body><section>
 
-<div style="padding:60px 20px;text-align:center;color:var(--t3);">
-    <div style="font-size:2.8rem;margin-bottom:16px;">🤖</div>
-    <div style="font-size:1.1rem;font-weight:600;color:var(--t2);margin-bottom:8px;">QMT</div>
-    <div style="font-size:.875rem;">功能建设中，敬请期待…</div>
+<style>
+/* ── QMT 专属样式 ──────────────────────────────────────────── */
+.qmt-wrap { padding: 22px 4px; }
+
+/* 价格卡片行 */
+.price-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+@media (max-width: 900px) { .price-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.price-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px 14px;
+    box-shadow: var(--sh-0);
+    transition: box-shadow .2s, transform .2s;
+    position: relative; overflow: hidden;
+}
+.price-card:hover { box-shadow: var(--sh-2); transform: translateY(-2px); }
+.price-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: var(--pc-accent, var(--blue));
+}
+.pc-btc { --pc-accent: #f7931a; }
+.pc-eth { --pc-accent: #627eea; }
+.pc-bnb { --pc-accent: #f3ba2f; }
+.pc-sol { --pc-accent: #9945ff; }
+
+.pc-sym  { font-size: .75rem; font-weight: 700; color: var(--t3); letter-spacing: 1px; margin-bottom: 6px; }
+.pc-price { font-size: 1.55rem; font-weight: 800; color: var(--t1); font-family: 'JetBrains Mono'; line-height: 1.15; }
+.pc-change { font-size: .82rem; font-weight: 700; margin-top: 3px; }
+.pc-vol { font-size: .72rem; color: var(--t3); margin-top: 6px; }
+.pc-vol span { color: var(--t2); font-weight: 600; }
+.pc-updated { font-size: .65rem; color: var(--t3); margin-top: 4px; }
+
+/* 均线卡片 */
+.ma-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--sh-0);
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+.ma-card-header {
+    background: #fafbff;
+    border-bottom: 1px solid var(--border);
+    padding: 13px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.ma-card-title { font-weight: 700; font-size: .92rem; color: var(--t1); display: flex; align-items: center; gap: 8px; }
+.ma-card-body { overflow-x: auto; }
+
+/* 策略信号卡片 */
+.sig-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+@media (max-width: 900px) { .sig-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.sig-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: var(--sh-0);
+    transition: all .2s;
+}
+.sig-card.bull { border-color: var(--green-b); background: var(--green-l); }
+.sig-card.bear { border-color: var(--red-b);   background: var(--red-l);   }
+.sig-card.neutral { border-color: var(--yellow-b); background: var(--yellow-l); }
+.sig-card.wait { border-color: var(--border); }
+
+.sig-sym   { font-size: .72rem; font-weight: 700; color: var(--t3); letter-spacing: 1px; margin-bottom: 6px; }
+.sig-label { font-size: 1.3rem; font-weight: 800; margin-bottom: 4px; }
+.sig-score { font-size: .78rem; color: var(--t2); margin-bottom: 8px; }
+.sig-validity { font-size: .7rem; color: var(--t3); }
+.sig-reasons { margin-top: 8px; }
+.sig-reason-item {
+    font-size: .7rem; color: var(--t2);
+    padding: 2px 0; display: flex; align-items: flex-start; gap: 4px;
+}
+.sig-reason-item::before { content: '·'; flex-shrink: 0; }
+
+/* Tab 控件 */
+.tf-tabs {
+    display: inline-flex; gap: 3px;
+    background: #f1f5ff;
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 3px;
+    margin-bottom: 18px;
+}
+.tf-tab {
+    padding: 6px 18px; border-radius: 7px;
+    font-size: .82rem; font-weight: 500; color: var(--t2);
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+    user-select: none;
+}
+.tf-tab:hover:not(.active) { color: var(--blue); background: rgba(59,130,246,.08); }
+.tf-tab.active {
+    background: #fff; color: var(--blue); font-weight: 700;
+    box-shadow: 0 1px 5px rgba(15,23,42,.12);
+}
+
+/* 状态栏 */
+.qmt-status {
+    display: flex; align-items: center; gap: 16px;
+    font-size: .75rem; color: var(--t3);
+    margin-bottom: 18px; flex-wrap: wrap;
+}
+.qmt-status .pulse-dot { margin-right: 2px; }
+.countdown-bar {
+    height: 3px; background: var(--border);
+    border-radius: 2px; overflow: hidden;
+    width: 80px; display: inline-block; vertical-align: middle; margin: 0 4px;
+}
+.countdown-fill {
+    height: 100%; background: linear-gradient(90deg, var(--blue), var(--cyan));
+    border-radius: 2px; transition: width .5s linear;
+}
+
+/* MA 数值格子 */
+.ma-val { font-family: 'JetBrains Mono'; font-size: .84rem; font-weight: 600; }
+.ma-above { color: var(--green); }
+.ma-below { color: var(--red); }
+
+/* 成交量格式 */
+.vol-num { font-family: 'JetBrains Mono'; font-size: .82rem; }
+
+/* 空数据提示 */
+.ma-empty { text-align: center; color: var(--t3); padding: 24px; font-size: .85rem; }
+</style>
+
+<!-- 状态栏 -->
+<div class="qmt-status">
+    <span><span class="pulse-dot"></span> 实时行情</span>
+    <span>🔄 <span id="countdown-text">10</span>s 后刷新
+        <span class="countdown-bar"><span class="countdown-fill" id="cbar" style="width:100%"></span></span>
+    </span>
+    <span id="last-updated">--</span>
+    <span id="bar-label" style="color:var(--blue);font-weight:600;"></span>
+    <span id="valid-hint" style="color:var(--t2);"></span>
 </div>
+
+<!-- 价格卡片 -->
+<div class="price-grid" id="price-grid">
+    <div class="price-card pc-btc"><div class="pc-sym">BTC</div><div class="pc-price" id="p-BTC">--</div><div class="pc-change" id="c-BTC">--</div><div class="pc-vol">24h Vol: <span id="v-BTC">--</span></div><div class="pc-updated" id="u-BTC"></div></div>
+    <div class="price-card pc-eth"><div class="pc-sym">ETH</div><div class="pc-price" id="p-ETH">--</div><div class="pc-change" id="c-ETH">--</div><div class="pc-vol">24h Vol: <span id="v-ETH">--</span></div><div class="pc-updated" id="u-ETH"></div></div>
+    <div class="price-card pc-bnb"><div class="pc-sym">BNB</div><div class="pc-price" id="p-BNB">--</div><div class="pc-change" id="c-BNB">--</div><div class="pc-vol">24h Vol: <span id="v-BNB">--</span></div><div class="pc-updated" id="u-BNB"></div></div>
+    <div class="price-card pc-sol"><div class="pc-sym">SOL</div><div class="pc-price" id="p-SOL">--</div><div class="pc-change" id="c-SOL">--</div><div class="pc-vol">24h Vol: <span id="v-SOL">--</span></div><div class="pc-updated" id="u-SOL"></div></div>
+</div>
+
+<!-- 时间周期 Tab -->
+<div class="tf-tabs">
+    <div class="tf-tab active" data-bar="15m">15min</div>
+    <div class="tf-tab" data-bar="1H">1H</div>
+    <div class="tf-tab" data-bar="4H">4H</div>
+    <div class="tf-tab" data-bar="1D">1D</div>
+    <div class="tf-tab" data-bar="1W">7D</div>
+</div>
+
+<!-- 策略信号卡片 -->
+<div class="sig-grid" id="sig-grid">
+    <div class="sig-card" id="sig-BTC"><div class="sig-sym">BTC</div><div class="sig-label">--</div><div class="sig-score">--</div><div class="sig-validity">--</div><div class="sig-reasons"></div></div>
+    <div class="sig-card" id="sig-ETH"><div class="sig-sym">ETH</div><div class="sig-label">--</div><div class="sig-score">--</div><div class="sig-validity">--</div><div class="sig-reasons"></div></div>
+    <div class="sig-card" id="sig-BNB"><div class="sig-sym">BNB</div><div class="sig-label">--</div><div class="sig-score">--</div><div class="sig-validity">--</div><div class="sig-reasons"></div></div>
+    <div class="sig-card" id="sig-SOL"><div class="sig-sym">SOL</div><div class="sig-label">--</div><div class="sig-score">--</div><div class="sig-validity">--</div><div class="sig-reasons"></div></div>
+</div>
+
+<!-- 均线数值表 -->
+<div class="ma-card">
+    <div class="ma-card-header">
+        <div class="ma-card-title">📐 均线指标 <span id="ma-bar-badge" class="tag-blue">15min</span></div>
+        <div style="font-size:.72rem;color:var(--t3);">MA20 / MA120 = 简单均线 &nbsp;|&nbsp; EMA144 / EMA169 = 指数均线</div>
+    </div>
+    <div class="ma-card-body">
+        <table class="table" id="ma-table">
+            <thead>
+                <tr>
+                    <th>币种</th>
+                    <th>当前价格</th>
+                    <th>MA20</th>
+                    <th>MA120</th>
+                    <th>EMA144</th>
+                    <th>EMA169</th>
+                    <th>成交量</th>
+                    <th>均量(20)</th>
+                    <th>量比</th>
+                </tr>
+            </thead>
+            <tbody id="ma-tbody">
+                <tr><td colspan="9" class="ma-empty">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+(function () {
+    const REFRESH_INTERVAL = 10; // 秒
+    const SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL'];
+
+    let currentBar = '15m';
+    let refreshTimer = null;
+    let countdown = REFRESH_INTERVAL;
+
+    // ── Tab 切换 ────────────────────────────────────────────────
+    document.querySelectorAll('.tf-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tf-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentBar = tab.dataset.bar;
+            loadData();
+        });
+    });
+
+    // ── 倒计时 & 自动刷新 ──────────────────────────────────────
+    function startCountdown() {
+        clearInterval(refreshTimer);
+        countdown = REFRESH_INTERVAL;
+        refreshTimer = setInterval(() => {
+            countdown--;
+            document.getElementById('countdown-text').textContent = countdown;
+            const pct = (countdown / REFRESH_INTERVAL * 100).toFixed(0);
+            document.getElementById('cbar').style.width = pct + '%';
+            if (countdown <= 0) {
+                loadData();
+                countdown = REFRESH_INTERVAL;
+            }
+        }, 1000);
+    }
+
+    // ── 主数据加载 ──────────────────────────────────────────────
+    function loadData() {
+        fetch('/api/qmt/data?bar=' + currentBar)
+            .then(r => r.json())
+            .then(data => {
+                renderPrices(data.tickers || []);
+                renderSignals(data.indicators || {}, data.validHours || 0, currentBar);
+                renderMaTable(data.indicators || {}, currentBar);
+                document.getElementById('last-updated').textContent =
+                    '更新于 ' + new Date().toLocaleTimeString('zh-CN');
+                const barLabels = {'15m':'15min','1H':'1H','4H':'4H','1D':'1D','1W':'7D'};
+                document.getElementById('bar-label').textContent = '周期: ' + (barLabels[currentBar] || currentBar);
+                const vh = data.validHours || 0;
+                document.getElementById('valid-hint').textContent =
+                    '信号有效期: ' + fmtHours(vh);
+            })
+            .catch(e => console.warn('QMT data load error', e));
+    }
+
+    // ── 价格渲染 ────────────────────────────────────────────────
+    function renderPrices(tickers) {
+        tickers.forEach(t => {
+            const sym = t.symbol;
+            const price = parseFloat(t.priceUsd) || 0;
+            const chg   = parseFloat(t.change24h) || 0;
+            const vol   = parseFloat(t.volume24h) || 0;
+
+            const pe = document.getElementById('p-' + sym);
+            if (pe) pe.textContent = fmtPrice(price, sym);
+
+            const ce = document.getElementById('c-' + sym);
+            if (ce) {
+                ce.textContent = (chg >= 0 ? '▲ +' : '▼ ') + chg.toFixed(2) + '%';
+                ce.className   = 'pc-change ' + (chg >= 0 ? 'up' : 'dn');
+            }
+
+            const ve = document.getElementById('v-' + sym);
+            if (ve) ve.textContent = vol > 0 ? fmtVol(vol) : '--';
+
+            const ue = document.getElementById('u-' + sym);
+            if (ue && t.updatedAt) ue.textContent = '更新: ' + t.updatedAt.substring(11, 19);
+        });
+    }
+
+    // ── 策略信号卡渲染 ──────────────────────────────────────────
+    function renderSignals(indicators, validHours, bar) {
+        SYMBOLS.forEach(sym => {
+            const ind = indicators[sym];
+            const card = document.getElementById('sig-' + sym);
+            if (!card) return;
+
+            if (!ind || ind.signal === 'WAIT') {
+                card.className = 'sig-card wait';
+                card.querySelector('.sig-label').textContent  = '⏳ 等待数据';
+                card.querySelector('.sig-score').textContent  = '数据不足，等待 K 线积累';
+                card.querySelector('.sig-validity').textContent = '';
+                card.querySelector('.sig-reasons').innerHTML  = '';
+                return;
+            }
+
+            const sig   = ind.signal || 'NEUTRAL';
+            const score = ind.signalScore || 0;
+            const reasons = ind.reasons || [];
+
+            card.className = 'sig-card ' + sig.toLowerCase();
+            card.querySelector('.sig-label').textContent =
+                sig === 'BULL'    ? '📈 看多 BULL'   :
+                sig === 'BEAR'    ? '📉 看空 BEAR'   :
+                                    '➡ 中性 NEUTRAL';
+            card.querySelector('.sig-score').textContent =
+                '综合评分 ' + score + ' / 4 分';
+            card.querySelector('.sig-validity').textContent =
+                '有效期约 ' + fmtHours(validHours);
+
+            const reasonsEl = card.querySelector('.sig-reasons');
+            reasonsEl.innerHTML = reasons.map(r =>
+                `<div class="sig-reason-item">${escHtml(r)}</div>`
+            ).join('');
+        });
+    }
+
+    // ── 均线表渲染 ──────────────────────────────────────────────
+    function renderMaTable(indicators, bar) {
+        const barLabels = {'15m':'15min','1H':'1H','4H':'4H','1D':'1D','1W':'7D'};
+        document.getElementById('ma-bar-badge').textContent = barLabels[bar] || bar;
+
+        const tbody = document.getElementById('ma-tbody');
+        if (!tbody) return;
+
+        const rows = SYMBOLS.map(sym => {
+            const ind = indicators[sym];
+            if (!ind || ind.signal === 'WAIT') {
+                return `<tr>
+                    <td><strong>${sym}</strong></td>
+                    <td colspan="8" style="color:var(--t3);font-size:.8rem;">数据积累中…</td>
+                </tr>`;
+            }
+
+            const price   = ind.currentPrice;
+            const ma20    = ind.ma20;
+            const ma120   = ind.ma120;
+            const ema144  = ind.ema144;
+            const ema169  = ind.ema169;
+            const vol     = ind.volume;
+            const avgVol  = ind.avgVolume20;
+            const volRatio = avgVol > 0 ? (vol / avgVol).toFixed(2) : '--';
+
+            const priceClass  = ma20 != null ? (price > ma20 ? 'ma-above' : 'ma-below') : '';
+            const ma20Class   = (ma20 != null && ma120 != null) ? (ma20 > ma120 ? 'ma-above' : 'ma-below') : '';
+            const ma120Class  = '';
+            const ema144Class = (ema144 != null && ema169 != null) ? (ema144 > ema169 ? 'ma-above' : 'ma-below') : '';
+            const ema169Class = '';
+            const volClass    = (avgVol > 0 && vol > avgVol * 1.2) ? 'ma-above' : '';
+
+            return `<tr>
+                <td><strong>${sym}</strong></td>
+                <td class="ma-val ${priceClass}">${fmtPrice(price, sym)}</td>
+                <td class="ma-val ${ma20Class}">${ma20 != null ? fmtPrice(ma20, sym) : '<span style="color:var(--t3)">—</span>'}</td>
+                <td class="ma-val ${ma120Class}">${ma120 != null ? fmtPrice(ma120, sym) : '<span style="color:var(--t3)">—</span>'}</td>
+                <td class="ma-val ${ema144Class}">${ema144 != null ? fmtPrice(ema144, sym) : '<span style="color:var(--t3)">—</span>'}</td>
+                <td class="ma-val ${ema169Class}">${ema169 != null ? fmtPrice(ema169, sym) : '<span style="color:var(--t3)">—</span>'}</td>
+                <td class="vol-num ${volClass}">${fmtVol(vol)}</td>
+                <td class="vol-num">${fmtVol(avgVol)}</td>
+                <td class="ma-val ${volClass}">${volRatio}×</td>
+            </tr>`;
+        });
+
+        tbody.innerHTML = rows.join('');
+    }
+
+    // ── 格式化工具 ──────────────────────────────────────────────
+    function fmtPrice(v, sym) {
+        const n = parseFloat(v) || 0;
+        if (sym === 'BTC') return '$' + n.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        if (n >= 1000) return '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (n >= 10)   return '$' + n.toFixed(3);
+        if (n >= 1)    return '$' + n.toFixed(4);
+        return '$' + n.toFixed(6);
+    }
+
+    function fmtVol(v) {
+        const n = parseFloat(v) || 0;
+        if (n <= 0) return '--';
+        if (n >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
+        if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+        if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
+        return '$' + n.toFixed(2);
+    }
+
+    function fmtHours(h) {
+        if (!h) return '—';
+        if (h >= 720) return Math.round(h / 720) + ' 个月';
+        if (h >= 168) return Math.round(h / 168) + ' 周';
+        if (h >= 24)  return Math.round(h / 24) + ' 天';
+        return h + ' 小时';
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── 启动 ───────────────────────────────────────────────────
+    loadData();
+    startCountdown();
+
+})();
+</script>
 
 </section></body>
 </html>

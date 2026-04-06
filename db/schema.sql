@@ -93,3 +93,30 @@ CREATE TABLE IF NOT EXISTS perp_funding_rate (
     INDEX idx_exchange_symbol (exchange, symbol),
     INDEX idx_fetched_at (fetched_at)
 );
+
+-- ── 价格实时表（补充 24h 交易量）────────────────────────────────────
+-- 已有 price_ticker 表，补充 volume_24h 字段（如未执行过则运行）
+ALTER TABLE price_ticker
+    ADD COLUMN IF NOT EXISTS volume_24h DECIMAL(30, 4) COMMENT '24h 交易量（计价货币 USDT）';
+
+-- ── K 线历史表 ──────────────────────────────────────────────────────
+-- 存储 BTC/ETH/BNB/SOL 各时间周期的 K 线数据，供均线和策略计算使用
+-- 清理策略（00:20 执行）：
+--   15m → 保留 7 天；1H → 30 天；4H → 180 天；1D → 730 天；1W → 2000 天
+CREATE TABLE IF NOT EXISTS kline_bar (
+    id           BIGINT PRIMARY KEY AUTO_INCREMENT,
+    symbol       VARCHAR(20)   NOT NULL COMMENT 'BTC / ETH / BNB / SOL',
+    bar          VARCHAR(10)   NOT NULL COMMENT '15m / 1H / 4H / 1D / 1W',
+    open_time    DATETIME      NOT NULL COMMENT 'K 线开盘时间',
+    open_price   DECIMAL(30,8) NOT NULL,
+    high_price   DECIMAL(30,8) NOT NULL,
+    low_price    DECIMAL(30,8) NOT NULL,
+    close_price  DECIMAL(30,8) NOT NULL,
+    volume       DECIMAL(30,4) NOT NULL COMMENT '成交量（基础货币）',
+    volume_usdt  DECIMAL(30,4)          COMMENT '成交量（USDT）',
+    confirmed    TINYINT(1)    DEFAULT 0 COMMENT '0=未收盘 1=已收盘',
+    created_at   DATETIME      DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_symbol_bar_time (symbol, bar, open_time),
+    INDEX idx_symbol_bar (symbol, bar),
+    INDEX idx_open_time  (open_time)
+);

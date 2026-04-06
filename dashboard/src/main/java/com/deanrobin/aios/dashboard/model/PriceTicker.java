@@ -25,6 +25,10 @@ public class PriceTicker {
     @Column(name = "change_24h", precision = 10, scale = 4)
     private BigDecimal change24h;
 
+    /** 24H 交易量（USDT，来自 OKX ticker volCcy24h 字段） */
+    @Column(name = "volume_24h", precision = 30, scale = 4)
+    private BigDecimal volume24h;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 }
