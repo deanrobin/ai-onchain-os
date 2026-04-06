@@ -149,12 +149,29 @@
 <!-- 状态栏 -->
 <div class="qmt-status">
     <span><span class="pulse-dot"></span> 实时行情</span>
-    <span>🔄 <span id="countdown-text">10</span>s 后刷新
+
+    <!-- 刷新间隔选择 -->
+    <span style="display:inline-flex;align-items:center;gap:4px;">
+        <span style="color:var(--t3)">刷新:</span>
+        <span class="ri-pill" id="ri-15"  onclick="setRefreshInterval(15)"  style="cursor:pointer;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:600;border:1px solid var(--border);background:var(--bg-card);color:var(--t2);transition:all .15s">15s</span>
+        <span class="ri-pill" id="ri-60"  onclick="setRefreshInterval(60)"  style="cursor:pointer;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:600;border:1px solid var(--border);background:var(--bg-card);color:var(--t2);transition:all .15s">60s</span>
+    </span>
+
+    <!-- 倒计时 -->
+    <span>🔄 <span id="countdown-text">15</span>s 后刷新
         <span class="countdown-bar"><span class="countdown-fill" id="cbar" style="width:100%"></span></span>
     </span>
+
     <span id="last-updated">--</span>
     <span id="bar-label" style="color:var(--blue);font-weight:600;"></span>
     <span id="valid-hint" style="color:var(--t2);"></span>
+
+    <!-- 数据来源 -->
+    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;
+                 background:#fff7ed;border:1px solid rgba(249,115,22,.25);
+                 border-radius:20px;padding:2px 10px;font-size:.7rem;color:#c2410c;font-weight:600;">
+        📊 数据来源: Binance
+    </span>
 </div>
 
 <!-- K线积累状态提示（首次部署时可见，数据就绪后自动隐藏） -->
@@ -224,12 +241,37 @@
 
 <script>
 (function () {
-    const REFRESH_INTERVAL = 10; // 秒
     const SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XAUT'];
+    const VALID_INTERVALS = [15, 60];
+
+    let refreshInterval = parseInt(localStorage.getItem('qmt_ri') || '15', 10);
+    if (!VALID_INTERVALS.includes(refreshInterval)) refreshInterval = 15;
 
     let currentBar = '15m';
     let refreshTimer = null;
-    let countdown = REFRESH_INTERVAL;
+    let countdown = refreshInterval;
+
+    // ── 刷新间隔切换 ────────────────────────────────────────────
+    function setRefreshInterval(sec) {
+        if (!VALID_INTERVALS.includes(sec)) return;
+        refreshInterval = sec;
+        localStorage.setItem('qmt_ri', String(sec));
+        updateRiPills();
+        startCountdown(); // 重置计时器
+    }
+    // 暴露到全局供 onclick 调用
+    window.setRefreshInterval = setRefreshInterval;
+
+    function updateRiPills() {
+        VALID_INTERVALS.forEach(v => {
+            const el = document.getElementById('ri-' + v);
+            if (!el) return;
+            const active = v === refreshInterval;
+            el.style.background = active ? 'var(--blue)'  : 'var(--bg-card)';
+            el.style.color      = active ? '#fff'         : 'var(--t2)';
+            el.style.borderColor= active ? 'var(--blue)'  : 'var(--border)';
+        });
+    }
 
     // ── Tab 切换 ────────────────────────────────────────────────
     document.querySelectorAll('.tf-tab').forEach(tab => {
@@ -244,15 +286,17 @@
     // ── 倒计时 & 自动刷新 ──────────────────────────────────────
     function startCountdown() {
         clearInterval(refreshTimer);
-        countdown = REFRESH_INTERVAL;
+        countdown = refreshInterval;
+        document.getElementById('countdown-text').textContent = countdown;
+        document.getElementById('cbar').style.width = '100%';
         refreshTimer = setInterval(() => {
             countdown--;
             document.getElementById('countdown-text').textContent = countdown;
-            const pct = (countdown / REFRESH_INTERVAL * 100).toFixed(0);
+            const pct = (countdown / refreshInterval * 100).toFixed(0);
             document.getElementById('cbar').style.width = pct + '%';
             if (countdown <= 0) {
                 loadData();
-                countdown = REFRESH_INTERVAL;
+                countdown = refreshInterval;
             }
         }, 1000);
     }
@@ -444,6 +488,7 @@
     }
 
     // ── 启动 ───────────────────────────────────────────────────
+    updateRiPills();  // 恢复上次选择的刷新频率外观
     loadStatus();
     loadData();
     startCountdown();
