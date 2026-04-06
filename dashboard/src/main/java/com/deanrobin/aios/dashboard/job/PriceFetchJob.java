@@ -23,10 +23,11 @@ import java.util.Map;
 public class PriceFetchJob {
 
     private static final List<String[]> TARGETS = List.of(
-        new String[]{"BTC", "BTC-USDT"},
-        new String[]{"ETH", "ETH-USDT"},
-        new String[]{"BNB", "BNB-USDT"},
-        new String[]{"SOL", "SOL-USDT"}
+        new String[]{"BTC",  "BTC-USDT"},
+        new String[]{"ETH",  "ETH-USDT"},
+        new String[]{"BNB",  "BNB-USDT"},
+        new String[]{"SOL",  "SOL-USDT"},
+        new String[]{"XAUT", "XAUT-USDT"}   // Tether Gold（黄金代币）
     );
 
     private final PriceTickerRepository priceRepo;
