@@ -84,7 +84,7 @@ public class PerpAlertService {
         return true;
     }
 
-    // ─── 构建并发送 Top10 报告 ────────────────────────────────────────
+    // ─── 构建并发送 Top5 报告 ────────────────────────────────────────
     private void sendReport() {
         if (alertUrl == null || alertUrl.isBlank()) {
             log.warn("⚠️ perp.alert-url 未配置，跳过飞书汇报");
@@ -102,16 +102,16 @@ public class PerpAlertService {
 
         for (String[] ex : exchanges) {
             String exch = ex[0], icon = ex[1];
-            List<PerpInstrument> high = perpService.getTop10High(exch);
-            List<PerpInstrument> low  = perpService.getTop10Low(exch);
+            List<PerpInstrument> high = perpService.getTop5High(exch);
+            List<PerpInstrument> low  = perpService.getTop5Low(exch);
             if (high.isEmpty() && low.isEmpty()) continue;
 
             sb.append("━━━━━━━━━━━━━━━━━━━━━━━━\n");
             sb.append(icon).append(" ").append(exch).append("\n");
 
-            sb.append("▲ Top10 最高\n");
+            sb.append("▲ Top5 最高\n");
             appendRates(sb, high);
-            sb.append("▼ Top10 最低\n");
+            sb.append("▼ Top5 最低\n");
             appendRates(sb, low);
         }
 

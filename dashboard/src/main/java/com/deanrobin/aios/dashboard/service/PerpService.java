@@ -13,12 +13,12 @@ public class PerpService {
 
     private final PerpInstrumentRepository instrumentRepo;
 
-    public List<PerpInstrument> getTop10High(String exchange) {
-        return instrumentRepo.findTop10HighByExchange(exchange);
+    public List<PerpInstrument> getTop5High(String exchange) {
+        return instrumentRepo.findTop5HighByExchange(exchange);
     }
 
-    public List<PerpInstrument> getTop10Low(String exchange) {
-        return instrumentRepo.findTop10LowByExchange(exchange);
+    public List<PerpInstrument> getTop5Low(String exchange) {
+        return instrumentRepo.findTop5LowByExchange(exchange);
     }
 
     public long getInstrumentCount(String exchange) {
