@@ -2,10 +2,14 @@ package com.deanrobin.aios.dashboard.repository;
 
 import com.deanrobin.aios.dashboard.model.BinanceTicker;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface BinanceTickerRepository extends JpaRepository<BinanceTicker, Long> {
 
@@ -22,6 +26,12 @@ public interface BinanceTickerRepository extends JpaRepository<BinanceTicker, Lo
     /** Top 20 按24h涨幅升序（跌幅榜） */
     @Query("SELECT t FROM BinanceTicker t ORDER BY t.priceChangePct ASC LIMIT 20")
     List<BinanceTicker> findTop20ByLosers();
+
+    /** 删除不在活跃品种集合中的旧记录（清理已下线合约） */
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM BinanceTicker t WHERE t.symbol NOT IN :symbols")
+    int deleteBySymbolNotIn(@Param("symbols") Set<String> symbols);
 
     /** 全量记录数 */
     long count();
