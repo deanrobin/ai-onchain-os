@@ -219,9 +219,9 @@ public class ApiController {
     @GetMapping("/perps/rates")
     public Map<String, Object> perpRates(@RequestParam(defaultValue = "OKX") String exchange) {
         String ex = exchange.toUpperCase();
-        List<Map<String, Object>> high = perpService.getTop5High(ex).stream()
+        List<Map<String, Object>> high = perpService.getTop10High(ex).stream()
                 .map(ApiController::toRateMap).collect(Collectors.toList());
-        List<Map<String, Object>> low  = perpService.getTop5Low(ex).stream()
+        List<Map<String, Object>> low  = perpService.getTop10Low(ex).stream()
                 .map(ApiController::toRateMap).collect(Collectors.toList());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("exchange",    ex);
