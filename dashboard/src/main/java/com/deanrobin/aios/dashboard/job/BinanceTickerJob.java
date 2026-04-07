@@ -2,6 +2,7 @@ package com.deanrobin.aios.dashboard.job;
 
 import com.deanrobin.aios.dashboard.model.BinanceTicker;
 import com.deanrobin.aios.dashboard.repository.BinanceTickerRepository;
+import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
 import com.deanrobin.aios.dashboard.service.PerpAlertService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -15,6 +16,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 每分钟拉取 Binance U本位永续合约 24h 行情，upsert 到 binance_ticker 表。
@@ -35,9 +38,10 @@ public class BinanceTickerJob {
     /** 成交额报警阈值：5000w USDT */
     private static final BigDecimal VOLUME_ALERT_THRESHOLD = new BigDecimal("50000000");
 
-    private final BinanceTickerRepository tickerRepo;
-    private final PerpAlertService        perpAlertService;
-    private final WebClient.Builder       webClientBuilder;
+    private final BinanceTickerRepository  tickerRepo;
+    private final PerpInstrumentRepository instrumentRepo;
+    private final PerpAlertService         perpAlertService;
+    private final WebClient.Builder        webClientBuilder;
 
     // initialDelay 错开其他 Binance job（BinancePerpJob initialDelay 20s/90s）
     @Scheduled(initialDelay = 30_000, fixedDelay = 60_000)
@@ -45,14 +49,21 @@ public class BinanceTickerJob {
         List<Map<String, Object>> raw = fetchFromBinance();
         if (raw.isEmpty()) return;
 
+        // 取 perp_instrument 中 BINANCE 在交易的品种，过滤掉已下线合约
+        Set<String> activeSymbols = instrumentRepo.findByExchangeAndIsActiveTrue("BINANCE")
+                .stream()
+                .map(p -> p.getSymbol())
+                .collect(Collectors.toSet());
+
         LocalDateTime now   = LocalDateTime.now();
         int upserted = 0;
 
         for (Map<String, Object> item : raw) {
             String symbol = str(item, "symbol");
             if (symbol.isBlank()) continue;
-            // 只保留 USDT 结算
+            // 只保留 USDT 结算 且 perp_instrument 中存在的活跃合约
             if (!symbol.endsWith("USDT")) continue;
+            if (!activeSymbols.contains(symbol)) continue;
 
             BigDecimal lastPrice      = decimal(item, "lastPrice");
             BigDecimal priceChangePct = decimal(item, "priceChangePercent");

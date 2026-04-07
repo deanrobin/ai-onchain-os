@@ -27,11 +27,18 @@
 }
 .sort-btn:hover:not(.active) { background: #f0f4ff; }
 
+.ticker-table  { table-layout: fixed; width: 100%; }
 .ticker-table th { font-size: .73rem; color: var(--t3); font-weight: 600; white-space: nowrap; }
 .ticker-table td { font-size: .83rem; vertical-align: middle; }
-.ticker-rank    { color: var(--t3); font-size: .75rem; width: 28px; }
-.ticker-symbol  { font-weight: 700; color: var(--t1); }
-.ticker-base    { font-size: .72rem; color: var(--t3); margin-left: 4px; }
+.ticker-col-rank   { width: 36px; }
+.ticker-col-symbol { width: 130px; }
+.ticker-col-price  { width: 120px; }
+.ticker-col-chg    { width: 90px; }
+.ticker-col-vol    { width: 120px; }
+.ticker-col-cnt    { width: 100px; }
+.ticker-rank   { color: var(--t3); font-size: .75rem; }
+.ticker-symbol { font-weight: 700; color: var(--t1); }
+.ticker-base   { font-size: .72rem; color: var(--t3); margin-left: 4px; }
 </style>
 
 <!-- ── 页头 ────────────────────────────────────────────────────── -->
@@ -55,6 +62,14 @@
 <div class="card">
     <div class="card-body p-0">
         <table class="table table-hover mb-0 ticker-table">
+            <colgroup>
+                <col class="ticker-col-rank">
+                <col class="ticker-col-symbol">
+                <col class="ticker-col-price">
+                <col class="ticker-col-chg">
+                <col class="ticker-col-vol">
+                <col class="ticker-col-cnt">
+            </colgroup>
             <thead>
                 <tr>
                     <th class="ps-3">#</th>
@@ -106,12 +121,13 @@ function renderTable(rows) {
         return;
     }
     tb.innerHTML = rows.map((r, i) => {
-        const pct     = parseFloat(r.changePct) || 0;
-        const pctCls  = pct > 0 ? 'chg-pos' : pct < 0 ? 'chg-neg' : 'chg-zero';
-        const pctStr  = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
-        const price   = fmtPrice(r.price);
-        const vol     = fmtVol(r.quoteVolume);
-        const cnt     = r.tradeCount != null ? Number(r.tradeCount).toLocaleString() : '—';
+        const pct    = parseFloat(r.changePct) || 0;
+        const color  = pct > 0 ? 'var(--green)' : pct < 0 ? 'var(--red)' : 'var(--t3)';
+        const weight = pct === 0 ? '600' : '700';
+        const pctStr = (pct > 0 ? '+' : '') + pct.toFixed(2) + '%';
+        const price  = fmtPrice(r.price);
+        const vol    = fmtVol(r.quoteVolume);
+        const cnt    = r.tradeCount != null ? Number(r.tradeCount).toLocaleString() : '—';
         return `<tr>
             <td class="ps-3 ticker-rank">${i + 1}</td>
             <td>
@@ -119,7 +135,7 @@ function renderTable(rows) {
                 <span class="ticker-base">${r.symbol}</span>
             </td>
             <td class="text-end mono">${price}</td>
-            <td class="text-end ${pctCls}">${pctStr}</td>
+            <td class="text-end"><span style="font-family:'JetBrains Mono';color:${color};font-weight:${weight}">${pctStr}</span></td>
             <td class="text-end mono">${vol}</td>
             <td class="text-end pe-3 text-muted" style="font-size:.78rem">${cnt}</td>
         </tr>`;
