@@ -126,12 +126,16 @@ function renderTable(rows) {
         const weight = pct === 0 ? '600' : '700';
         const pctStr = (pct > 0 ? '+' : '') + pct.toFixed(2) + '%';
         const price  = fmtPrice(r.price);
-        const volNum  = parseFloat(r.quoteVolume) || 0;
-        const vol     = fmtVol(r.quoteVolume);
-        const volHigh = volNum >= 50_000_000;
-        const volStyle = volHigh
-            ? 'font-family:\'JetBrains Mono\';color:#f59e0b;font-weight:700'
-            : 'font-family:\'JetBrains Mono\'';
+        const volNum   = parseFloat(r.quoteVolume) || 0;
+        const vol      = fmtVol(r.quoteVolume);
+        // 成交额分档配色：>1亿红、5kw~1亿橙、2kw~5kw蓝、<2kw默认
+        const volColor = volNum >= 1e8       ? '#ef4444'
+                       : volNum >= 5e7       ? '#f97316'
+                       : volNum >= 2e7       ? '#3b82f6'
+                       : '';
+        const volStyle = volColor
+            ? `font-family:'JetBrains Mono';color:${volColor};font-weight:700`
+            : `font-family:'JetBrains Mono'`;
         const cnt    = r.tradeCount != null ? Number(r.tradeCount).toLocaleString() : '—';
         return `<tr>
             <td class="ps-3 ticker-rank">${i + 1}</td>
@@ -141,7 +145,7 @@ function renderTable(rows) {
             </td>
             <td class="text-end mono">${price}</td>
             <td class="text-end"><span style="font-family:'JetBrains Mono';color:${color};font-weight:${weight}">${pctStr}</span></td>
-            <td class="text-end"><span style="${volStyle}">${volHigh ? '🔥 ' : ''}${vol}</span></td>
+            <td class="text-end"><span style="${volStyle}">${vol}</span></td>
             <td class="text-end pe-3 text-muted" style="font-size:.78rem">${cnt}</td>
         </tr>`;
     }).join('');
