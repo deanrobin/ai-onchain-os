@@ -214,14 +214,14 @@ public class ApiController {
     }
     /**
      * GET /api/perps/rates?exchange=OKX
-     * 返回指定交易所最新费率 top10高 / top10低，供页面 AJAX 自动刷新。
+     * 返回指定交易所最新费率 top5高 / top5低，供页面 AJAX 自动刷新。
      */
     @GetMapping("/perps/rates")
     public Map<String, Object> perpRates(@RequestParam(defaultValue = "OKX") String exchange) {
         String ex = exchange.toUpperCase();
-        List<Map<String, Object>> high = perpService.getTop10High(ex).stream()
+        List<Map<String, Object>> high = perpService.getTop5High(ex).stream()
                 .map(ApiController::toRateMap).collect(Collectors.toList());
-        List<Map<String, Object>> low  = perpService.getTop10Low(ex).stream()
+        List<Map<String, Object>> low  = perpService.getTop5Low(ex).stream()
                 .map(ApiController::toRateMap).collect(Collectors.toList());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("exchange",    ex);
@@ -235,7 +235,7 @@ public class ApiController {
 
     /**
      * POST /api/perps/report
-     * 立刻发送三所 Top10 飞书汇报。5 分钟内只能触发一次。
+     * 立刻发送三所 Top5 飞书汇报。5 分钟内只能触发一次。
      */
     @PostMapping("/perps/report")
     public Map<String, Object> perpReport() {
