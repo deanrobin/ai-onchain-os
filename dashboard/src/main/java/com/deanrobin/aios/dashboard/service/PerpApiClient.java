@@ -127,7 +127,8 @@ public class PerpApiClient {
             List<Map<String, Object>> result = new ArrayList<>();
             for (Object item : list) {
                 if (item instanceof Map<?, ?> m) {
-                    if ("PERPETUAL".equals(m.get("contractType"))) {
+                    if ("PERPETUAL".equals(m.get("contractType"))
+                            && "TRADING".equals(m.get("status"))) {
                         result.add((Map<String, Object>) m);
                     }
                 }
