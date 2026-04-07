@@ -63,3 +63,8 @@ perp:
     overview-ttl-seconds: 300      # overview 缓存 5 分钟
     tx-history-ttl-seconds: 30     # tx_history 缓存 30 秒
     tx-history-limit: 50           # 每次拉取最近多少笔交易
+
+# ── 链上持仓监控 RPC 配置 ─────────────────────────────────────────
+onchain:
+  eth-rpc: https://eth.llamarpc.com
+  bsc-rpc: https://bsc-dataseed.binance.org/
