@@ -4,6 +4,7 @@ import com.deanrobin.aios.dashboard.model.PerpFundingRate;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.repository.PerpFundingRateRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
+import com.deanrobin.aios.dashboard.repository.TickerAlertBlacklistRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,10 +47,11 @@ public class PerpAlertService {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MM-dd HH:mm");
     private static final ZoneId CST = ZoneId.of("Asia/Shanghai");
 
-    private final PerpService               perpService;
-    private final PerpInstrumentRepository  instrumentRepo;
-    private final PerpFundingRateRepository fundingRateRepo;
-    private final WebClient.Builder         webClientBuilder;
+    private final PerpService                      perpService;
+    private final PerpInstrumentRepository         instrumentRepo;
+    private final PerpFundingRateRepository        fundingRateRepo;
+    private final TickerAlertBlacklistRepository   blacklistRepo;
+    private final WebClient.Builder                webClientBuilder;
 
     @Value("${perp.alert-url:}")
     private String alertUrl;
@@ -57,8 +59,21 @@ public class PerpAlertService {
     /** spike 报警冷却：key = "EXCHANGE:SYMBOL"，value = 上次报警时间戳 */
     private final ConcurrentHashMap<String, Long> spikeCooldown = new ConcurrentHashMap<>();
 
-    /** 成交量报警冷却：key = symbol，value = 上次报警时间戳 */
+    /** 成交量报警冷却：key = symbol，value = 上次报警时间戳（1H 最多一次） */
     private final ConcurrentHashMap<String, Long> volumeCooldown = new ConcurrentHashMap<>();
+
+    /** 黑名单缓存，每 5 分钟从 DB 刷新一次 */
+    private volatile Set<String> blacklistCache = Set.of();
+
+    @Scheduled(initialDelay = 0, fixedDelay = 300_000)
+    public void refreshBlacklist() {
+        try {
+            blacklistCache = blacklistRepo.findAllSymbols();
+            log.debug("🔕 成交量报警黑名单已刷新，共 {} 个", blacklistCache.size());
+        } catch (Exception e) {
+            log.warn("⚠️ 黑名单刷新失败: {}", e.getMessage());
+        }
+    }
 
     /** 手动汇报冷却 */
     private final AtomicLong lastManualReport = new AtomicLong(0);
@@ -213,6 +228,9 @@ public class PerpAlertService {
      */
     public void checkVolumeAlert(String symbol, java.math.BigDecimal quoteVolume) {
         if (alertUrl == null || alertUrl.isBlank()) return;
+        // 黑名单过滤
+        if (blacklistCache.contains(symbol)) return;
+        // 1H 冷却
         String key = "VOL:" + symbol;
         long last = volumeCooldown.getOrDefault(key, 0L);
         if (System.currentTimeMillis() - last < SPIKE_COOLDOWN_MS) return;
@@ -222,7 +240,7 @@ public class PerpAlertService {
                 "🔥 合约成交量异动\n合约: %s\n24h成交额: %.0f USDT (%.1f亿)",
                 symbol, vol, vol / 1_0000_0000.0);
         sendFeishu(text);
-        log.info("🔥 成交量报警 | {} | 24h成交额={:.0f} USDT", symbol, vol);
+        log.info("🔥 成交量报警 | {} | 24h成交额={} USDT", symbol, String.format("%.0f", vol));
     }
 
     // ─── 飞书发送 ────────────────────────────────────────────────────

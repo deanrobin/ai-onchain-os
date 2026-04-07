@@ -154,6 +154,23 @@ CREATE TABLE IF NOT EXISTS binance_ticker (
     INDEX idx_price_change (price_change_pct)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── 合约成交量报警黑名单（命中则不报警）────────────────────────────────
+CREATE TABLE IF NOT EXISTS ticker_alert_blacklist (
+    id         BIGINT       AUTO_INCREMENT PRIMARY KEY,
+    symbol     VARCHAR(50)  NOT NULL COMMENT '合约交易对，如 BTCUSDT',
+    note       VARCHAR(200)          COMMENT '备注',
+    created_at DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_symbol (symbol)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO ticker_alert_blacklist (symbol, note) VALUES
+    ('BTCUSDT',  '主流币，24h量常态超阈值'),
+    ('ETHUSDT',  '主流币，24h量常态超阈值'),
+    ('BNBUSDT',  '主流币，24h量常态超阈值'),
+    ('SOLUSDT',  '主流币，24h量常态超阈值'),
+    ('XRPUSDT',  '主流币，24h量常态超阈值'),
+    ('DOGEUSDT', '主流币，24h量常态超阈值');
+
 -- ── 链上持仓余额快照表 ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS onchain_holder_snapshot (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
