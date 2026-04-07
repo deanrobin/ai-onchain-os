@@ -32,7 +32,7 @@ public class OnchainWatch {
     private String network;
 
     /** ERC20 小数位，首次查链获取，默认 18 */
-    @Column(name = "token_decimals", nullable = false)
+    @Column(name = "token_decimals", nullable = false, columnDefinition = "TINYINT")
     private int tokenDecimals = 18;
 
     /** TOKEN = 按代币数量比对；USD = 按折算美元比对 */
