@@ -1,0 +1,125 @@
+package com.deanrobin.aios.dashboard.job;
+
+import com.deanrobin.aios.dashboard.model.BinanceTicker;
+import com.deanrobin.aios.dashboard.repository.BinanceTickerRepository;
+import com.deanrobin.aios.dashboard.service.PerpAlertService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 每分钟拉取 Binance U本位永续合约 24h 行情，upsert 到 binance_ticker 表。
+ * 成交额超过 5000w USDT 时触发飞书报警（每个品种每小时一次）。
+ *
+ * ⚠️ 不加 @Transactional
+ */
+@Log4j2
+@Component
+@RequiredArgsConstructor
+public class BinanceTickerJob {
+
+    private static final String BINANCE_BASE   = "https://fapi.binance.com";
+    private static final String TICKER_URI     = "/fapi/v1/ticker/24hr";
+    private static final int    MAX_BUF        = 10 * 1024 * 1024;
+    private static final Duration TIMEOUT      = Duration.ofSeconds(15);
+
+    /** 成交额报警阈值：5000w USDT */
+    private static final BigDecimal VOLUME_ALERT_THRESHOLD = new BigDecimal("50000000");
+
+    private final BinanceTickerRepository tickerRepo;
+    private final PerpAlertService        perpAlertService;
+    private final WebClient.Builder       webClientBuilder;
+
+    // initialDelay 错开其他 Binance job（BinancePerpJob initialDelay 20s/90s）
+    @Scheduled(initialDelay = 30_000, fixedDelay = 60_000)
+    public void fetchTickers() {
+        List<Map<String, Object>> raw = fetchFromBinance();
+        if (raw.isEmpty()) return;
+
+        LocalDateTime now   = LocalDateTime.now();
+        int upserted = 0;
+
+        for (Map<String, Object> item : raw) {
+            String symbol = str(item, "symbol");
+            if (symbol.isBlank()) continue;
+            // 只保留 USDT 结算
+            if (!symbol.endsWith("USDT")) continue;
+
+            BigDecimal lastPrice      = decimal(item, "lastPrice");
+            BigDecimal priceChangePct = decimal(item, "priceChangePercent");
+            BigDecimal quoteVolume    = decimal(item, "quoteVolume");
+            if (lastPrice == null || quoteVolume == null) continue;
+
+            // 基础货币 = symbol 去掉 "USDT" 后缀
+            String base = symbol.substring(0, symbol.length() - 4);
+
+            // upsert
+            BinanceTicker ticker = tickerRepo.findBySymbol(symbol).orElseGet(BinanceTicker::new);
+            ticker.setSymbol(symbol);
+            ticker.setBaseCurrency(base);
+            ticker.setLastPrice(lastPrice);
+            ticker.setPriceChangePct(priceChangePct != null ? priceChangePct : BigDecimal.ZERO);
+            ticker.setQuoteVolume(quoteVolume);
+            Object cnt = item.get("count");
+            if (cnt != null) {
+                try { ticker.setTradeCount(Integer.parseInt(String.valueOf(cnt))); } catch (Exception ignored) {}
+            }
+            ticker.setFetchedAt(now);
+            tickerRepo.save(ticker);
+            upserted++;
+
+            // 成交额报警
+            if (quoteVolume.compareTo(VOLUME_ALERT_THRESHOLD) >= 0) {
+                perpAlertService.checkVolumeAlert(symbol, quoteVolume);
+            }
+        }
+
+        log.info("📊 Binance ticker 更新={} 条", upserted);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> fetchFromBinance() {
+        try {
+            WebClient client = webClientBuilder.clone()
+                    .baseUrl(BINANCE_BASE)
+                    .exchangeStrategies(ExchangeStrategies.builder()
+                            .codecs(c -> c.defaultCodecs().maxInMemorySize(MAX_BUF))
+                            .build())
+                    .build();
+            List<?> resp = client.get()
+                    .uri(TICKER_URI)
+                    .retrieve()
+                    .bodyToMono(List.class)
+                    .timeout(TIMEOUT)
+                    .block();
+            if (resp == null) return List.of();
+            return (List<Map<String, Object>>) resp;
+        } catch (Exception e) {
+            log.warn("⚠️ Binance ticker 拉取失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private static String str(Map<String, Object> m, String key) {
+        Object v = m.get(key);
+        return v == null ? "" : String.valueOf(v).trim();
+    }
+
+    private static BigDecimal decimal(Map<String, Object> m, String key) {
+        try {
+            String s = str(m, key);
+            return s.isEmpty() ? null : new BigDecimal(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+}

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('合约行情', ~{::section})}">
+<body><section>
+
+<style>
+.chg-pos { color: var(--green); font-weight: 700; font-family: 'JetBrains Mono'; }
+.chg-neg { color: var(--red);   font-weight: 700; font-family: 'JetBrains Mono'; }
+.chg-zero{ color: var(--t3);    font-weight: 600; font-family: 'JetBrains Mono'; }
+.mono    { font-family: 'JetBrains Mono'; }
+
+.sort-btn {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--t2);
+    border-radius: 8px;
+    padding: 5px 14px;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.sort-btn.active {
+    background: var(--blue);
+    color: #fff;
+    border-color: var(--blue);
+}
+.sort-btn:hover:not(.active) { background: #f0f4ff; }
+
+.ticker-table th { font-size: .73rem; color: var(--t3); font-weight: 600; white-space: nowrap; }
+.ticker-table td { font-size: .83rem; vertical-align: middle; }
+.ticker-rank    { color: var(--t3); font-size: .75rem; width: 28px; }
+.ticker-symbol  { font-weight: 700; color: var(--t1); }
+.ticker-base    { font-size: .72rem; color: var(--t3); margin-left: 4px; }
+</style>
+
+<!-- ── 页头 ────────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+    <h5 class="mb-0">📊 合约行情</h5>
+    <span class="badge bg-secondary" id="total-badge">— 个品种</span>
+    <span class="ms-auto text-muted" style="font-size:.75rem">
+        更新于 <span id="updated-at">—</span> &nbsp;
+        🔄 <span id="countdown">30</span>s
+    </span>
+</div>
+
+<!-- ── 排序按钮 ──────────────────────────────────────────────────── -->
+<div class="d-flex gap-2 mb-3">
+    <button class="sort-btn active" id="btn-volume"  onclick="switchSort('volume')">🔥 成交量 Top20</button>
+    <button class="sort-btn"        id="btn-gainers" onclick="switchSort('gainers')">📈 涨幅 Top20</button>
+    <button class="sort-btn"        id="btn-losers"  onclick="switchSort('losers')">📉 跌幅 Top20</button>
+</div>
+
+<!-- ── 行情表格 ──────────────────────────────────────────────────── -->
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 ticker-table">
+            <thead>
+                <tr>
+                    <th class="ps-3">#</th>
+                    <th>合约</th>
+                    <th class="text-end">最新价</th>
+                    <th class="text-end">24h涨跌</th>
+                    <th class="text-end">24h成交额</th>
+                    <th class="text-end pe-3">成交笔数</th>
+                </tr>
+            </thead>
+            <tbody id="ticker-body">
+                <tr><td colspan="6" class="text-center text-muted py-4">加载中…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let currentSort = 'volume';
+let cdTimer;
+
+function switchSort(sort) {
+    currentSort = sort;
+    ['volume','gainers','losers'].forEach(s => {
+        document.getElementById('btn-' + s).classList.toggle('active', s === sort);
+    });
+    loadTicker();
+}
+
+function loadTicker() {
+    fetch('/api/ticker/binance?sort=' + currentSort)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('total-badge').textContent = (data.total || 0) + ' 个品种';
+            document.getElementById('updated-at').textContent = data.updatedAt || '—';
+            renderTable(data.rows || []);
+            resetCountdown();
+        })
+        .catch(() => {
+            document.getElementById('ticker-body').innerHTML =
+                '<tr><td colspan="6" class="text-center text-muted py-4">加载失败，请稍后重试</td></tr>';
+        });
+}
+
+function renderTable(rows) {
+    const tb = document.getElementById('ticker-body');
+    if (!rows.length) {
+        tb.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">暂无数据</td></tr>';
+        return;
+    }
+    tb.innerHTML = rows.map((r, i) => {
+        const pct     = parseFloat(r.changePct) || 0;
+        const pctCls  = pct > 0 ? 'chg-pos' : pct < 0 ? 'chg-neg' : 'chg-zero';
+        const pctStr  = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+        const price   = fmtPrice(r.price);
+        const vol     = fmtVol(r.quoteVolume);
+        const cnt     = r.tradeCount != null ? Number(r.tradeCount).toLocaleString() : '—';
+        return `<tr>
+            <td class="ps-3 ticker-rank">${i + 1}</td>
+            <td>
+                <span class="ticker-symbol">${r.base || r.symbol}</span>
+                <span class="ticker-base">${r.symbol}</span>
+            </td>
+            <td class="text-end mono">${price}</td>
+            <td class="text-end ${pctCls}">${pctStr}</td>
+            <td class="text-end mono">${vol}</td>
+            <td class="text-end pe-3 text-muted" style="font-size:.78rem">${cnt}</td>
+        </tr>`;
+    }).join('');
+}
+
+function fmtPrice(v) {
+    if (v == null) return '—';
+    const n = parseFloat(v);
+    if (isNaN(n)) return '—';
+    if (n >= 1000)  return n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (n >= 1)     return n.toFixed(4);
+    return n.toFixed(6);
+}
+
+function fmtVol(v) {
+    if (v == null) return '—';
+    const n = parseFloat(v);
+    if (isNaN(n)) return '—';
+    if (n >= 1e8)  return (n / 1e8).toFixed(2) + ' 亿';
+    if (n >= 1e4)  return (n / 1e4).toFixed(2) + ' 万';
+    return n.toFixed(0);
+}
+
+function resetCountdown() {
+    clearInterval(cdTimer);
+    let t = 30;
+    document.getElementById('countdown').textContent = t;
+    cdTimer = setInterval(() => {
+        t--;
+        document.getElementById('countdown').textContent = t;
+        if (t <= 0) {
+            clearInterval(cdTimer);
+            loadTicker();
+        }
+    }, 1000);
+}
+
+// 初始加载
+loadTicker();
+</script>
+
+</section></body>
+</html>
