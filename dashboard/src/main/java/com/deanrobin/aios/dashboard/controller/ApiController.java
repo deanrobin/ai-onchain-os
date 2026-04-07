@@ -1,8 +1,10 @@
 package com.deanrobin.aios.dashboard.controller;
 
+import com.deanrobin.aios.dashboard.model.BinanceTicker;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.model.PriceTicker;
 import com.deanrobin.aios.dashboard.model.SmartMoneySignal;
+import com.deanrobin.aios.dashboard.repository.BinanceTickerRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
 import com.deanrobin.aios.dashboard.repository.PriceTickerRepository;
 import com.deanrobin.aios.dashboard.service.PerpAlertService;
@@ -32,8 +34,9 @@ public class ApiController {
     private final com.deanrobin.aios.dashboard.service.PumpPortalClient                pumpPortalClient;
     private final com.deanrobin.aios.dashboard.repository.FourMemeTokenRepository      fourMemeRepo;
     private final com.deanrobin.aios.dashboard.service.FourMemeClient                  fourMemeClient;
-    private final PortfolioService       portfolioService;
-    private final PriceTickerRepository  priceRepo;
+    private final PortfolioService        portfolioService;
+    private final PriceTickerRepository   priceRepo;
+    private final BinanceTickerRepository binanceTickerRepo;
 
     /** 最新四币价格（从 DB 读，PriceFetchJob 每 30s 更新） */
     @GetMapping("/prices")
@@ -302,5 +305,42 @@ public class ApiController {
             )).toList());
             return m;
         }).toList();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Binance 合约行情
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * GET /api/ticker/binance?sort=volume|gainers|losers
+     * 返回 Top20 合约行情，支持三种排序。
+     */
+    @GetMapping("/ticker/binance")
+    public Map<String, Object> binanceTicker(
+            @RequestParam(defaultValue = "volume") String sort) {
+        List<BinanceTicker> list = switch (sort) {
+            case "gainers" -> binanceTickerRepo.findTop20ByGainers();
+            case "losers"  -> binanceTickerRepo.findTop20ByLosers();
+            default        -> binanceTickerRepo.findTop20ByVolume();
+        };
+        List<Map<String, Object>> rows = list.stream().map(t -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("symbol",         t.getSymbol());
+            m.put("base",           t.getBaseCurrency());
+            m.put("price",          t.getLastPrice());
+            m.put("changePct",      t.getPriceChangePct());
+            m.put("quoteVolume",    t.getQuoteVolume());
+            m.put("tradeCount",     t.getTradeCount());
+            m.put("fetchedAt",      t.getFetchedAt() != null
+                    ? t.getFetchedAt().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")) : "—");
+            return m;
+        }).toList();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("sort",      sort);
+        result.put("total",     binanceTickerRepo.count());
+        result.put("rows",      rows);
+        result.put("updatedAt", java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm:ss")));
+        return result;
     }
 }

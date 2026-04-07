@@ -139,6 +139,21 @@ CREATE TABLE IF NOT EXISTS onchain_watch (
     INDEX idx_active  (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Binance 合约行情快照表（U本位永续，每分钟更新）─────────────────────
+CREATE TABLE IF NOT EXISTS binance_ticker (
+    id                BIGINT        AUTO_INCREMENT PRIMARY KEY,
+    symbol            VARCHAR(50)   NOT NULL COMMENT '交易对，如 BTCUSDT',
+    base_currency     VARCHAR(20)            COMMENT '基础货币，如 BTC',
+    last_price        DECIMAL(30,10) NOT NULL COMMENT '最新成交价',
+    price_change_pct  DECIMAL(12,4)  NOT NULL COMMENT '24h涨跌幅%',
+    quote_volume      DECIMAL(30,4)  NOT NULL COMMENT '24h成交额(USDT)',
+    trade_count       INT                    COMMENT '24h成交笔数',
+    fetched_at        DATETIME       NOT NULL COMMENT '数据抓取时间',
+    UNIQUE KEY uk_symbol (symbol),
+    INDEX idx_quote_volume (quote_volume),
+    INDEX idx_price_change (price_change_pct)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── 链上持仓余额快照表 ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS onchain_holder_snapshot (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,

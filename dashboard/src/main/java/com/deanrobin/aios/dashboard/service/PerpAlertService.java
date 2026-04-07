@@ -57,6 +57,9 @@ public class PerpAlertService {
     /** spike 报警冷却：key = "EXCHANGE:SYMBOL"，value = 上次报警时间戳 */
     private final ConcurrentHashMap<String, Long> spikeCooldown = new ConcurrentHashMap<>();
 
+    /** 成交量报警冷却：key = symbol，value = 上次报警时间戳 */
+    private final ConcurrentHashMap<String, Long> volumeCooldown = new ConcurrentHashMap<>();
+
     /** 手动汇报冷却 */
     private final AtomicLong lastManualReport = new AtomicLong(0);
 
@@ -198,6 +201,28 @@ public class PerpAlertService {
         sendFeishu(text);
         log.info("⚡ 费率异动报警 | {}:{} | 15min前={:+.4f}% → 当前={:+.4f}%",
                 exchange, symbol, prev * 100, curr * 100);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // 功能三：合约成交量报警（> 5000w USDT）
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * Binance ticker job 每分钟调用，成交额超阈值时发飞书报警。
+     * 每个品种每小时最多报一次。
+     */
+    public void checkVolumeAlert(String symbol, java.math.BigDecimal quoteVolume) {
+        if (alertUrl == null || alertUrl.isBlank()) return;
+        String key = "VOL:" + symbol;
+        long last = volumeCooldown.getOrDefault(key, 0L);
+        if (System.currentTimeMillis() - last < SPIKE_COOLDOWN_MS) return;
+        volumeCooldown.put(key, System.currentTimeMillis());
+        double vol = quoteVolume.doubleValue();
+        String text = String.format(
+                "🔥 合约成交量异动\n合约: %s\n24h成交额: %.0f USDT (%.1f亿)",
+                symbol, vol, vol / 1_0000_0000.0);
+        sendFeishu(text);
+        log.info("🔥 成交量报警 | {} | 24h成交额={:.0f} USDT", symbol, vol);
     }
 
     // ─── 飞书发送 ────────────────────────────────────────────────────
