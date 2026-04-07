@@ -94,6 +94,12 @@ public class BinanceTickerJob {
             }
         }
 
+        // 清理 DB 里已不在活跃品种集合中的旧记录（如 A2Z、ALPACA 等）
+        if (!activeSymbols.isEmpty()) {
+            int deleted = tickerRepo.deleteBySymbolNotIn(activeSymbols);
+            if (deleted > 0) log.info("🗑️ Binance ticker 清理下线合约 {} 条", deleted);
+        }
+
         log.info("📊 Binance ticker 更新={} 条", upserted);
     }
 
