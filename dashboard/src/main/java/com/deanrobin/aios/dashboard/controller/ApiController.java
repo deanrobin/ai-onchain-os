@@ -6,6 +6,7 @@ import com.deanrobin.aios.dashboard.model.PriceTicker;
 import com.deanrobin.aios.dashboard.model.SmartMoneySignal;
 import com.deanrobin.aios.dashboard.repository.BinanceTickerRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
+import com.deanrobin.aios.dashboard.repository.PerpOpenInterestRepository;
 import com.deanrobin.aios.dashboard.repository.PriceTickerRepository;
 import com.deanrobin.aios.dashboard.service.PerpAlertService;
 import com.deanrobin.aios.dashboard.service.PerpService;
@@ -25,10 +26,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ApiController {
 
-    private final PerpService               perpService;
-    private final PerpAlertService          perpAlertService;
-    private final PerpInstrumentRepository  perpInstrumentRepo;
-    private final SmartMoneyService         smartMoneyService;
+    private final PerpService                  perpService;
+    private final PerpAlertService             perpAlertService;
+    private final PerpInstrumentRepository     perpInstrumentRepo;
+    private final PerpOpenInterestRepository   oiRepo;
+    private final SmartMoneyService            smartMoneyService;
     private final com.deanrobin.aios.dashboard.repository.PumpTokenRepository          pumpTokenRepo;
     private final com.deanrobin.aios.dashboard.repository.PumpMarketCapSnapshotRepository snapshotRepo;
     private final com.deanrobin.aios.dashboard.service.PumpPortalClient                pumpPortalClient;
@@ -259,6 +261,41 @@ public class ApiController {
                 ? p.getLatestFundingUpdatedAt().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))
                 : "—");
         return m;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // 合约持仓量 (OI)
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * GET /api/oi/binance
+     * 返回 Binance watched 品种最新 OI 快照 + 15min / 4H 变化百分比。
+     */
+    @GetMapping("/oi/binance")
+    public List<Map<String, Object>> binanceOI() {
+        var latest = oiRepo.findLatestPerSymbol("BINANCE");
+        var dtFmt  = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss");
+        return latest.stream().map(snap -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("symbol",   snap.getSymbol());
+            m.put("oiUsdt",   snap.getOiUsdt());
+            m.put("oiCoin",   snap.getOiCoin());
+            double oiUsdt = snap.getOiUsdt() != null ? snap.getOiUsdt().doubleValue() : 0;
+            java.time.LocalDateTime t = snap.getFetchedAt();
+            m.put("delta15m", calcOiChangePct(snap.getSymbol(), t.minusMinutes(20), t.minusMinutes(10), oiUsdt));
+            m.put("delta4h",  calcOiChangePct(snap.getSymbol(), t.minusHours(5),   t.minusHours(3),    oiUsdt));
+            m.put("fetchedAt", t != null ? t.format(dtFmt) : "—");
+            return m;
+        }).toList();
+    }
+
+    private Double calcOiChangePct(String symbol, java.time.LocalDateTime from,
+                                   java.time.LocalDateTime to, double currentOiUsdt) {
+        return oiRepo.findEarliestInRange("BINANCE", symbol, from, to).map(prev -> {
+            double prevUsdt = prev.getOiUsdt() != null ? prev.getOiUsdt().doubleValue() : 0;
+            if (prevUsdt <= 0) return null;
+            return (currentOiUsdt - prevUsdt) / prevUsdt * 100;
+        }).orElse(null);
     }
 
     @GetMapping("/fourmeme/status")
