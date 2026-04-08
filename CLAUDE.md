@@ -57,6 +57,64 @@ sh /root/aios-dashboard/start.sh
 
 ---
 
+## 编码规则（强制）
+
+### 禁止 `new BigDecimal(double)`
+
+```java
+// ❌ 错误 — 浮点精度陷阱，0.1 + 0.2 ≠ 0.3
+new BigDecimal(0.1)
+new BigDecimal(priceDouble)
+
+// ✅ 正确 — 参数必须是 String 或 long/int
+new BigDecimal("0.1")
+new BigDecimal(String.valueOf(priceDouble))
+BigDecimal.valueOf(priceDouble)   // 内部走 Double.toString，精度安全
+```
+
+任何涉及金额、价格、费率、数量的 `BigDecimal` 构造，参数必须是 **String** 或使用 `BigDecimal.valueOf(double)`。
+
+### 禁止明文硬编码 API Key / Secret / Token
+
+```java
+// ❌ 错误 — 密钥进 git，泄露风险
+private static final String API_KEY = "sk-abc123xyz";
+WebClient.create("https://api.xxx.com?key=abc123");
+
+// ✅ 正确 — 读取 application.yml 中的占位符，或直接读环境变量
+@Value("${okx.api-key}")
+private String apiKey;
+
+// application.yml 中写：
+// okx:
+//   api-key: ${OKX_API_KEY}   ← 值来自环境变量，不进代码/配置文件
+```
+
+涉及交易所 API Key、Secret、Webhook URL、数据库密码等**一律**通过 `${ENV_VAR}` 占位符注入，不得出现在任何 `.java` / `.yml` / `.properties` 文件中的明文字符串。
+
+---
+
+## db/schema.sql 追加规范
+
+- **只追加，不修改已有内容** — 新表/新字段统一追加到文件末尾
+- **每次追加必须加批次分隔符**，格式：`YYYYMMDD-NNN`（NNN 当天从 001 递增）
+
+```sql
+-- ════════════════════════════════════════════════════════════════
+-- 20260408-001  简短描述本批次的目的
+-- ════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS your_new_table (
+    ...
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+- 同一天多次追加时批次号递增：`20260408-001`、`20260408-002` …
+- 一个批次内可包含多张表，但逻辑上属于同一需求
+- **禁止**在旧批次内插入新内容，也禁止删除旧批次的注释分隔符
+
+---
+
 ## 代码位置速查
 
 | 要改什么 | 去哪里 |

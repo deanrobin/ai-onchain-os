@@ -139,6 +139,25 @@ CREATE TABLE IF NOT EXISTS onchain_watch (
     INDEX idx_active  (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── 链上持仓余额快照表 ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS onchain_holder_snapshot (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    watch_id       BIGINT        NOT NULL COMMENT 'FK -> onchain_watch.id',
+    wallet_addr    VARCHAR(42)   NOT NULL COMMENT '钱包地址',
+    balance_raw    DECIMAL(40,0) NOT NULL COMMENT '原始余额（未除精度）',
+    balance_token  DECIMAL(30,6) NOT NULL COMMENT '余额（除精度后）',
+    price_usd      DECIMAL(20,8) COMMENT '快照时代币 USD 价格',
+    value_usd      DECIMAL(20,2) COMMENT '折算 USD 市值',
+    block_number   BIGINT        NOT NULL COMMENT '取余额时的区块高度',
+    snapped_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_watch_wallet (watch_id, wallet_addr),
+    INDEX idx_snapped_at   (snapped_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ════════════════════════════════════════════════════════════════
+-- 20260408-001  合约行情快照 + 成交量报警黑名单（含默认主流币）
+-- ════════════════════════════════════════════════════════════════
+
 -- ── Binance 合约行情快照表（U本位永续，每分钟更新）─────────────────────
 CREATE TABLE IF NOT EXISTS binance_ticker (
     id                BIGINT        AUTO_INCREMENT PRIMARY KEY,
@@ -171,6 +190,10 @@ INSERT IGNORE INTO ticker_alert_blacklist (symbol, note) VALUES
     ('XRPUSDT',  '主流币，24h量常态超阈值'),
     ('DOGEUSDT', '主流币，24h量常态超阈值');
 
+-- ════════════════════════════════════════════════════════════════
+-- 20260408-002  合约供应量快照（CoinGecko）+ OI持仓量快照
+-- ════════════════════════════════════════════════════════════════
+
 -- ── 合约代币供应量快照表（CoinGecko，12H 刷新）────────────────────────
 -- 用于市值计算：市值=价格×总量，流通市值=价格×流通量
 CREATE TABLE IF NOT EXISTS perp_supply_snapshot (
@@ -198,20 +221,4 @@ CREATE TABLE IF NOT EXISTS perp_open_interest (
     oi_usdt     DECIMAL(30,4)           COMMENT '持仓价值（USDT，= oi_coin × price）',
     fetched_at  DATETIME       NOT NULL COMMENT '快照时间',
     INDEX idx_exchange_symbol_time (exchange, symbol, fetched_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-
--- ── 链上持仓余额快照表 ──────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS onchain_holder_snapshot (
-    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
-    watch_id       BIGINT        NOT NULL COMMENT 'FK -> onchain_watch.id',
-    wallet_addr    VARCHAR(42)   NOT NULL COMMENT '钱包地址',
-    balance_raw    DECIMAL(40,0) NOT NULL COMMENT '原始余额（未除精度）',
-    balance_token  DECIMAL(30,6) NOT NULL COMMENT '余额（除精度后）',
-    price_usd      DECIMAL(20,8) COMMENT '快照时代币 USD 价格',
-    value_usd      DECIMAL(20,2) COMMENT '折算 USD 市值',
-    block_number   BIGINT        NOT NULL COMMENT '取余额时的区块高度',
-    snapped_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_watch_wallet (watch_id, wallet_addr),
-    INDEX idx_snapped_at   (snapped_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
