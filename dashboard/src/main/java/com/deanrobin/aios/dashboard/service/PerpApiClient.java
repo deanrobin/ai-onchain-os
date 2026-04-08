@@ -163,6 +163,112 @@ public class PerpApiClient {
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // Binance USDT-M Futures — 扩展接口
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * 获取单个品种的 24h 行情（价格涨跌幅、当前价格、成交额等）。
+     * GET /fapi/v1/ticker/24hr?symbol=BTCUSDT
+     * 关键字段：priceChangePercent / lastPrice / quoteVolume
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchBinanceTicker24h(String symbol) {
+        try {
+            Map<?, ?> resp = client(BINANCE_BASE)
+                    .get()
+                    .uri("/fapi/v1/ticker/24hr?symbol=" + symbol)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(TIMEOUT)
+                    .block();
+            if (resp != null) return (Map<String, Object>) resp;
+        } catch (Exception e) {
+            log.warn("⚠️ Binance ticker24h {} 失败: {}", symbol, e.getMessage());
+        }
+        return Map.of();
+    }
+
+    /**
+     * 获取指定品种的 K 线数据（倒序返回，最后一条为当前 bar，可能未收盘）。
+     * GET /fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=22
+     * 返回二维数组，每行索引：
+     *   0=开盘时间(ms)  1=开  2=高  3=低  4=收  5=基础量  6=收盘时间(ms)
+     *   7=计价量(USDT)  8=成交笔数  9=主动买入基础量  10=主动买入计价量
+     */
+    @SuppressWarnings("unchecked")
+    public List<List<Object>> fetchBinanceKlines(String symbol, String interval, int limit) {
+        try {
+            List<?> resp = client(BINANCE_BASE)
+                    .get()
+                    .uri("/fapi/v1/klines?symbol=" + symbol + "&interval=" + interval + "&limit=" + limit)
+                    .retrieve()
+                    .bodyToMono(List.class)
+                    .timeout(TIMEOUT)
+                    .block();
+            if (resp != null) return (List<List<Object>>) resp;
+        } catch (Exception e) {
+            log.warn("⚠️ Binance klines {}/{} 失败: {}", symbol, interval, e.getMessage());
+        }
+        return List.of();
+    }
+
+    /**
+     * 获取单个品种当前持仓量（OI）。
+     * GET /fapi/v1/openInterest?symbol=BTCUSDT
+     * 返回：symbol / openInterest（基础货币数量）/ time(ms)
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchBinanceOpenInterest(String symbol) {
+        try {
+            Map<?, ?> resp = client(BINANCE_BASE)
+                    .get()
+                    .uri("/fapi/v1/openInterest?symbol=" + symbol)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(TIMEOUT)
+                    .block();
+            if (resp != null) return (Map<String, Object>) resp;
+        } catch (Exception e) {
+            log.warn("⚠️ Binance openInterest {} 失败: {}", symbol, e.getMessage());
+        }
+        return Map.of();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CoinGecko 公开接口 — 供应量数据（无需 API Key）
+    // ═══════════════════════════════════════════════════════════════
+
+    private static final String COINGECKO_BASE = "https://api.coingecko.com";
+
+    /**
+     * 获取市值排名前 N 页（每页 250 个）的代币供应量数据。
+     * GET /api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page={page}
+     * 关键字段：symbol / id / circulating_supply / total_supply / max_supply
+     *
+     * 注：Binance 公开期货 API 不提供代币总量/流通量数据，因此使用 CoinGecko 补全。
+     *     免费接口有限速（约 10-30 次/min），12H 刷新一次即可。
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchCoinGeckoMarkets(int page) {
+        try {
+            String uri = "/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc" +
+                         "&per_page=250&page=" + page + "&sparkline=false&locale=en";
+            List<?> resp = client(COINGECKO_BASE)
+                    .get()
+                    .uri(uri)
+                    .header("Accept", "application/json")
+                    .retrieve()
+                    .bodyToMono(List.class)
+                    .timeout(Duration.ofSeconds(30))
+                    .block();
+            if (resp != null) return (List<Map<String, Object>>) resp;
+        } catch (Exception e) {
+            log.warn("⚠️ CoinGecko markets page={} 失败: {}", page, e.getMessage());
+        }
+        return List.of();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // Hyperliquid
     // ═══════════════════════════════════════════════════════════════
 

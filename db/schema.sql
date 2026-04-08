@@ -171,6 +171,36 @@ INSERT IGNORE INTO ticker_alert_blacklist (symbol, note) VALUES
     ('XRPUSDT',  '主流币，24h量常态超阈值'),
     ('DOGEUSDT', '主流币，24h量常态超阈值');
 
+-- ── 合约代币供应量快照表（CoinGecko，12H 刷新）────────────────────────
+-- 用于市值计算：市值=价格×总量，流通市值=价格×流通量
+CREATE TABLE IF NOT EXISTS perp_supply_snapshot (
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    base_currency       VARCHAR(20)   NOT NULL COMMENT '基础货币，如 BTC/ETH/SOL',
+    coingecko_id        VARCHAR(100)           COMMENT 'CoinGecko coin ID',
+    circulating_supply  DECIMAL(40,4)          COMMENT '流通量',
+    total_supply        DECIMAL(40,4)          COMMENT '总量（可能为NULL）',
+    max_supply          DECIMAL(40,4)          COMMENT '最大供应量',
+    fetched_at          DATETIME      NOT NULL  COMMENT '数据获取时间',
+    created_at          DATETIME      DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_base_currency (base_currency),
+    INDEX idx_fetched_at (fetched_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── 合约持仓量(OI)快照表 ─────────────────────────────────────────────
+-- 每5分钟快照一次，用于15分钟/4小时持仓变化对比
+-- 清理策略：保留 7 天
+CREATE TABLE IF NOT EXISTS perp_open_interest (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    exchange    VARCHAR(20)    NOT NULL COMMENT 'OKX / BINANCE',
+    symbol      VARCHAR(100)   NOT NULL COMMENT '合约代码，如 BTCUSDT',
+    oi_coin     DECIMAL(30,4)           COMMENT '持仓量（基础货币，如 BTC 数量）',
+    oi_usdt     DECIMAL(30,4)           COMMENT '持仓价值（USDT，= oi_coin × price）',
+    fetched_at  DATETIME       NOT NULL COMMENT '快照时间',
+    INDEX idx_exchange_symbol_time (exchange, symbol, fetched_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 -- ── 链上持仓余额快照表 ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS onchain_holder_snapshot (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
