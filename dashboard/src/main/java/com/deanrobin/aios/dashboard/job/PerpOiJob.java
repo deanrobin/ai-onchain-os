@@ -119,18 +119,18 @@ public class PerpOiJob {
         Map<String, PerpInstrument> allInst = instrumentRepo.findByExchangeAndIsActiveTrue("BINANCE")
                 .stream().collect(Collectors.toMap(PerpInstrument::getSymbol, p -> p, (a, b) -> a));
 
-        // 目标品种：watched ∪ Top50 成交量（保证行情 Top20 都有数据）
+        // 目标品种：watched ∪ 三榜 Top30（精准覆盖行情页全部可见品种，不采冷门合约）
         Set<String> targets = new LinkedHashSet<>();
         instrumentRepo.findByIsWatchedTrue().stream()
                 .filter(p -> "BINANCE".equals(p.getExchange()))
                 .map(PerpInstrument::getSymbol)
                 .forEach(targets::add);
-        binanceTickerRepo.findTop50ByVolume().stream()
-                .map(t -> t.getSymbol())
-                .forEach(targets::add);
+        binanceTickerRepo.findTop30ByVolume().stream() .map(t -> t.getSymbol()).forEach(targets::add);
+        binanceTickerRepo.findTop30ByGainers().stream().map(t -> t.getSymbol()).forEach(targets::add);
+        binanceTickerRepo.findTop30ByLosers().stream() .map(t -> t.getSymbol()).forEach(targets::add);
 
         if (targets.isEmpty()) return;
-        log.info("📡 Binance OI 开始采集 | 目标品种 {} 个", targets.size());
+        log.info("📡 Binance OI 开始采集 | 三榜 Top30 并集 {} 个品种", targets.size());
 
         int saved = 0;
         for (String symbol : targets) {
@@ -172,7 +172,7 @@ public class PerpOiJob {
                 log.warn("⚠️ Binance OI {} 失败: {}", symbol, e.getMessage());
             }
         }
-        log.info("📊 Binance OI 采集完成 | 更新 {} 条（watched + Top50 成交量）", saved);
+        log.info("📊 Binance OI 采集完成 | 更新 {} / {} 条", saved, targets.size());
     }
 
     private static void sleepMs(long ms) {
