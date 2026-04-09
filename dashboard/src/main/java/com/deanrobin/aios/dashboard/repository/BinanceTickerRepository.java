@@ -19,10 +19,6 @@ public interface BinanceTickerRepository extends JpaRepository<BinanceTicker, Lo
     @Query("SELECT t FROM BinanceTicker t ORDER BY t.quoteVolume DESC LIMIT 20")
     List<BinanceTicker> findTop20ByVolume();
 
-    /** Top 50 按成交额降序（供 OI 采集覆盖行情页所有可见品种）*/
-    @Query("SELECT t FROM BinanceTicker t ORDER BY t.quoteVolume DESC LIMIT 50")
-    List<BinanceTicker> findTop50ByVolume();
-
     /** Top 20 按24h涨幅降序（涨幅榜） */
     @Query("SELECT t FROM BinanceTicker t ORDER BY t.priceChangePct DESC LIMIT 20")
     List<BinanceTicker> findTop20ByGainers();
@@ -30,6 +26,16 @@ public interface BinanceTickerRepository extends JpaRepository<BinanceTicker, Lo
     /** Top 20 按24h涨幅升序（跌幅榜） */
     @Query("SELECT t FROM BinanceTicker t ORDER BY t.priceChangePct ASC LIMIT 20")
     List<BinanceTicker> findTop20ByLosers();
+
+    /** OI 采集专用：三榜 Top30，PerpOiJob 取并集后精准覆盖行情页可见品种 */
+    @Query("SELECT t FROM BinanceTicker t ORDER BY t.quoteVolume    DESC LIMIT 30")
+    List<BinanceTicker> findTop30ByVolume();
+
+    @Query("SELECT t FROM BinanceTicker t ORDER BY t.priceChangePct DESC LIMIT 30")
+    List<BinanceTicker> findTop30ByGainers();
+
+    @Query("SELECT t FROM BinanceTicker t ORDER BY t.priceChangePct ASC  LIMIT 30")
+    List<BinanceTicker> findTop30ByLosers();
 
     /** 删除不在活跃品种集合中的旧记录（清理已下线合约） */
     @Transactional
