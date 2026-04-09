@@ -1,5 +1,6 @@
 package com.deanrobin.aios.dashboard.job;
 
+import com.deanrobin.aios.dashboard.model.BinanceTicker;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.model.PerpOiAlert;
 import com.deanrobin.aios.dashboard.model.PerpOpenInterest;
@@ -117,6 +118,11 @@ public class PerpOiJob {
         Map<String, PerpInstrument> allInst = instrumentRepo.findByExchangeAndIsActiveTrue("BINANCE")
                 .stream().collect(Collectors.toMap(PerpInstrument::getSymbol, p -> p, (a, b) -> a));
 
+        // 预加载 binance_ticker 全量价格（覆盖所有品种，解决 price_ticker 只有 4 币的问题）
+        Map<String, BigDecimal> tickerPrices = binanceTickerRepo.findAllWithPrice()
+                .stream().collect(Collectors.toMap(BinanceTicker::getSymbol,
+                        BinanceTicker::getLastPrice, (a, b) -> a));
+
         // 目标品种：watched ∪ 三榜 Top30（精准覆盖行情页全部可见品种，不采冷门合约）
         Set<String> targets = new LinkedHashSet<>();
         instrumentRepo.findByIsWatchedTrue().stream()
@@ -140,9 +146,13 @@ public class PerpOiJob {
                 BigDecimal oi = parseBD(resp.get("openInterest"));
                 if (oi == null) { sleepMs(DELAY_MS); continue; }
 
-                String base = (inst != null && inst.getBaseCurrency() != null)
-                        ? inst.getBaseCurrency() : symbol.replace("USDT", "");
-                BigDecimal priceUsd = getPrice(base);
+                // 优先用 binance_ticker 实时价格（全量），回退 price_ticker
+                BigDecimal priceUsd = tickerPrices.get(symbol);
+                if (priceUsd == null) {
+                    String base = (inst != null && inst.getBaseCurrency() != null)
+                            ? inst.getBaseCurrency() : symbol.replace("USDT", "");
+                    priceUsd = getPrice(base);
+                }
                 BigDecimal oiUsd = (priceUsd != null) ? oi.multiply(priceUsd) : null;
 
                 PerpOpenInterest snap = new PerpOpenInterest();
