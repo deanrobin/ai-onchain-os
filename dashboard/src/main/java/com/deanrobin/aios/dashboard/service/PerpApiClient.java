@@ -212,28 +212,6 @@ public class PerpApiClient {
         return List.of();
     }
 
-    /**
-     * 获取单个品种当前持仓量（OI）。
-     * GET /fapi/v1/openInterest?symbol=BTCUSDT
-     * 返回：symbol / openInterest（基础货币数量）/ time(ms)
-     */
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> fetchBinanceOpenInterest(String symbol) {
-        try {
-            Map<?, ?> resp = client(BINANCE_BASE)
-                    .get()
-                    .uri("/fapi/v1/openInterest?symbol=" + symbol)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .timeout(TIMEOUT)
-                    .block();
-            if (resp != null) return (Map<String, Object>) resp;
-        } catch (Exception e) {
-            log.warn("⚠️ Binance openInterest {} 失败: {}", symbol, e.getMessage());
-        }
-        return Map.of();
-    }
-
     // ═══════════════════════════════════════════════════════════════
     // CoinGecko 公开接口 — 供应量数据（无需 API Key）
     // ═══════════════════════════════════════════════════════════════
