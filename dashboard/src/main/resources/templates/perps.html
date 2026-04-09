@@ -62,6 +62,73 @@
 .oi-chg-neg { color: var(--red);   font-weight: 600; }
 .oi-chg-neu { color: var(--t3); }
 
+/* ── 特别关注区 ── */
+.watch-section {
+    margin-top: 28px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-card);
+    box-shadow: var(--sh-0);
+}
+.watch-section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, rgba(239,68,68,.06) 0%, transparent 70%);
+}
+.watch-section-title {
+    font-size: .9rem; font-weight: 800; color: var(--t1);
+    display: flex; align-items: center; gap: 8px;
+}
+.watch-badge-live {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(239,68,68,.1); color: #ef4444;
+    border: 1px solid rgba(239,68,68,.25); border-radius: 20px;
+    font-size: .68rem; font-weight: 700; padding: 1px 8px;
+}
+.watch-empty {
+    text-align: center; color: var(--t3); font-size: .82rem; padding: 22px;
+}
+.chg-pos { color: var(--green); font-weight: 600; }
+.chg-neg { color: var(--red);   font-weight: 600; }
+.chg-neu { color: var(--t3); }
+.btn-watch-snap {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 3px 10px; border-radius: 5px; font-size: .72rem; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--t2); cursor: pointer; transition: background .15s, color .15s;
+}
+.btn-watch-snap:hover { background: var(--blue-l); color: var(--blue); border-color: var(--blue-b); }
+
+/* ── 5min 快照弹窗 ── */
+.ws-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.45); z-index: 9999;
+    align-items: center; justify-content: center;
+}
+.ws-modal-overlay.active { display: flex; }
+.ws-modal {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    width: min(760px, 95vw); max-height: 82vh;
+    display: flex; flex-direction: column; overflow: hidden;
+}
+.ws-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.ws-modal-title { font-size: .95rem; font-weight: 800; color: var(--t1); }
+.ws-modal-close {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; cursor: pointer; font-size: 1rem; color: var(--t3);
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+}
+.ws-modal-close:hover { background: var(--bg-hover); }
+.ws-modal-body { flex: 1; overflow-y: auto; }
+
 /* ── 固定展示区 ── */
 .featured-grid {
     display: grid;
@@ -303,6 +370,61 @@
     </div>
 </div>
 
+<!-- ── 特别关注区 ─────────────────────────────────────────────────── -->
+<div class="watch-section" id="watch-section" style="display:none">
+    <div class="watch-section-head">
+        <div class="watch-section-title">
+            🔔 特别关注品种
+            <span class="watch-badge-live">
+                <span class="pulse-dot" style="width:6px;height:6px;flex-shrink:0"></span>
+                48h 监控中
+            </span>
+        </div>
+        <span style="font-size:.72rem;color:var(--t3)">每 5 分钟采集价格 / 涨跌 / 持仓量</span>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="table" style="margin:0;white-space:nowrap">
+            <thead><tr>
+                <th>交易所</th><th>合约</th>
+                <th>价格(USD)</th><th>24h涨跌</th>
+                <th>持仓量</th><th>快照时间</th>
+                <th>触发OI</th><th>关注到</th>
+                <th>操作</th>
+            </tr></thead>
+            <tbody id="watch-tbody">
+                <tr class="loading-row"><td colspan="9">⏳ 加载中…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ── 5min 快照弹窗 ─────────────────────────────────────────────────── -->
+<div class="ws-modal-overlay" id="ws-modal-overlay" onclick="closeWsModal(event)">
+    <div class="ws-modal" onclick="event.stopPropagation()">
+        <div class="ws-modal-head">
+            <div>
+                <div class="ws-modal-title" id="ws-modal-title">特别关注 5min 快照</div>
+                <div style="font-size:.72rem;color:var(--t3);margin-top:2px" id="ws-modal-sub">最近 48h | 每 5 分钟采集</div>
+            </div>
+            <button class="ws-modal-close" onclick="closeWsModal()">✕</button>
+        </div>
+        <div class="ws-modal-body">
+            <table class="table" style="margin:0">
+                <thead><tr>
+                    <th>时间</th>
+                    <th>价格(USD)</th>
+                    <th>24h涨跌</th>
+                    <th>持仓量(USD)</th>
+                    <th>OI环比</th>
+                </tr></thead>
+                <tbody id="ws-snap-body">
+                    <tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <!-- ── OI 历史弹窗 ─────────────────────────────────────────────────── -->
 <div class="oi-modal-overlay" id="oi-modal-overlay" onclick="closeOiModal(event)">
     <div class="oi-modal" onclick="event.stopPropagation()">
@@ -492,10 +614,7 @@ function fmtUsd(usd) {
     return '$' + usd.toFixed(0);
 }
 
-// ESC 关闭弹窗
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') document.getElementById('oi-modal-overlay').classList.remove('active');
-});
+// (ESC key handling is at the bottom of the script block)
 
 function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -512,6 +631,7 @@ function resetCountdown() {
         if (countdownVal <= 0) {
             loadFeatured();
             loadRates(currentExch);
+            loadWatchlist();
             resetCountdown();
         }
     }, 1000);
@@ -573,9 +693,132 @@ function sendReport() {
         });
 }
 
+// ══════════════════════════════════════════════════════════════
+// 特别关注区
+// ══════════════════════════════════════════════════════════════
+function loadWatchlist() {
+    fetch('/api/perps/oi/watchlist')
+        .then(r => r.json())
+        .then(list => {
+            const section = document.getElementById('watch-section');
+            const tbody   = document.getElementById('watch-tbody');
+            if (!list || !list.length) {
+                section.style.display = 'none';
+                return;
+            }
+            section.style.display = '';
+            tbody.innerHTML = list.map(item => {
+                const exchIcon = item.exchange === 'OKX' ? '🟡'
+                    : item.exchange === 'BINANCE' ? '🟠' : '🔵';
+                const label    = item.base ? escHtml(item.base) : escHtml(item.symbol);
+                const price    = item.priceUsd != null
+                    ? '$' + parseFloat(item.priceUsd).toLocaleString(undefined, {maximumFractionDigits: 2})
+                    : '<span class="t-dim">—</span>';
+                let chgHtml = '<span class="t-dim">—</span>';
+                if (item.change24h != null) {
+                    const c   = parseFloat(item.change24h);
+                    const cls = c > 0 ? 'chg-pos' : c < 0 ? 'chg-neg' : 'chg-neu';
+                    const pfx = c > 0 ? '+' : '';
+                    chgHtml   = `<span class="${cls}">${pfx}${c.toFixed(2)}%</span>`;
+                }
+                const latestOi   = item.latestOiUsd != null ? fmtUsd(parseFloat(item.latestOiUsd)) : '<span class="t-dim">—</span>';
+                const snappedAt  = item.snappedAt   ? escHtml(item.snappedAt)  : '—';
+                const alertOi    = item.alertOiUsd  != null ? fmtUsd(parseFloat(item.alertOiUsd)) : '—';
+                const watchUntil = item.watchUntil  ? escHtml(item.watchUntil) : '—';
+                const sym        = escHtml(item.symbol || '');
+                const exch       = escHtml(item.exchange || '');
+                return `<tr>
+                    <td class="t-dim" style="font-size:.78rem">${exchIcon} ${exch}</td>
+                    <td class="mono fw-7" style="font-size:.8rem">${label}<br>
+                        <span class="t-dim" style="font-size:.67rem">${sym}</span>
+                    </td>
+                    <td class="mono" style="font-size:.82rem">${price}</td>
+                    <td>${chgHtml}</td>
+                    <td class="oi-cell">${latestOi}</td>
+                    <td class="t-dim" style="font-size:.72rem">${snappedAt}</td>
+                    <td class="oi-cell" style="font-size:.72rem">${alertOi}</td>
+                    <td class="t-dim" style="font-size:.72rem">${watchUntil}</td>
+                    <td><button class="btn-watch-snap" onclick="openWsModal('${exch}','${sym}')">📈 历史</button></td>
+                </tr>`;
+            }).join('');
+        })
+        .catch(() => {});
+}
+
+// ── 5min 快照弹窗 ─────────────────────────────────────────────
+let wsCurrentExch   = '';
+let wsCurrentSymbol = '';
+
+function openWsModal(exch, symbol) {
+    wsCurrentExch   = exch;
+    wsCurrentSymbol = symbol;
+    document.getElementById('ws-modal-title').textContent = symbol + ' 特别关注快照';
+    document.getElementById('ws-modal-overlay').classList.add('active');
+    loadWsSnap();
+}
+
+function closeWsModal(evt) {
+    if (evt && evt.target !== document.getElementById('ws-modal-overlay')) return;
+    document.getElementById('ws-modal-overlay').classList.remove('active');
+}
+
+function loadWsSnap() {
+    const tbody = document.getElementById('ws-snap-body');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr>';
+    const url = `/api/perps/oi/watchsnap?exchange=${encodeURIComponent(wsCurrentExch)}&symbol=${encodeURIComponent(wsCurrentSymbol)}`;
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            const rows = data.rows || [];
+            if (!rows.length) {
+                tbody.innerHTML = '<tr class="loading-row"><td colspan="5">暂无快照（Job 尚未采集或该品种刚进入关注期）</td></tr>';
+                return;
+            }
+            tbody.innerHTML = rows.map(r => {
+                const price = r.priceUsd != null
+                    ? '$' + parseFloat(r.priceUsd).toLocaleString(undefined, {maximumFractionDigits: 2})
+                    : '—';
+                let chgHtml = '<span class="oi-chg-neu">—</span>';
+                if (r.change24h != null) {
+                    const c   = parseFloat(r.change24h);
+                    const cls = c > 0 ? 'oi-chg-pos' : c < 0 ? 'oi-chg-neg' : 'oi-chg-neu';
+                    const pfx = c > 0 ? '+' : '';
+                    chgHtml   = `<span class="${cls}">${pfx}${c.toFixed(2)}%</span>`;
+                }
+                const oiUsd = r.oiUsd != null ? fmtUsd(parseFloat(r.oiUsd)) : '—';
+                let oiChgHtml = '<span class="oi-chg-neu">—</span>';
+                if (r.oiChgPct != null) {
+                    const c   = parseFloat(r.oiChgPct);
+                    const cls = c > 0 ? 'oi-chg-pos' : c < 0 ? 'oi-chg-neg' : 'oi-chg-neu';
+                    const pfx = c > 0 ? '+' : '';
+                    oiChgHtml = `<span class="${cls}">${pfx}${c.toFixed(2)}%</span>`;
+                }
+                return `<tr>
+                    <td class="t-dim" style="font-size:.78rem;white-space:nowrap">${escHtml(r.time || '—')}</td>
+                    <td class="mono" style="font-size:.8rem">${price}</td>
+                    <td>${chgHtml}</td>
+                    <td class="oi-cell">${oiUsd}</td>
+                    <td>${oiChgHtml}</td>
+                </tr>`;
+            }).join('');
+        })
+        .catch(() => {
+            tbody.innerHTML = '<tr class="loading-row"><td colspan="5">❌ 加载失败</td></tr>';
+        });
+}
+
+// ESC 也关闭快照弹窗
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        document.getElementById('oi-modal-overlay').classList.remove('active');
+        document.getElementById('ws-modal-overlay').classList.remove('active');
+    }
+});
+
 // ── 初始化 ───────────────────────────────────────────────────────
 loadFeatured();
 loadRates('OKX');
+loadWatchlist();
 // 其他两个交易所预加载（数据已在服务端，静默加载）
 setTimeout(() => loadRates('BINANCE'),     800);
 setTimeout(() => loadRates('HYPERLIQUID'), 1600);

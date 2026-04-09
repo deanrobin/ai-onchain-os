@@ -1,10 +1,13 @@
 package com.deanrobin.aios.dashboard.job;
 
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
+import com.deanrobin.aios.dashboard.model.PerpOiAlert;
 import com.deanrobin.aios.dashboard.model.PerpOpenInterest;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
+import com.deanrobin.aios.dashboard.repository.PerpOiAlertRepository;
 import com.deanrobin.aios.dashboard.repository.PerpOpenInterestRepository;
 import com.deanrobin.aios.dashboard.repository.PriceTickerRepository;
+import com.deanrobin.aios.dashboard.service.PerpAlertService;
 import com.deanrobin.aios.dashboard.service.PerpApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -22,6 +25,9 @@ import java.util.stream.Collectors;
  * 每 15 分钟执行一次，采集后存入 perp_open_interest 表，
  * 同时更新 perp_instrument 的 latest_oi / latest_oi_usd 缓存字段。
  *
+ * 采集完成后检查 OI 是否 >= 5000万 USD（OI_THRESHOLD），
+ * 满足条件且 48h 内未告警 → 写入 perp_oi_alert + 发飞书。
+ *
  * - OKX：批量获取所有 USDT 永续合约持仓量（一次 API 调用）
  * - Binance：仅采集 is_watched=true 品种（需逐个请求，数量少）
  *
@@ -32,12 +38,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PerpOiJob {
 
+    /** OI 突破阈值：5000万 USD */
+    static final BigDecimal OI_THRESHOLD = new BigDecimal("50000000");
+
     private static final long DELAY_MS = 500L;
 
     private final PerpApiClient              perpApiClient;
-    private final PerpInstrumentRepository  instrumentRepo;
+    private final PerpInstrumentRepository   instrumentRepo;
     private final PerpOpenInterestRepository oiRepo;
-    private final PriceTickerRepository     priceRepo;
+    private final PerpOiAlertRepository      alertRepo;
+    private final PerpAlertService           perpAlertService;
+    private final PriceTickerRepository      priceRepo;
 
     /**
      * 每 15 分钟采集一次持仓量。
@@ -91,6 +102,9 @@ public class PerpOiJob {
             inst.setLatestOiUpdatedAt(now);
             instrumentRepo.save(inst);
             saved++;
+
+            // ── 阈值检测：是否触发特别关注 ──
+            checkAndAlert("OKX", inst, oiUsd, now);
         }
         log.info("📊 OKX OI 采集完成 | 更新 {} 条", saved);
     }
@@ -126,6 +140,8 @@ public class PerpOiJob {
                 inst.setLatestOiUpdatedAt(now);
                 instrumentRepo.save(inst);
                 saved++;
+
+                checkAndAlert("BINANCE", inst, oiUsd, now);
                 Thread.sleep(DELAY_MS);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
@@ -135,6 +151,30 @@ public class PerpOiJob {
             }
         }
         if (saved > 0) log.info("📊 Binance OI 采集完成 | 更新 {} 条", saved);
+    }
+
+    // ─── 阈值检测：OI >= 5000万 且 48h 内未告警 → 触发 ─────────────────
+    private void checkAndAlert(String exchange, PerpInstrument inst, BigDecimal oiUsd, LocalDateTime now) {
+        if (oiUsd == null || oiUsd.compareTo(OI_THRESHOLD) < 0) return;
+
+        // 检查是否已存在仍在有效期内的告警（watch_until > now）
+        boolean activeWatch = alertRepo.existsByExchangeAndSymbolAndWatchUntilAfter(
+                exchange, inst.getSymbol(), now);
+        if (activeWatch) return;  // 48h 冷却中，跳过
+
+        // 写入告警记录，watch_until = now + 48h
+        PerpOiAlert alert = new PerpOiAlert();
+        alert.setExchange(exchange);
+        alert.setSymbol(inst.getSymbol());
+        alert.setOiUsd(oiUsd);
+        alert.setAlertedAt(now);
+        alert.setWatchUntil(now.plusHours(48));
+        alertRepo.save(alert);
+
+        // 发飞书告警
+        perpAlertService.sendOiBreakAlert(exchange, inst.getSymbol(),
+                inst.getBaseCurrency(), oiUsd);
+        log.info("🚨 OI突破5000万 | {}:{} | OI_USD={}", exchange, inst.getSymbol(), oiUsd);
     }
 
     // ─── 读取当前价格（从 price_ticker 表）───────────────────────────────

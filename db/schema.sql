@@ -121,6 +121,38 @@ CREATE TABLE IF NOT EXISTS kline_bar (
     INDEX idx_open_time  (open_time)
 );
 
+-- ── OI 突破告警 + 特别关注记录表 ────────────────────────────────────────
+-- 当持仓量(OI) USD >= 5000万时触发，48h内同品种不重复告警。
+-- watch_until = alerted_at + 48h，作为特别关注截止时间。
+-- 48h到期后若 OI 仍 >= 5000万，PerpOiJob 重新创建记录续期。
+CREATE TABLE IF NOT EXISTS perp_oi_alert (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    exchange    VARCHAR(20)    NOT NULL COMMENT 'OKX / BINANCE / HYPERLIQUID',
+    symbol      VARCHAR(100)   NOT NULL COMMENT '合约代码',
+    oi_usd      DECIMAL(30,4)           COMMENT '触发时持仓量 USD',
+    alerted_at  DATETIME       NOT NULL COMMENT '告警时间',
+    watch_until DATETIME       NOT NULL COMMENT '特别关注截止时间（alerted_at + 48h）',
+    INDEX idx_exch_sym (exchange, symbol),
+    INDEX idx_watch_until (watch_until),
+    INDEX idx_alerted_at (alerted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── 特别关注品种 5 分钟快照表 ──────────────────────────────────────────
+-- 处于特别关注期的品种每 5 分钟记录一次价格/涨跌/持仓量，供事后复盘。
+-- 清理策略：凌晨 01:15 删除 7 天前的数据。
+CREATE TABLE IF NOT EXISTS perp_oi_watch_snapshot (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    exchange    VARCHAR(20)    NOT NULL,
+    symbol      VARCHAR(100)   NOT NULL,
+    price_usd   DECIMAL(30,8)           COMMENT '当前价格（USD）',
+    change_24h  DECIMAL(10,4)           COMMENT '24h 涨跌幅（%）',
+    oi_usd      DECIMAL(30,4)           COMMENT '持仓量 USD',
+    snapped_at  DATETIME       NOT NULL,
+    INDEX idx_exch_sym_time (exchange, symbol, snapped_at),
+    INDEX idx_snapped_at (snapped_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 -- 给 perp_instrument 增加 OI 缓存列（已有表 ALTER）
 ALTER TABLE perp_instrument
     ADD COLUMN IF NOT EXISTS latest_oi            DECIMAL(30,4) COMMENT '最新持仓量（基础货币；HL 为 USD）',

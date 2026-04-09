@@ -2,11 +2,15 @@ package com.deanrobin.aios.dashboard.controller;
 
 import com.deanrobin.aios.dashboard.model.BinanceTicker;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
+import com.deanrobin.aios.dashboard.model.PerpOiAlert;
+import com.deanrobin.aios.dashboard.model.PerpOiWatchSnapshot;
 import com.deanrobin.aios.dashboard.model.PerpOpenInterest;
 import com.deanrobin.aios.dashboard.model.PriceTicker;
 import com.deanrobin.aios.dashboard.model.SmartMoneySignal;
 import com.deanrobin.aios.dashboard.repository.BinanceTickerRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
+import com.deanrobin.aios.dashboard.repository.PerpOiAlertRepository;
+import com.deanrobin.aios.dashboard.repository.PerpOiWatchSnapshotRepository;
 import com.deanrobin.aios.dashboard.repository.PerpOpenInterestRepository;
 import com.deanrobin.aios.dashboard.repository.PriceTickerRepository;
 import com.deanrobin.aios.dashboard.service.PerpAlertService;
@@ -21,6 +25,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 /** REST endpoints for AJAX calls from frontend */
@@ -29,11 +34,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ApiController {
 
-    private final PerpService                  perpService;
-    private final PerpAlertService             perpAlertService;
-    private final PerpInstrumentRepository     perpInstrumentRepo;
-    private final PerpOpenInterestRepository   oiRepo;
-    private final SmartMoneyService            smartMoneyService;
+    private final PerpService                   perpService;
+    private final PerpAlertService              perpAlertService;
+    private final PerpInstrumentRepository      perpInstrumentRepo;
+    private final PerpOpenInterestRepository    oiRepo;
+    private final PerpOiAlertRepository         perpOiAlertRepo;
+    private final PerpOiWatchSnapshotRepository watchSnapRepo;
+    private final SmartMoneyService             smartMoneyService;
     private final com.deanrobin.aios.dashboard.repository.PumpTokenRepository          pumpTokenRepo;
     private final com.deanrobin.aios.dashboard.repository.PumpMarketCapSnapshotRepository snapshotRepo;
     private final com.deanrobin.aios.dashboard.service.PumpPortalClient                pumpPortalClient;
@@ -372,6 +379,87 @@ public class ApiController {
         result.put("exchange", ex);
         result.put("symbol",   sym);
         result.put("period",   period);
+        result.put("rows",     rows);
+        result.put("total",    rows.size());
+        return result;
+    }
+
+    /**
+     * GET /api/perps/oi/watchlist
+     * 返回当前所有处于特别关注期（watch_until > now）的品种，附带最新 5 分钟快照数据。
+     */
+    @GetMapping("/perps/oi/watchlist")
+    public List<Map<String, Object>> oiWatchlist() {
+        LocalDateTime now = LocalDateTime.now();
+        List<PerpOiAlert> active = perpOiAlertRepo.findActiveWatches(now);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd HH:mm");
+        return active.stream().map(alert -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("exchange",   alert.getExchange());
+            m.put("symbol",     alert.getSymbol());
+            m.put("alertOiUsd", alert.getOiUsd());
+            m.put("alertedAt",  alert.getAlertedAt().format(fmt));
+            m.put("watchUntil", alert.getWatchUntil().format(fmt));
+            // baseCurrency
+            perpInstrumentRepo.findByExchangeAndSymbol(alert.getExchange(), alert.getSymbol())
+                    .ifPresent(inst -> m.put("base", inst.getBaseCurrency()));
+            // 最新快照
+            watchSnapRepo.findTopByExchangeAndSymbolOrderBySnappedAtDesc(
+                            alert.getExchange(), alert.getSymbol())
+                    .ifPresent(snap -> {
+                        m.put("priceUsd",    snap.getPriceUsd());
+                        m.put("change24h",   snap.getChange24h());
+                        m.put("latestOiUsd", snap.getOiUsd());
+                        m.put("snappedAt",   snap.getSnappedAt().format(fmt));
+                    });
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * GET /api/perps/oi/watchsnap?exchange=OKX&symbol=BTC-USDT-SWAP
+     * 返回指定品种最近 48h 的 5 分钟快照，最新在前，附带 OI 环比变化 %。
+     */
+    @GetMapping("/perps/oi/watchsnap")
+    public Map<String, Object> oiWatchSnap(
+            @RequestParam String exchange,
+            @RequestParam String symbol) {
+        String ex  = exchange.toUpperCase();
+        String sym = symbol.replaceAll("[^A-Za-z0-9\\-_.]", "");
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(48);
+
+        // repo 返回 desc，反转 → asc 以便计算环比
+        List<PerpOiWatchSnapshot> desc = watchSnapRepo
+                .findByExchangeAndSymbolAndSnappedAtAfterOrderBySnappedAtDesc(ex, sym, cutoff);
+        List<PerpOiWatchSnapshot> asc = new ArrayList<>(desc);
+        Collections.reverse(asc);
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd HH:mm");
+        List<Map<String, Object>> rows = new ArrayList<>();
+        PerpOiWatchSnapshot prev = null;
+        for (PerpOiWatchSnapshot snap : asc) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("time",      snap.getSnappedAt().format(fmt));
+            row.put("priceUsd",  snap.getPriceUsd());
+            row.put("change24h", snap.getChange24h());
+            row.put("oiUsd",     snap.getOiUsd());
+            if (prev != null && prev.getOiUsd() != null && snap.getOiUsd() != null
+                    && prev.getOiUsd().compareTo(java.math.BigDecimal.ZERO) != 0) {
+                double chg = snap.getOiUsd().subtract(prev.getOiUsd())
+                        .divide(prev.getOiUsd(), 6, java.math.RoundingMode.HALF_UP)
+                        .doubleValue() * 100;
+                row.put("oiChgPct", Math.round(chg * 100.0) / 100.0);
+            } else {
+                row.put("oiChgPct", null);
+            }
+            rows.add(row);
+            prev = snap;
+        }
+        Collections.reverse(rows);  // 最新在前
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("exchange", ex);
+        result.put("symbol",   sym);
         result.put("rows",     rows);
         result.put("total",    rows.size());
         return result;

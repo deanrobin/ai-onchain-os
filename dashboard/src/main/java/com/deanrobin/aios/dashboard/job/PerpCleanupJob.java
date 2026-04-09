@@ -2,6 +2,7 @@ package com.deanrobin.aios.dashboard.job;
 
 import com.deanrobin.aios.dashboard.repository.PerpFundingRateRepository;
 import com.deanrobin.aios.dashboard.repository.PerpOpenInterestRepository;
+import com.deanrobin.aios.dashboard.repository.PerpOiWatchSnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -10,9 +11,15 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 /**
- * 每天 00:30 清理旧快照数据：
- * - perp_funding_rate：保留 5 天
- * - perp_open_interest：保留 7 天
+ * Perps 数据清理 Job，两个定时任务：
+ *
+ * 00:35 清理旧快照：
+ *   - perp_funding_rate    → 保留 5 天
+ *   - perp_open_interest   → 保留 7 天
+ *
+ * 01:15 清理特别关注快照：
+ *   - perp_oi_watch_snapshot → 保留 7 天
+ *
  * 每次最多删 1000 条（防止长事务锁表），循环直到全部清理完。
  */
 @Log4j2
@@ -20,9 +27,11 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class PerpCleanupJob {
 
-    private final PerpFundingRateRepository  fundingRateRepo;
-    private final PerpOpenInterestRepository oiRepo;
+    private final PerpFundingRateRepository      fundingRateRepo;
+    private final PerpOpenInterestRepository     oiRepo;
+    private final PerpOiWatchSnapshotRepository  watchSnapRepo;
 
+    /** 00:35 清理资金费率 + OI 快照 */
     @Scheduled(cron = "0 35 0 * * *", zone = "Asia/Shanghai")
     public void cleanOldSnapshots() {
         // ── 资金费率：保留 5 天 ──
@@ -42,5 +51,17 @@ public class PerpCleanupJob {
             oiTotal  += oiDeleted;
         } while (oiDeleted == 1000);
         if (oiTotal > 0) log.info("🧹 持仓量快照清理 {} 条（7天前）", oiTotal);
+    }
+
+    /** 01:15 清理特别关注 5min 快照（7天前数据） */
+    @Scheduled(cron = "0 15 1 * * *", zone = "Asia/Shanghai")
+    public void cleanWatchSnapshots() {
+        LocalDateTime before = LocalDateTime.now().minusDays(7);
+        int total = 0, deleted;
+        do {
+            deleted = watchSnapRepo.deleteOldSnapshots(before);
+            total  += deleted;
+        } while (deleted == 1000);
+        if (total > 0) log.info("🧹 特别关注快照清理 {} 条（7天前）", total);
     }
 }
