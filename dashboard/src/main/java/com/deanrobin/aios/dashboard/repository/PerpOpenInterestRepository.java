@@ -41,10 +41,16 @@ public interface PerpOpenInterestRepository extends JpaRepository<PerpOpenIntere
     List<PerpOpenInterest> findByExchangeAndSymbolAndFetchedAtAfterOrderByFetchedAtAsc(
             String exchange, String symbol, LocalDateTime after);
 
-    /** 清理 before 之前的旧快照，每次最多删 1000 条防止长事务 */
+    /** 清理 before 之前的旧快照，每次最多删 1000 条防止长事务（PerpCleanupJob 使用） */
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM perp_open_interest WHERE fetched_at < :before LIMIT 1000",
            nativeQuery = true)
     int deleteOldSnapshots(@Param("before") LocalDateTime before);
+
+    /** 清理 cutoff 之前的所有 OI 快照（BinanceContractAlertJob 使用） */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM PerpOpenInterest o WHERE o.fetchedAt < :cutoff")
+    int deleteByFetchedAtBefore(@Param("cutoff") LocalDateTime cutoff);
 }
