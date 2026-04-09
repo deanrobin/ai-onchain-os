@@ -304,13 +304,72 @@ public class PerpApiClient {
                 Map<?, ?> ctx   = (Map<?, ?>) ctxList.get(i);
                 String name    = String.valueOf(asset.get("name"));
                 String funding = ctx.get("funding") != null ? String.valueOf(ctx.get("funding")) : null;
-                result.add(new HyperliquidAsset(name, funding));
+                String oi      = ctx.get("openInterest") != null ? String.valueOf(ctx.get("openInterest")) : null;
+                result.add(new HyperliquidAsset(name, funding, oi));
             }
             return result;
         } catch (Exception e) {
             log.error("❌ Hyperliquid fetchAll 失败: {}", e.getMessage());
         }
         return List.of();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // OKX Open Interest
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * 批量获取 OKX 所有永续合约当前持仓量（一次返回全部）。
+     * GET /api/v5/public/open-interest?instType=SWAP
+     * 返回列表，每项含 instId / oi（合约张数）/ oiCcy（基础货币数量）/ ts（毫秒时间戳）
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> fetchOkxOpenInterestAll() {
+        try {
+            Map<?, ?> resp = client(OKX_BASE)
+                    .get()
+                    .uri("/api/v5/public/open-interest?instType=SWAP")
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(TIMEOUT)
+                    .block();
+            if (resp == null || !"0".equals(String.valueOf(resp.get("code")))) {
+                log.warn("⚠️ OKX open-interest 返回异常: {}", resp);
+                return List.of();
+            }
+            Object data = resp.get("data");
+            if (data instanceof List<?> list) return (List<Map<String, Object>>) list;
+        } catch (Exception e) {
+            log.error("❌ OKX fetchOpenInterestAll 失败: {}", e.getMessage());
+        }
+        return List.of();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Binance Open Interest
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * 获取单个 Binance USDT-M 永续合约的当前持仓量。
+     * GET /fapi/v1/openInterest?symbol=BTCUSDT
+     * 返回 Map 含 openInterest（基础资产数量）/ symbol / time
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchBinanceOpenInterest(String symbol) {
+        try {
+            Map<?, ?> resp = client(BINANCE_BASE)
+                    .get()
+                    .uri("/fapi/v1/openInterest?symbol=" + symbol)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(TIMEOUT)
+                    .block();
+            if (resp == null) return Map.of();
+            return (Map<String, Object>) resp;
+        } catch (Exception e) {
+            log.warn("⚠️ Binance openInterest {} 失败: {}", symbol, e.getMessage());
+        }
+        return Map.of();
     }
 
     // ─── 工具：毫秒时间戳 → LocalDateTime ───────────────────────────
@@ -325,5 +384,5 @@ public class PerpApiClient {
     }
 
     // ─── Hyperliquid 品种数据 VO ─────────────────────────────────
-    public record HyperliquidAsset(String name, String fundingRate) {}
+    public record HyperliquidAsset(String name, String fundingRate, String openInterest) {}
 }

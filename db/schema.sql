@@ -121,6 +121,12 @@ CREATE TABLE IF NOT EXISTS kline_bar (
     INDEX idx_open_time  (open_time)
 );
 
+-- 给 perp_instrument 增加 OI 缓存列（已有表 ALTER）
+ALTER TABLE perp_instrument
+    ADD COLUMN IF NOT EXISTS latest_oi            DECIMAL(30,4) COMMENT '最新持仓量（基础货币；HL 为 USD）',
+    ADD COLUMN IF NOT EXISTS latest_oi_usd        DECIMAL(30,4) COMMENT '最新持仓量 USD 估算',
+    ADD COLUMN IF NOT EXISTS latest_oi_updated_at DATETIME      COMMENT '持仓量更新时间';
+
 -- ── 链上持仓监控任务表 ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS onchain_watch (
     id               BIGINT AUTO_INCREMENT PRIMARY KEY,
