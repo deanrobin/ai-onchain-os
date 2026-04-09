@@ -37,6 +37,10 @@ public interface BinanceTickerRepository extends JpaRepository<BinanceTicker, Lo
     @Query("SELECT t FROM BinanceTicker t ORDER BY t.priceChangePct ASC  LIMIT 30")
     List<BinanceTicker> findTop30ByLosers();
 
+    /** 全量 symbol → lastPrice（供 OI 计算使用，覆盖所有品种）*/
+    @Query("SELECT t FROM BinanceTicker t WHERE t.lastPrice IS NOT NULL")
+    List<BinanceTicker> findAllWithPrice();
+
     /** 删除不在活跃品种集合中的旧记录（清理已下线合约） */
     @Transactional
     @Modifying
