@@ -19,6 +19,10 @@ public interface BinanceTickerRepository extends JpaRepository<BinanceTicker, Lo
     @Query("SELECT t FROM BinanceTicker t ORDER BY t.quoteVolume DESC LIMIT 20")
     List<BinanceTicker> findTop20ByVolume();
 
+    /** Top 50 按成交额降序（供 OI 采集覆盖行情页所有可见品种）*/
+    @Query("SELECT t FROM BinanceTicker t ORDER BY t.quoteVolume DESC LIMIT 50")
+    List<BinanceTicker> findTop50ByVolume();
+
     /** Top 20 按24h涨幅降序（涨幅榜） */
     @Query("SELECT t FROM BinanceTicker t ORDER BY t.priceChangePct DESC LIMIT 20")
     List<BinanceTicker> findTop20ByGainers();

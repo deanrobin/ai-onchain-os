@@ -3,6 +3,7 @@ package com.deanrobin.aios.dashboard.job;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.model.PerpOiAlert;
 import com.deanrobin.aios.dashboard.model.PerpOpenInterest;
+import com.deanrobin.aios.dashboard.repository.BinanceTickerRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
 import com.deanrobin.aios.dashboard.repository.PerpOiAlertRepository;
 import com.deanrobin.aios.dashboard.repository.PerpOpenInterestRepository;
@@ -16,8 +17,10 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -29,7 +32,7 @@ import java.util.stream.Collectors;
  * 满足条件且 48h 内未告警 → 写入 perp_oi_alert + 发飞书。
  *
  * - OKX：批量获取所有 USDT 永续合约持仓量（一次 API 调用）
- * - Binance：仅采集 is_watched=true 品种（需逐个请求，数量少）
+ * - Binance：采集 is_watched=true 品种 ∪ 成交量 Top50 品种（确保行情页 OI 数据完整）
  *
  * ⚠️ 不加 @Transactional，避免长事务锁 DB
  */
@@ -41,7 +44,7 @@ public class PerpOiJob {
     /** OI 突破阈值：5000万 USD */
     static final BigDecimal OI_THRESHOLD = new BigDecimal("50000000");
 
-    private static final long DELAY_MS = 500L;
+    private static final long DELAY_MS = 200L;   // Binance OI 品种间间隔（fapi 限速宽松）
 
     private final PerpApiClient              perpApiClient;
     private final PerpInstrumentRepository   instrumentRepo;
@@ -49,6 +52,7 @@ public class PerpOiJob {
     private final PerpOiAlertRepository      alertRepo;
     private final PerpAlertService           perpAlertService;
     private final PriceTickerRepository      priceRepo;
+    private final BinanceTickerRepository    binanceTickerRepo;
 
     /**
      * 每 15 分钟采集一次持仓量。
@@ -109,48 +113,72 @@ public class PerpOiJob {
         log.info("📊 OKX OI 采集完成 | 更新 {} 条", saved);
     }
 
-    // ─── Binance：仅采集关注品种（逐个请求）─────────────────────────────
+    // ─── Binance：watched 品种 ∪ 成交量 Top50（确保行情页 OI 完整）─────────
     private void fetchBinanceOi(LocalDateTime now) {
-        List<PerpInstrument> watched = instrumentRepo.findByIsWatchedTrue().stream()
+        // 一次加载所有活跃 Binance perp_instrument，供 symbol 查询
+        Map<String, PerpInstrument> allInst = instrumentRepo.findByExchangeAndIsActiveTrue("BINANCE")
+                .stream().collect(Collectors.toMap(PerpInstrument::getSymbol, p -> p, (a, b) -> a));
+
+        // 目标品种：watched ∪ Top50 成交量（保证行情 Top20 都有数据）
+        Set<String> targets = new LinkedHashSet<>();
+        instrumentRepo.findByIsWatchedTrue().stream()
                 .filter(p -> "BINANCE".equals(p.getExchange()))
-                .collect(Collectors.toList());
-        if (watched.isEmpty()) return;
+                .map(PerpInstrument::getSymbol)
+                .forEach(targets::add);
+        binanceTickerRepo.findTop50ByVolume().stream()
+                .map(t -> t.getSymbol())
+                .forEach(targets::add);
+
+        if (targets.isEmpty()) return;
+        log.info("📡 Binance OI 开始采集 | 目标品种 {} 个", targets.size());
 
         int saved = 0;
-        for (PerpInstrument inst : watched) {
+        for (String symbol : targets) {
+            PerpInstrument inst = allInst.get(symbol);
             try {
-                Map<String, Object> resp = perpApiClient.fetchBinanceOpenInterest(inst.getSymbol());
-                if (resp.isEmpty()) continue;
+                log.info("📡 查询 BINANCE:{} 持仓情况...", symbol);
+                Map<String, Object> resp = perpApiClient.fetchBinanceOpenInterest(symbol);
+                if (resp.isEmpty()) { sleepMs(DELAY_MS); continue; }
                 BigDecimal oi = parseBD(resp.get("openInterest"));
-                if (oi == null) continue;
+                if (oi == null) { sleepMs(DELAY_MS); continue; }
 
-                BigDecimal priceUsd = getPrice(inst.getBaseCurrency());
+                String base = (inst != null && inst.getBaseCurrency() != null)
+                        ? inst.getBaseCurrency() : symbol.replace("USDT", "");
+                BigDecimal priceUsd = getPrice(base);
                 BigDecimal oiUsd = (priceUsd != null) ? oi.multiply(priceUsd) : null;
 
                 PerpOpenInterest snap = new PerpOpenInterest();
                 snap.setExchange("BINANCE");
-                snap.setSymbol(inst.getSymbol());
+                snap.setSymbol(symbol);
                 snap.setOiCoin(oi);
                 snap.setOiUsdt(oiUsd);
                 snap.setFetchedAt(now);
                 oiRepo.save(snap);
 
-                inst.setLatestOi(oi);
-                inst.setLatestOiUsd(oiUsd);
-                inst.setLatestOiUpdatedAt(now);
-                instrumentRepo.save(inst);
+                if (inst != null) {
+                    inst.setLatestOi(oi);
+                    inst.setLatestOiUsd(oiUsd);
+                    inst.setLatestOiUpdatedAt(now);
+                    instrumentRepo.save(inst);
+                    checkAndAlert("BINANCE", inst, oiUsd, now);
+                }
                 saved++;
-
-                checkAndAlert("BINANCE", inst, oiUsd, now);
-                Thread.sleep(DELAY_MS);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                break;
+                sleepMs(DELAY_MS);
             } catch (Exception e) {
-                log.warn("⚠️ Binance OI {} 失败: {}", inst.getSymbol(), e.getMessage());
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                log.warn("⚠️ Binance OI {} 失败: {}", symbol, e.getMessage());
             }
         }
-        if (saved > 0) log.info("📊 Binance OI 采集完成 | 更新 {} 条", saved);
+        log.info("📊 Binance OI 采集完成 | 更新 {} 条（watched + Top50 成交量）", saved);
+    }
+
+    private static void sleepMs(long ms) {
+        try { Thread.sleep(ms); } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     // ─── 阈值检测：OI >= 5000万 且 48h 内未告警 → 触发 ─────────────────
