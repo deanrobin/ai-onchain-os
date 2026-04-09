@@ -140,8 +140,7 @@ function renderTable(rows) {
             ? `font-family:'JetBrains Mono';color:${volColor};font-weight:700`
             : `font-family:'JetBrains Mono'`;
         const cnt    = r.tradeCount != null ? Number(r.tradeCount).toLocaleString() : '—';
-        const oiUsdt = parseFloat(r.oiUsdt) || 0;
-        const oiStr  = oiUsdt > 0 ? fmtOI(oiUsdt) : '<span class="oi-nil">—</span>';
+        const oiStr = fmtOI(parseFloat(r.oiUsdt) || 0);
         return `<tr>
             <td class="ps-3 ticker-rank">${i + 1}</td>
             <td>
@@ -176,11 +175,14 @@ function fmtVol(v) {
 }
 
 function fmtOI(v) {
-    if (!v) return '—';
-    if (v >= 1e9) return (v / 1e8).toFixed(2) + ' 亿';
-    if (v >= 1e7) return (v / 1e7).toFixed(2) + ' KW';
-    if (v >= 1e4) return (v / 1e4).toFixed(2) + ' 万';
-    return v.toFixed(0);
+    if (!v || v <= 0) return '<span class="oi-nil">—</span>';
+    let text;
+    if (v >= 1e8)      text = (v / 1e8).toFixed(2) + ' 亿';
+    else if (v >= 1e4) text = (v / 1e4).toFixed(2) + ' 万';
+    else               text = v.toFixed(0);
+    // 超过千万（1000万）标深橙色
+    if (v >= 1e7) return `<span style="color:#ea580c;font-weight:700">${text}</span>`;
+    return text;
 }
 
 function resetCountdown() {
