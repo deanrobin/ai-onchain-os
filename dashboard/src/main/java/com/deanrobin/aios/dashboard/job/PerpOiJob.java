@@ -25,14 +25,10 @@ import java.util.stream.Collectors;
 
 /**
  * 合约持仓量（Open Interest）定时采集 Job。
- * 每 15 分钟执行一次，采集后存入 perp_open_interest 表，
- * 同时更新 perp_instrument 的 latest_oi / latest_oi_usd 缓存字段。
  *
- * 采集完成后检查 OI 是否 >= 5000万 USD（OI_THRESHOLD），
- * 满足条件且 48h 内未告警 → 写入 perp_oi_alert + 发飞书。
- *
- * - OKX：批量获取所有 USDT 永续合约持仓量（一次 API 调用）
- * - Binance：采集 is_watched=true 品种 ∪ 成交量 Top50 品种（确保行情页 OI 数据完整）
+ * - OKX：每 15 分钟批量获取所有 USDT 永续合约（一次 API 调用）
+ * - Binance：每 5 分钟，采集 is_watched 品种 ∪ 三榜 Top30（保证行情页 OI 完整）
+ *   Binance 无批量 OI 接口，逐 symbol 请求；~60-90 个品种 × 200ms ≈ 12-18s/轮
  *
  * ⚠️ 不加 @Transactional，避免长事务锁 DB
  */
@@ -54,15 +50,16 @@ public class PerpOiJob {
     private final PriceTickerRepository      priceRepo;
     private final BinanceTickerRepository    binanceTickerRepo;
 
-    /**
-     * 每 15 分钟采集一次持仓量。
-     * initialDelay 120s：等待资金费率 Job 完成初始化后再启动。
-     */
+    /** OKX OI：每 15 分钟批量采集（一次 API 搞定全部品种）*/
     @Scheduled(initialDelay = 120_000, fixedDelay = 900_000)
-    public void fetchAll() {
-        LocalDateTime now = LocalDateTime.now();
-        fetchOkxOi(now);
-        fetchBinanceOi(now);
+    public void fetchOkxOiAll() {
+        fetchOkxOi(LocalDateTime.now());
+    }
+
+    /** Binance OI：每 5 分钟，覆盖 watched ∪ 三榜 Top30，保证行情页数据实时 */
+    @Scheduled(initialDelay = 120_000, fixedDelay = 300_000)
+    public void fetchBinanceOiAll() {
+        fetchBinanceOi(LocalDateTime.now());
     }
 
     // ─── OKX：批量获取所有品种 ─────────────────────────────────────────
@@ -113,7 +110,7 @@ public class PerpOiJob {
         log.info("📊 OKX OI 采集完成 | 更新 {} 条", saved);
     }
 
-    // ─── Binance：watched 品种 ∪ 成交量 Top50（确保行情页 OI 完整）─────────
+    // ─── Binance：watched ∪ 三榜 Top30（每 5 分钟，确保行情页 OI 完整）────────
     private void fetchBinanceOi(LocalDateTime now) {
         // 一次加载所有活跃 Binance perp_instrument，供 symbol 查询
         Map<String, PerpInstrument> allInst = instrumentRepo.findByExchangeAndIsActiveTrue("BINANCE")
