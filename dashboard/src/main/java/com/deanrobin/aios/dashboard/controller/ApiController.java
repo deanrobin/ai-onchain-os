@@ -527,6 +527,12 @@ public class ApiController {
             case "losers"  -> binanceTickerRepo.findTop20ByLosers();
             default        -> binanceTickerRepo.findTop20ByVolume();
         };
+        // 预加载 Binance OI（watched 品种），symbol → oiUsdt
+        Map<String, java.math.BigDecimal> oiMap = oiRepo.findLatestPerSymbol("BINANCE")
+                .stream().collect(Collectors.toMap(
+                        PerpOpenInterest::getSymbol,
+                        o -> o.getOiUsdt() != null ? o.getOiUsdt() : java.math.BigDecimal.ZERO,
+                        (a, b) -> a));
         List<Map<String, Object>> rows = list.stream().map(t -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("symbol",         t.getSymbol());
@@ -535,6 +541,7 @@ public class ApiController {
             m.put("changePct",      t.getPriceChangePct());
             m.put("quoteVolume",    t.getQuoteVolume());
             m.put("tradeCount",     t.getTradeCount());
+            m.put("oiUsdt",         oiMap.get(t.getSymbol()));
             m.put("fetchedAt",      t.getFetchedAt() != null
                     ? t.getFetchedAt().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")) : "—");
             return m;

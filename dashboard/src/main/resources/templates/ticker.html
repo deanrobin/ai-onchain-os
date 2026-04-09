@@ -35,6 +35,7 @@
 .ticker-col-price  { width: 120px; }
 .ticker-col-chg    { width: 90px; }
 .ticker-col-vol    { width: 120px; }
+.ticker-col-oi     { width: 110px; }
 .ticker-col-cnt    { width: 100px; }
 .ticker-rank   { color: var(--t3); font-size: .75rem; }
 .ticker-symbol { font-weight: 700; color: var(--t1); }
@@ -81,6 +82,7 @@
                 <col class="ticker-col-price">
                 <col class="ticker-col-chg">
                 <col class="ticker-col-vol">
+                <col class="ticker-col-oi">
                 <col class="ticker-col-cnt">
             </colgroup>
             <thead>
@@ -90,11 +92,12 @@
                     <th class="text-end">最新价</th>
                     <th class="text-end">24h涨跌</th>
                     <th class="text-end">24h成交额</th>
+                    <th class="text-end">持仓量(OI)</th>
                     <th class="text-end pe-3">成交笔数</th>
                 </tr>
             </thead>
             <tbody id="ticker-body">
-                <tr><td colspan="6" class="text-center text-muted py-4">加载中…</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-4">加载中…</td></tr>
             </tbody>
         </table>
     </div>
@@ -161,7 +164,7 @@ function loadTicker() {
 function renderTable(rows) {
     const tb = document.getElementById('ticker-body');
     if (!rows.length) {
-        tb.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">暂无数据</td></tr>';
+        tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">暂无数据</td></tr>';
         return;
     }
     tb.innerHTML = rows.map((r, i) => {
@@ -181,6 +184,8 @@ function renderTable(rows) {
             ? `font-family:'JetBrains Mono';color:${volColor};font-weight:700`
             : `font-family:'JetBrains Mono'`;
         const cnt    = r.tradeCount != null ? Number(r.tradeCount).toLocaleString() : '—';
+        const oiUsdt = parseFloat(r.oiUsdt) || 0;
+        const oiStr  = oiUsdt > 0 ? fmtOI(oiUsdt) : '<span class="oi-nil">—</span>';
         return `<tr>
             <td class="ps-3 ticker-rank">${i + 1}</td>
             <td>
@@ -190,6 +195,7 @@ function renderTable(rows) {
             <td class="text-end mono">${price}</td>
             <td class="text-end"><span style="font-family:'JetBrains Mono';color:${color};font-weight:${weight}">${pctStr}</span></td>
             <td class="text-end"><span style="${volStyle}">${volNum >= 5e7 ? '🔥 ' : ''}${vol}</span></td>
+            <td class="text-end mono" style="font-size:.82rem">${oiStr}</td>
             <td class="text-end pe-3 text-muted" style="font-size:.78rem">${cnt}</td>
         </tr>`;
     }).join('');

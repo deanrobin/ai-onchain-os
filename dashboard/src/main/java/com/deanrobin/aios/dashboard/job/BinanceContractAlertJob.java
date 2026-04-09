@@ -1,8 +1,10 @@
 package com.deanrobin.aios.dashboard.job;
 
+import com.deanrobin.aios.dashboard.model.BinanceTicker;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.model.PerpOpenInterest;
 import com.deanrobin.aios.dashboard.model.PerpSupplySnapshot;
+import com.deanrobin.aios.dashboard.repository.BinanceTickerRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
 import com.deanrobin.aios.dashboard.repository.PerpOpenInterestRepository;
 import com.deanrobin.aios.dashboard.repository.PerpSupplySnapshotRepository;
@@ -63,6 +65,7 @@ public class BinanceContractAlertJob {
     private final PerpInstrumentRepository   instrumentRepo;
     private final PerpOpenInterestRepository oiRepo;
     private final PerpSupplySnapshotRepository supplyRepo;
+    private final BinanceTickerRepository    binanceTickerRepo;
     private final WebClient.Builder          webClientBuilder;
 
     @Value("${perp.alert-url:}")
@@ -85,7 +88,7 @@ public class BinanceContractAlertJob {
         for (PerpInstrument inst : watched) {
             try {
                 processSymbol(inst, now);
-                sleepMs(300);
+                sleepMs(100);
             } catch (Exception e) {
                 log.warn("⚠️ BinanceContractAlert 处理 {} 失败: {}", inst.getSymbol(), e.getMessage());
             }
@@ -95,10 +98,19 @@ public class BinanceContractAlertJob {
     private void processSymbol(PerpInstrument inst, LocalDateTime now) {
         String symbol = inst.getSymbol();
 
-        // ── 1. 拉 24h Ticker（价格、涨跌幅）────────────────────────────
-        Map<String, Object> ticker = perpApiClient.fetchBinanceTicker24h(symbol);
-        double lastPrice          = parseDouble(ticker.get("lastPrice"));
-        double priceChangePct     = parseDouble(ticker.get("priceChangePercent"));
+        // ── 1. 读 24h Ticker（从 DB，BinanceTickerJob 每分钟更新，无需额外 API 调用）
+        double lastPrice, priceChangePct;
+        var tickerOpt = binanceTickerRepo.findBySymbol(symbol);
+        if (tickerOpt.isPresent()) {
+            BinanceTicker t = tickerOpt.get();
+            lastPrice      = t.getLastPrice()      != null ? t.getLastPrice().doubleValue()      : 0;
+            priceChangePct = t.getPriceChangePct() != null ? t.getPriceChangePct().doubleValue() : 0;
+        } else {
+            // DB 未命中（极少发生）→ 回退 API
+            Map<String, Object> ticker = perpApiClient.fetchBinanceTicker24h(symbol);
+            lastPrice      = parseDouble(ticker.get("lastPrice"));
+            priceChangePct = parseDouble(ticker.get("priceChangePercent"));
+        }
 
         // ── 2. 拉 22 根 1H K 线（最后一根可能未收盘）───────────────────
         List<List<Object>> klines = perpApiClient.fetchBinanceKlines(symbol, "1h", 22);
@@ -135,6 +147,7 @@ public class BinanceContractAlertJob {
 
     // ─── OI 快照 ─────────────────────────────────────────────────────
     private OiInfo snapshotOI(String symbol, double lastPrice, LocalDateTime now) {
+        log.info("📡 查询 {} 持仓情况...", symbol);
         Map<String, Object> oiResp = perpApiClient.fetchBinanceOpenInterest(symbol);
         if (oiResp.isEmpty()) return null;
 
