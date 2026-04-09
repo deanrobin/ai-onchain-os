@@ -15,6 +15,7 @@ public interface PerpOpenInterestRepository extends JpaRepository<PerpOpenIntere
 
     /**
      * 查询指定交易所每个品种最新的 OI 快照（每个 symbol 取 fetched_at 最大的那条）。
+     * 用于 /api/oi/binance 展示当前持仓状况。
      */
     @Query(value = "SELECT o.* FROM perp_open_interest o " +
                    "WHERE o.exchange = :exchange " +
@@ -36,11 +37,14 @@ public interface PerpOpenInterestRepository extends JpaRepository<PerpOpenIntere
             @Param("from")     LocalDateTime from,
             @Param("to")       LocalDateTime to);
 
-    /**
-     * 清理指定时间之前的 OI 快照。
-     */
+    /** 查询指定品种在某时间点之后的快照，按时间升序（用于 OI 历史弹窗分桶） */
+    List<PerpOpenInterest> findByExchangeAndSymbolAndFetchedAtAfterOrderByFetchedAtAsc(
+            String exchange, String symbol, LocalDateTime after);
+
+    /** 清理 before 之前的旧快照，每次最多删 1000 条防止长事务 */
     @Modifying
     @Transactional
-    @Query("DELETE FROM PerpOpenInterest o WHERE o.fetchedAt < :cutoff")
-    int deleteByFetchedAtBefore(@Param("cutoff") LocalDateTime cutoff);
+    @Query(value = "DELETE FROM perp_open_interest WHERE fetched_at < :before LIMIT 1000",
+           nativeQuery = true)
+    int deleteOldSnapshots(@Param("before") LocalDateTime before);
 }

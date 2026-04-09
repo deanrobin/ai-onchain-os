@@ -8,8 +8,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 合约持仓量(OI)快照 —— 每 5 分钟抓一次 watched 品种。
- * 保留 7 天，用于计算 15 分钟 / 4 小时持仓变化。
+ * 合约持仓量(OI)快照。
+ * Binance watched 品种每 5 分钟采集；OKX / Hyperliquid 每 15 分钟采集。
  */
 @Getter @Setter
 @Entity
@@ -26,7 +26,7 @@ public class PerpOpenInterest {
     @Column(nullable = false, length = 100)
     private String symbol;
 
-    /** 持仓量（基础货币单位，如 BTC 数量） */
+    /** 持仓量（基础货币单位，如 BTC 数量；Hyperliquid 为 USD 计价） */
     @Column(name = "oi_coin", precision = 30, scale = 4)
     private BigDecimal oiCoin;
 

@@ -208,6 +208,36 @@ public class PerpAlertService {
         }
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // 功能三：OI 突破 5000万 告警
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * 持仓量首次突破 5000万 USD 时调用，发送飞书通知。
+     * 48h 内同品种不重复（由 PerpOiJob 的 checkAndAlert 保证）。
+     */
+    public void sendOiBreakAlert(String exchange, String symbol, String baseCurrency, java.math.BigDecimal oiUsd) {
+        if (alertUrl == null || alertUrl.isBlank()) return;
+        String label = (baseCurrency != null && !baseCurrency.isBlank())
+                ? baseCurrency : symbol.split("[-/]")[0];
+        String oiFmt = formatUsd(oiUsd);
+        String text = String.format(
+                "🚨 合约持仓量突破 5000万 USD\n交易所：%s\n合约：%s（%s）\n当前持仓量：%s\n\n" +
+                "已进入 48h 特别关注模式\n每 5 分钟快照价格 / 涨跌 / 持仓量",
+                exchange, symbol, label, oiFmt);
+        sendFeishu(text);
+        log.info("🚨 OI突破告警飞书已发 | {}:{} | OI={}", exchange, symbol, oiFmt);
+    }
+
+    private String formatUsd(java.math.BigDecimal v) {
+        if (v == null) return "—";
+        double d = v.doubleValue();
+        if (d >= 1e9)  return String.format("$%.2fB", d / 1e9);
+        if (d >= 1e6)  return String.format("$%.1fM", d / 1e6);
+        if (d >= 1e3)  return String.format("$%.1fK", d / 1e3);
+        return String.format("$%.0f", d);
+    }
+
     private void sendSpikeAlert(String exchange, String symbol, double prev, double curr) {
         double diff   = curr - prev;
         String arrow  = diff > 0 ? "↑" : "↓";

@@ -2,8 +2,10 @@ package com.deanrobin.aios.dashboard.job;
 
 import com.deanrobin.aios.dashboard.model.PerpFundingRate;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
+import com.deanrobin.aios.dashboard.model.PerpOpenInterest;
 import com.deanrobin.aios.dashboard.repository.PerpFundingRateRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
+import com.deanrobin.aios.dashboard.repository.PerpOpenInterestRepository;
 import com.deanrobin.aios.dashboard.service.PerpAlertService;
 import com.deanrobin.aios.dashboard.service.PerpApiClient;
 import lombok.RequiredArgsConstructor;
@@ -38,11 +40,12 @@ public class HyperliquidPerpJob {
 
     private static final String EXCHANGE = "HYPERLIQUID";
 
-    private final PerpApiClient             perpApiClient;
-    private final PerpInstrumentRepository  instrumentRepo;
-    private final PerpFundingRateRepository fundingRateRepo;
-    private final PerpAlertService          perpAlertService;
-    private final WebClient.Builder         webClientBuilder;
+    private final PerpApiClient              perpApiClient;
+    private final PerpInstrumentRepository   instrumentRepo;
+    private final PerpFundingRateRepository  fundingRateRepo;
+    private final PerpOpenInterestRepository oiRepo;
+    private final PerpAlertService           perpAlertService;
+    private final WebClient.Builder          webClientBuilder;
 
     @Value("${perp.alert-url:}")
     private String alertUrl;
@@ -91,6 +94,22 @@ public class HyperliquidPerpJob {
 
             inst.setLatestFundingRate(rate);
             inst.setLatestFundingUpdatedAt(now);
+
+            // ── 持仓量（Hyperliquid openInterest 单位为 USD）──
+            BigDecimal oi = parseBD(asset.openInterest());
+            if (oi != null) {
+                PerpOpenInterest oiSnap = new PerpOpenInterest();
+                oiSnap.setExchange(EXCHANGE); oiSnap.setSymbol(symbol);
+                oiSnap.setOiCoin(oi);    // HL 的 OI 直接为 USD
+                oiSnap.setOiUsdt(oi);
+                oiSnap.setFetchedAt(now);
+                oiRepo.save(oiSnap);
+
+                inst.setLatestOi(oi);
+                inst.setLatestOiUsd(oi);
+                inst.setLatestOiUpdatedAt(now);
+            }
+
             instrumentRepo.save(inst);
             rateSaved++;
         }
