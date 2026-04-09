@@ -56,8 +56,9 @@ public class PerpOiJob {
         fetchOkxOi(LocalDateTime.now());
     }
 
-    /** Binance OI：每 5 分钟，覆盖 watched ∪ 三榜 Top30，保证行情页数据实时 */
-    @Scheduled(initialDelay = 120_000, fixedDelay = 300_000)
+    /** Binance OI：每 5 分钟，覆盖 watched ∪ 三榜 Top30，保证行情页数据实时
+     *  initialDelay 60s：BinanceTickerJob 30s 后启动，留 30s 缓冲确保 binance_ticker 有数据 */
+    @Scheduled(initialDelay = 60_000, fixedDelay = 300_000)
     public void fetchBinanceOiAll() {
         fetchBinanceOi(LocalDateTime.now());
     }
