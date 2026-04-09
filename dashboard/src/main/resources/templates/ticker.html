@@ -40,19 +40,7 @@
 .ticker-rank   { color: var(--t3); font-size: .75rem; }
 .ticker-symbol { font-weight: 700; color: var(--t1); }
 .ticker-base   { font-size: .72rem; color: var(--t3); margin-left: 4px; }
-
-/* OI 区域 */
-.oi-pos { color: var(--green); font-weight: 700; font-family: 'JetBrains Mono'; }
-.oi-neg { color: var(--red);   font-weight: 700; font-family: 'JetBrains Mono'; }
-.oi-nil { color: var(--t3);    font-size: .75rem; }
-.oi-table  { table-layout: fixed; width: 100%; }
-.oi-table th { font-size: .73rem; color: var(--t3); font-weight: 600; white-space: nowrap; }
-.oi-table td { font-size: .83rem; vertical-align: middle; }
-.oi-col-symbol { width: 130px; }
-.oi-col-oi     { width: 140px; }
-.oi-col-d15m   { width: 110px; }
-.oi-col-d4h    { width: 110px; }
-.oi-col-time   { width: 90px; }
+.oi-nil { color: var(--t3); font-size: .75rem; }
 </style>
 
 <!-- ── 页头 ────────────────────────────────────────────────────── -->
@@ -103,37 +91,6 @@
     </div>
 </div>
 
-<!-- ── 持仓量(OI)区域 ──────────────────────────────────────────── -->
-<div class="d-flex align-items-center gap-2 mt-4 mb-2">
-    <h6 class="mb-0">📊 合约持仓量 (OI)</h6>
-    <span class="text-muted" style="font-size:.72rem">Binance watched 品种 · 每 5 分钟更新</span>
-</div>
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0 oi-table">
-            <colgroup>
-                <col class="oi-col-symbol">
-                <col class="oi-col-oi">
-                <col class="oi-col-d15m">
-                <col class="oi-col-d4h">
-                <col class="oi-col-time">
-            </colgroup>
-            <thead>
-                <tr>
-                    <th class="ps-3">合约</th>
-                    <th class="text-end">持仓量(USDT)</th>
-                    <th class="text-end">15min变化</th>
-                    <th class="text-end">4H变化</th>
-                    <th class="text-end pe-3">更新时间</th>
-                </tr>
-            </thead>
-            <tbody id="oi-body">
-                <tr><td colspan="5" class="text-center text-muted py-4">加载中…</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
 <script>
 let currentSort = 'volume';
 let cdTimer;
@@ -157,7 +114,7 @@ function loadTicker() {
         })
         .catch(() => {
             document.getElementById('ticker-body').innerHTML =
-                '<tr><td colspan="6" class="text-center text-muted py-4">加载失败，请稍后重试</td></tr>';
+                '<tr><td colspan="7" class="text-center text-muted py-4">加载失败，请稍后重试</td></tr>';
         });
 }
 
@@ -175,10 +132,9 @@ function renderTable(rows) {
         const price  = fmtPrice(r.price);
         const volNum   = parseFloat(r.quoteVolume) || 0;
         const vol      = fmtVol(r.quoteVolume);
-        // 成交额分档配色：>1亿红、5kw~1亿橙、2kw~5kw蓝、<2kw默认
-        const volColor = volNum >= 1e8       ? '#ef4444'
-                       : volNum >= 5e7       ? '#f97316'
-                       : volNum >= 2e7       ? '#3b82f6'
+        const volColor = volNum >= 1e8 ? '#ef4444'
+                       : volNum >= 5e7 ? '#f97316'
+                       : volNum >= 2e7 ? '#3b82f6'
                        : '';
         const volStyle = volColor
             ? `font-family:'JetBrains Mono';color:${volColor};font-weight:700`
@@ -205,8 +161,8 @@ function fmtPrice(v) {
     if (v == null) return '—';
     const n = parseFloat(v);
     if (isNaN(n)) return '—';
-    if (n >= 1000)  return n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    if (n >= 1)     return n.toFixed(4);
+    if (n >= 1000) return n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (n >= 1)    return n.toFixed(4);
     return n.toFixed(6);
 }
 
@@ -214,9 +170,17 @@ function fmtVol(v) {
     if (v == null) return '—';
     const n = parseFloat(v);
     if (isNaN(n)) return '—';
-    if (n >= 1e8)  return (n / 1e8).toFixed(2) + ' 亿';
-    if (n >= 1e4)  return (n / 1e4).toFixed(2) + ' 万';
+    if (n >= 1e8) return (n / 1e8).toFixed(2) + ' 亿';
+    if (n >= 1e4) return (n / 1e4).toFixed(2) + ' 万';
     return n.toFixed(0);
+}
+
+function fmtOI(v) {
+    if (!v) return '—';
+    if (v >= 1e9) return (v / 1e8).toFixed(2) + ' 亿';
+    if (v >= 1e7) return (v / 1e7).toFixed(2) + ' KW';
+    if (v >= 1e4) return (v / 1e4).toFixed(2) + ' 万';
+    return v.toFixed(0);
 }
 
 function resetCountdown() {
@@ -233,62 +197,7 @@ function resetCountdown() {
     }, 1000);
 }
 
-// 初始加载
 loadTicker();
-loadOI();
-
-// ── OI 持仓量 ───────────────────────────────────────────────────
-function loadOI() {
-    fetch('/api/oi/binance')
-        .then(r => r.json())
-        .then(rows => renderOI(rows))
-        .catch(() => {
-            document.getElementById('oi-body').innerHTML =
-                '<tr><td colspan="5" class="text-center text-muted py-3">加载失败</td></tr>';
-        });
-}
-
-function renderOI(rows) {
-    const tb = document.getElementById('oi-body');
-    if (!rows || !rows.length) {
-        tb.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">暂无数据（等待 Job 首次运行）</td></tr>';
-        return;
-    }
-    tb.innerHTML = rows.map(r => {
-        const oiUsdt = parseFloat(r.oiUsdt) || 0;
-        const oiStr  = fmtOI(oiUsdt);
-        const d15m   = fmtDelta(r.delta15m);
-        const d4h    = fmtDelta(r.delta4h);
-        const base   = r.symbol.replace('USDT', '');
-        return `<tr>
-            <td class="ps-3">
-                <span class="ticker-symbol">${base}</span>
-                <span class="ticker-base">${r.symbol}</span>
-            </td>
-            <td class="text-end mono" style="font-size:.82rem">${oiStr}</td>
-            <td class="text-end">${d15m}</td>
-            <td class="text-end">${d4h}</td>
-            <td class="text-end pe-3 text-muted" style="font-size:.75rem">${r.fetchedAt || '—'}</td>
-        </tr>`;
-    }).join('');
-}
-
-function fmtOI(v) {
-    if (!v) return '—';
-    if (v >= 1e9)  return (v / 1e8).toFixed(2) + ' 亿';
-    if (v >= 1e7)  return (v / 1e7).toFixed(2) + ' KW';
-    if (v >= 1e4)  return (v / 1e4).toFixed(2) + ' 万';
-    return v.toFixed(0);
-}
-
-function fmtDelta(d) {
-    if (d == null) return '<span class="oi-nil">—</span>';
-    const pct = parseFloat(d);
-    if (isNaN(pct)) return '<span class="oi-nil">—</span>';
-    const sign = pct >= 0 ? '+' : '';
-    const cls  = pct > 0.5 ? 'oi-pos' : pct < -0.5 ? 'oi-neg' : 'text-muted';
-    return `<span class="${cls}">${sign}${pct.toFixed(2)}%</span>`;
-}
 </script>
 
 </section></body>
