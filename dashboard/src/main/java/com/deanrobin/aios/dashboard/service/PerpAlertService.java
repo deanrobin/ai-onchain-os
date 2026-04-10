@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
  *         绝对值变化 > 0.5% 且远离 0 的方向 → 飞书报警。
  *         每个品种每小时最多报一次（JVM 内存缓存）。
  *
+ * 功能三：OI 突破 5000万 告警（含持仓量 + 24H 涨跌幅）
+ *
  * ⚠️ 不加 @Transactional
  */
 @Log4j2
@@ -209,27 +211,37 @@ public class PerpAlertService {
     }
 
     // ════════════════════════════════════════════════════════════════
-    // 功能三：OI 突破 5000万 告警
+    // 功能三：OI 突破 5000万 告警（含持仓量 + 24H 涨跌幅）
     // ════════════════════════════════════════════════════════════════
 
     /**
      * 持仓量首次突破 5000万 USD 时调用，发送飞书通知。
      * 48h 内同品种不重复（由 PerpOiJob 的 checkAndAlert 保证）。
+     *
+     * @param exchange     交易所（OKX / BINANCE）
+     * @param symbol       合约代码（如 BTC-USDT-SWAP）
+     * @param baseCurrency 基础货币（如 BTC）
+     * @param oiUsd        当前持仓量（USDT）
+     * @param change24h    24H 涨跌幅（%，如 +2.31 或 -1.45），可为 null
      */
-    public void sendOiBreakAlert(String exchange, String symbol, String baseCurrency, java.math.BigDecimal oiUsd) {
+    public void sendOiBreakAlert(String exchange, String symbol, String baseCurrency,
+                                 BigDecimal oiUsd, BigDecimal change24h) {
         if (alertUrl == null || alertUrl.isBlank()) return;
         String label = (baseCurrency != null && !baseCurrency.isBlank())
                 ? baseCurrency : symbol.split("[-/]")[0];
         String oiFmt = formatUsd(oiUsd);
+        String changeFmt = change24h != null
+                ? String.format("%+.2f%%", change24h.doubleValue())
+                : "N/A";
         String text = String.format(
-                "🚨 合约持仓量突破 5000万 USD\n交易所：%s\n合约：%s（%s）\n当前持仓量：%s\n\n" +
+                "🚨 合约持仓量突破 5000万 USD\n交易所：%s\n合约：%s（%s）\n持仓量：%s\n24H 涨跌：%s\n\n" +
                 "已进入 48h 特别关注模式\n每 5 分钟快照价格 / 涨跌 / 持仓量",
-                exchange, symbol, label, oiFmt);
+                exchange, symbol, label, oiFmt, changeFmt);
         sendFeishu(text);
-        log.info("🚨 OI突破告警飞书已发 | {}:{} | OI={}", exchange, symbol, oiFmt);
+        log.info("🚨 OI突破告警飞书已发 | {}:{} | OI={} | 24H={}", exchange, symbol, oiFmt, changeFmt);
     }
 
-    private String formatUsd(java.math.BigDecimal v) {
+    private String formatUsd(BigDecimal v) {
         if (v == null) return "—";
         double d = v.doubleValue();
         if (d >= 1e9)  return String.format("$%.2fB", d / 1e9);
@@ -238,19 +250,8 @@ public class PerpAlertService {
         return String.format("$%.0f", d);
     }
 
-    private void sendSpikeAlert(String exchange, String symbol, double prev, double curr) {
-        double diff   = curr - prev;
-        String arrow  = diff > 0 ? "↑" : "↓";
-        String text = String.format(
-                "⚡ 资金费率异动\n交易所: %s\n合约: %s\n15分钟前: %+.4f%%\n当前: %+.4f%%\n变动: %+.4f%% %s",
-                exchange, symbol, prev * 100, curr * 100, diff * 100, arrow);
-        sendFeishu(text);
-        log.info("⚡ 费率异动报警 | {}:{} | 15min前={:+.4f}% → 当前={:+.4f}%",
-                exchange, symbol, prev * 100, curr * 100);
-    }
-
     // ════════════════════════════════════════════════════════════════
-    // 功能三：合约成交量报警（> 5000w USDT）
+    // 功能四：合约成交量报警（> 5000w USDT）
     // ════════════════════════════════════════════════════════════════
 
     /**
@@ -272,6 +273,17 @@ public class PerpAlertService {
                 symbol, vol, vol / 1_0000_0000.0);
         sendFeishu(text);
         log.info("🔥 成交量报警 | {} | 24h成交额={} USDT", symbol, String.format("%.0f", vol));
+    }
+
+    private void sendSpikeAlert(String exchange, String symbol, double prev, double curr) {
+        double diff   = curr - prev;
+        String arrow  = diff > 0 ? "↑" : "↓";
+        String text = String.format(
+                "⚡ 资金费率异动\n交易所: %s\n合约: %s\n15分钟前: %+.4f%%\n当前: %+.4f%%\n变动: %+.4f%% %s",
+                exchange, symbol, prev * 100, curr * 100, diff * 100, arrow);
+        sendFeishu(text);
+        log.info("⚡ 费率异动报警 | {}:{} | 15min前={:+.4f}% → 当前={:+.4f}%",
+                exchange, symbol, prev * 100, curr * 100);
     }
 
     // ─── 飞书发送 ────────────────────────────────────────────────────

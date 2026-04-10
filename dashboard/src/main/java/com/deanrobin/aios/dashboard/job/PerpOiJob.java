@@ -107,7 +107,8 @@ public class PerpOiJob {
             saved++;
 
             // ── 阈值检测：是否触发特别关注 ──
-            checkAndAlert("OKX", inst, oiUsd, now);
+            BigDecimal change24h = getChange24h(inst.getBaseCurrency());
+            checkAndAlert("OKX", inst, oiUsd, change24h, now);
         }
         log.info("📊 OKX OI 采集完成 | 更新 {} 条", saved);
     }
@@ -118,10 +119,14 @@ public class PerpOiJob {
         Map<String, PerpInstrument> allInst = instrumentRepo.findByExchangeAndIsActiveTrue("BINANCE")
                 .stream().collect(Collectors.toMap(PerpInstrument::getSymbol, p -> p, (a, b) -> a));
 
-        // 预加载 binance_ticker 全量价格（覆盖所有品种，解决 price_ticker 只有 4 币的问题）
-        Map<String, BigDecimal> tickerPrices = binanceTickerRepo.findAllWithPrice()
-                .stream().collect(Collectors.toMap(BinanceTicker::getSymbol,
+        // 预加载 binance_ticker 全量价格和 24H 涨跌幅
+        List<BinanceTicker> allTickers = binanceTickerRepo.findAllWithPrice();
+        Map<String, BigDecimal> tickerPrices = allTickers.stream()
+                .collect(Collectors.toMap(BinanceTicker::getSymbol,
                         BinanceTicker::getLastPrice, (a, b) -> a));
+        Map<String, BigDecimal> tickerChanges = allTickers.stream()
+                .collect(Collectors.toMap(BinanceTicker::getSymbol,
+                        BinanceTicker::getPriceChangePct, (a, b) -> a));
 
         // 目标品种：watched ∪ 三榜 Top30（精准覆盖行情页全部可见品种，不采冷门合约）
         Set<String> targets = new LinkedHashSet<>();
@@ -168,7 +173,8 @@ public class PerpOiJob {
                     inst.setLatestOiUsd(oiUsd);
                     inst.setLatestOiUpdatedAt(now);
                     instrumentRepo.save(inst);
-                    checkAndAlert("BINANCE", inst, oiUsd, now);
+                    BigDecimal change24h = tickerChanges.get(symbol);
+                    checkAndAlert("BINANCE", inst, oiUsd, change24h, now);
                 }
                 saved++;
                 sleepMs(DELAY_MS);
@@ -190,7 +196,8 @@ public class PerpOiJob {
     }
 
     // ─── 阈值检测：OI >= 5000万 且 48h 内未告警 → 触发 ─────────────────
-    private void checkAndAlert(String exchange, PerpInstrument inst, BigDecimal oiUsd, LocalDateTime now) {
+    private void checkAndAlert(String exchange, PerpInstrument inst, BigDecimal oiUsd,
+                                BigDecimal change24h, LocalDateTime now) {
         if (oiUsd == null || oiUsd.compareTo(OI_THRESHOLD) < 0) return;
 
         // 检查是否已存在仍在有效期内的告警（watch_until > now）
@@ -207,9 +214,9 @@ public class PerpOiJob {
         alert.setWatchUntil(now.plusHours(48));
         alertRepo.save(alert);
 
-        // 发飞书告警
+        // 发飞书告警（含持仓量 + 24H 涨跌幅）
         perpAlertService.sendOiBreakAlert(exchange, inst.getSymbol(),
-                inst.getBaseCurrency(), oiUsd);
+                inst.getBaseCurrency(), oiUsd, change24h);
         log.info("🚨 OI突破5000万 | {}:{} | OI_USD={}", exchange, inst.getSymbol(), oiUsd);
     }
 
@@ -218,6 +225,14 @@ public class PerpOiJob {
         if (baseCurrency == null) return null;
         return priceRepo.findBySymbol(baseCurrency.toUpperCase())
                 .map(p -> p.getPriceUsd())
+                .orElse(null);
+    }
+
+    // ─── 读取 24H 涨跌幅（从 price_ticker 表，OKX 主要品种适用）────────
+    private BigDecimal getChange24h(String baseCurrency) {
+        if (baseCurrency == null) return null;
+        return priceRepo.findBySymbol(baseCurrency.toUpperCase())
+                .map(p -> p.getChange24h())
                 .orElse(null);
     }
 
