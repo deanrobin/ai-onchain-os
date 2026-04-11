@@ -177,6 +177,28 @@ CREATE TABLE IF NOT EXISTS onchain_watch (
     INDEX idx_active  (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── 合约成交量异动持仓快照表 ──────────────────────────────────────
+-- 当 1H 合约成交量 > 20期均量×2 时触发，记录 OI / 多空比 / 费率快照，并在 24H / 48H 跟进
+CREATE TABLE IF NOT EXISTS perp_volume_snapshot (
+    id                BIGINT PRIMARY KEY AUTO_INCREMENT,
+    symbol            VARCHAR(20)    NOT NULL COMMENT 'BTC / ETH / BNB / SOL',
+    bar               VARCHAR(10)    NOT NULL DEFAULT '1H' COMMENT 'K线周期',
+    volume_usdt       DECIMAL(30,4)  NOT NULL COMMENT '触发时合约成交额（USDT）',
+    avg_volume_usdt   DECIMAL(30,4)  NOT NULL COMMENT '20期均量（USDT）',
+    volume_ratio      DECIMAL(10,4)  NOT NULL COMMENT '成交量倍数（volume/avg）',
+    close_price       DECIMAL(30,8)  COMMENT '触发时收盘价（USDT）',
+    oi_usdt           DECIMAL(30,4)  COMMENT '持仓量 OI（USDT，Binance）',
+    ls_ratio          DECIMAL(10,4)  COMMENT '多空账户比（>1 代表多头更多）',
+    long_pct          DECIMAL(10,4)  COMMENT '做多账户占比（0~1）',
+    short_pct         DECIMAL(10,4)  COMMENT '做空账户占比（0~1）',
+    funding_rate      DECIMAL(20,10) COMMENT '资金费率（Binance）',
+    snapped_at        DATETIME       NOT NULL COMMENT '快照时间',
+    followup_24h_done TINYINT(1)     NOT NULL DEFAULT 0 COMMENT '24H跟进是否已发送',
+    followup_48h_done TINYINT(1)     NOT NULL DEFAULT 0 COMMENT '48H跟进是否已发送',
+    INDEX idx_symbol_snapped (symbol, snapped_at),
+    INDEX idx_followup       (followup_24h_done, followup_48h_done, snapped_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='合约成交量异动持仓快照（OI+多空比+费率）';
+
 -- ── 链上持仓余额快照表 ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS onchain_holder_snapshot (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,

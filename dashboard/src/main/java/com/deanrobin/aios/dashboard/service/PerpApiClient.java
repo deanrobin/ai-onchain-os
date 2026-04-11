@@ -350,6 +350,60 @@ public class PerpApiClient {
         return Map.of();
     }
 
+    /**
+     * 获取 Binance USDT-M 持仓量（OI），返回 USDT 计价值。
+     * GET /futures/data/openInterestHist?symbol=BTCUSDT&period=5m&limit=1
+     * 返回最新一条 sumOpenInterestValue（USDT）。
+     */
+    @SuppressWarnings("unchecked")
+    public Double fetchBinanceOIUsdt(String binanceSymbol) {
+        try {
+            String uri = String.format(
+                    "/futures/data/openInterestHist?symbol=%s&period=5m&limit=1", binanceSymbol);
+            List<?> resp = client(BINANCE_BASE)
+                    .get().uri(uri)
+                    .retrieve()
+                    .bodyToMono(List.class)
+                    .timeout(TIMEOUT)
+                    .block();
+            if (resp == null || resp.isEmpty()) return null;
+            Object item = resp.get(0);
+            if (!(item instanceof Map<?, ?> m)) return null;
+            Object val = m.get("sumOpenInterestValue");
+            if (val == null) return null;
+            return Double.parseDouble(String.valueOf(val));
+        } catch (Exception e) {
+            log.warn("⚠️ Binance OI {} 失败: {}", binanceSymbol, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 获取 Binance 全球账户多空比（散户视角）。
+     * GET /futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=5m&limit=1
+     * 返回 Map 含 longShortRatio / longAccount / shortAccount（均为字符串小数）。
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchBinanceLSRatio(String binanceSymbol) {
+        try {
+            String uri = String.format(
+                    "/futures/data/globalLongShortAccountRatio?symbol=%s&period=5m&limit=1",
+                    binanceSymbol);
+            List<?> resp = client(BINANCE_BASE)
+                    .get().uri(uri)
+                    .retrieve()
+                    .bodyToMono(List.class)
+                    .timeout(TIMEOUT)
+                    .block();
+            if (resp == null || resp.isEmpty()) return Map.of();
+            Object item = resp.get(0);
+            if (item instanceof Map<?, ?> m) return (Map<String, Object>) m;
+        } catch (Exception e) {
+            log.warn("⚠️ Binance LS ratio {} 失败: {}", binanceSymbol, e.getMessage());
+        }
+        return Map.of();
+    }
+
     // ─── 工具：毫秒时间戳 → LocalDateTime ───────────────────────────
     public static LocalDateTime msToLdt(Object msObj) {
         if (msObj == null) return null;
