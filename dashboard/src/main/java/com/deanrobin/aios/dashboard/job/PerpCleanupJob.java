@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * Perps 数据清理 Job，两个定时任务：
  *
  * 00:35 清理旧快照：
- *   - perp_funding_rate    → 保留 5 天
+ *   - perp_funding_rate    → 保留 2 天（写入量大：~650条/5min，2天≈374K行；spike检测窗口最长1h，2天足够）
  *   - perp_open_interest   → 保留 7 天
  *
  * 01:15 清理特别关注快照：
@@ -34,14 +34,14 @@ public class PerpCleanupJob {
     /** 00:35 清理资金费率 + OI 快照 */
     @Scheduled(cron = "0 35 0 * * *", zone = "Asia/Shanghai")
     public void cleanOldSnapshots() {
-        // ── 资金费率：保留 5 天 ──
-        LocalDateTime frBefore = LocalDateTime.now().minusDays(5);
+        // ── 资金费率：保留 2 天（原 5 天，写入量大缩短以控制表行数）──
+        LocalDateTime frBefore = LocalDateTime.now().minusDays(2);
         int frTotal = 0, frDeleted;
         do {
             frDeleted = fundingRateRepo.deleteOldSnapshots(frBefore);
             frTotal  += frDeleted;
         } while (frDeleted == 500);
-        if (frTotal > 0) log.info("🧹 资金费率快照清理 {} 条（5天前）", frTotal);
+        if (frTotal > 0) log.info("🧹 资金费率快照清理 {} 条（2天前）", frTotal);
 
         // ── 持仓量：保留 7 天 ──
         LocalDateTime oiBefore = LocalDateTime.now().minusDays(7);
