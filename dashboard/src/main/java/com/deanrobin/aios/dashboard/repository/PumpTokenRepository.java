@@ -47,12 +47,15 @@ public interface PumpTokenRepository extends JpaRepository<PumpToken, Long> {
     @Query("SELECT t FROM PumpToken t WHERE t.status = 'survived' ORDER BY t.currentMarketCap DESC NULLS LAST")
     List<PumpToken> findSurvivors();
 
-    /** 取 SOL 当前价格（USD） */
-    @Query(value = "SELECT price_usd FROM price_ticker WHERE symbol='SOL' ORDER BY updated_at DESC LIMIT 1", nativeQuery = true)
+    /**
+     * 取 SOL 当前价格（USD）。
+     * symbol 是 UNIQUE KEY，ORDER BY updated_at 无意义且浪费排序开销，去掉。
+     */
+    @Query(value = "SELECT price_usd FROM price_ticker WHERE symbol='SOL' LIMIT 1", nativeQuery = true)
     java.math.BigDecimal findSolPrice();
 
-    /** 取 BNB 当前价格（USD） */
-    @Query(value = "SELECT price_usd FROM price_ticker WHERE symbol='BNB' ORDER BY updated_at DESC LIMIT 1", nativeQuery = true)
+    /** 取 BNB 当前价格（USD）。同上，去掉无用 ORDER BY。 */
+    @Query(value = "SELECT price_usd FROM price_ticker WHERE symbol='BNB' LIMIT 1", nativeQuery = true)
     java.math.BigDecimal findBnbPrice();
 
     // 保留最近 N 条，删除旧数据

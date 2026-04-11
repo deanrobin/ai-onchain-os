@@ -10,8 +10,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 每 10 秒从 OKX 公开市场 API 拉 BTC/ETH/BNB/SOL 价格及 24h 交易量，写入 price_ticker 表。
@@ -36,7 +38,14 @@ public class PriceFetchJob {
     @Scheduled(initialDelay = 5_000, fixedDelay = 10_000)
     public void fetchPrices() {
         WebClient client = webClientBuilder.baseUrl("https://www.okx.com").build();
-        int updated = 0;
+
+        // 一次批量加载所有已有 ticker，减少 DB 查询：5×SELECT → 1×SELECT
+        Map<String, PriceTicker> existing = priceRepo.findAll()
+                .stream().collect(Collectors.toMap(PriceTicker::getSymbol, t -> t));
+
+        List<PriceTicker> toSave = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
         for (String[] pair : TARGETS) {
             String symbol = pair[0];
             String instId = pair[1];
@@ -64,20 +73,23 @@ public class PriceFetchJob {
                         .setScale(4, java.math.RoundingMode.HALF_UP);
                 }
 
-                PriceTicker pt = priceRepo.findBySymbol(symbol).orElseGet(() -> {
-                    PriceTicker n = new PriceTicker(); n.setSymbol(symbol); return n;
-                });
+                PriceTicker pt = existing.getOrDefault(symbol, new PriceTicker());
+                if (pt.getSymbol() == null) pt.setSymbol(symbol);
                 pt.setPriceUsd(price);
                 pt.setChange24h(change24h);
                 pt.setVolume24h(vol24h);
-                pt.setUpdatedAt(LocalDateTime.now());
-                priceRepo.save(pt);
-                updated++;
+                pt.setUpdatedAt(now);
+                toSave.add(pt);
             } catch (Exception e) {
                 log.warn("⚠️ 价格拉取失败 {}: {}", symbol, e.getMessage());
             }
         }
-        if (updated > 0) log.debug("💹 价格已更新 {} 个代币", updated);
+
+        // 5×save → 1×saveAll，减少 DB round-trip
+        if (!toSave.isEmpty()) {
+            priceRepo.saveAll(toSave);
+            log.debug("💹 价格已更新 {} 个代币", toSave.size());
+        }
     }
 
     private BigDecimal parseBD(Object obj) {
