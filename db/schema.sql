@@ -177,33 +177,6 @@ CREATE TABLE IF NOT EXISTS onchain_watch (
     INDEX idx_active  (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ══════════════════════════════════════════════════════════════════════
--- 性能优化索引（2026-04）
--- 执行方式：登录 MySQL 后手动执行，或通过 Flyway/Liquibase 管理
--- ══════════════════════════════════════════════════════════════════════
-
--- ── smart_money_signal：findLatest 每 10s 调用 40+ 次，补全复合索引 ──
---   原有 idx_chain_token(chain_index, token_address) 缺少 wallet_type + signal_time
---   新索引可覆盖 ORDER BY signal_time DESC LIMIT 1，无需额外排序
-ALTER TABLE smart_money_signal
-    ADD INDEX IF NOT EXISTS idx_chain_token_wt_time (chain_index, token_address, wallet_type, signal_time);
-
--- ── pump_token：8 个阶段查询均含 received_at < :before AND checked_Xm_at IS NULL ──
---   无 received_at 索引时全表扫描，表保留 100000 行时压力极大
-ALTER TABLE pump_token
-    ADD INDEX IF NOT EXISTS idx_received_at (received_at),
-    ADD INDEX IF NOT EXISTS idx_status_received (status, received_at);
-
--- ── four_meme_token：同上 ────────────────────────────────────────────
-ALTER TABLE four_meme_token
-    ADD INDEX IF NOT EXISTS idx_received_at (received_at),
-    ADD INDEX IF NOT EXISTS idx_status_received (status, received_at);
-
--- ── pump_market_cap_snapshot：findByMintRecent 每次加载 survivors 都调用 ──
---   当前无索引，随数据增长全表扫描
-ALTER TABLE pump_market_cap_snapshot
-    ADD INDEX IF NOT EXISTS idx_mint_checked_at (mint, checked_at);
-
 -- ── 链上持仓余额快照表 ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS onchain_holder_snapshot (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -287,3 +260,29 @@ CREATE TABLE IF NOT EXISTS perp_open_interest (
     fetched_at  DATETIME       NOT NULL COMMENT '快照时间',
     INDEX idx_exchange_symbol_time (exchange, symbol, fetched_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ════════════════════════════════════════════════════════════════
+-- 20260411-001  DB 性能优化：补全缺失索引，消除慢查询
+-- ════════════════════════════════════════════════════════════════
+
+-- smart_money_signal：findLatest 每 10s 调用 40+ 次，补全复合索引
+-- 原有 idx_chain_token(chain_index, token_address) 缺少 wallet_type + signal_time
+-- 新索引可覆盖 ORDER BY signal_time DESC LIMIT 1，无需额外排序
+ALTER TABLE smart_money_signal
+    ADD INDEX IF NOT EXISTS idx_chain_token_wt_time (chain_index, token_address, wallet_type, signal_time);
+
+-- pump_token：8 个阶段查询均含 received_at < :before AND checked_Xm_at IS NULL
+-- 无 received_at 索引时全表扫描，表保留 100000 行时压力极大
+ALTER TABLE pump_token
+    ADD INDEX IF NOT EXISTS idx_received_at (received_at),
+    ADD INDEX IF NOT EXISTS idx_status_received (status, received_at);
+
+-- four_meme_token：同上
+ALTER TABLE four_meme_token
+    ADD INDEX IF NOT EXISTS idx_received_at (received_at),
+    ADD INDEX IF NOT EXISTS idx_status_received (status, received_at);
+
+-- pump_market_cap_snapshot：findByMintRecent 每次加载 survivors 都调用
+-- 当前无索引，随数据增长全表扫描
+ALTER TABLE pump_market_cap_snapshot
+    ADD INDEX IF NOT EXISTS idx_mint_checked_at (mint, checked_at);
