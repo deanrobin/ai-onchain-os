@@ -14,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,7 +57,12 @@ public class BinanceTickerJob {
                 .collect(Collectors.toSet());
 
         LocalDateTime now   = LocalDateTime.now();
-        int upserted = 0;
+
+        // 批量预加载所有现有记录（1次 SELECT 替代 300次 findBySymbol）
+        Map<String, BinanceTicker> existingMap = tickerRepo.findAll()
+                .stream().collect(Collectors.toMap(BinanceTicker::getSymbol, t -> t));
+
+        List<BinanceTicker> toSave = new ArrayList<>();
 
         for (Map<String, Object> item : raw) {
             String symbol = str(item, "symbol");
@@ -73,8 +79,8 @@ public class BinanceTickerJob {
             // 基础货币 = symbol 去掉 "USDT" 后缀
             String base = symbol.substring(0, symbol.length() - 4);
 
-            // upsert
-            BinanceTicker ticker = tickerRepo.findBySymbol(symbol).orElseGet(BinanceTicker::new);
+            // 复用现有对象（有 id → UPDATE）或新建（null id → INSERT）
+            BinanceTicker ticker = existingMap.getOrDefault(symbol, new BinanceTicker());
             ticker.setSymbol(symbol);
             ticker.setBaseCurrency(base);
             ticker.setLastPrice(lastPrice);
@@ -85,13 +91,18 @@ public class BinanceTickerJob {
                 try { ticker.setTradeCount(Integer.parseInt(String.valueOf(cnt))); } catch (Exception ignored) {}
             }
             ticker.setFetchedAt(now);
-            tickerRepo.save(ticker);
-            upserted++;
+            toSave.add(ticker);
 
             // 成交额报警
             if (quoteVolume.compareTo(VOLUME_ALERT_THRESHOLD) >= 0) {
                 perpAlertService.checkVolumeAlert(symbol, quoteVolume);
             }
+        }
+
+        // 批量写入（1次事务替代 300次单行 save）
+        int upserted = toSave.size();
+        if (!toSave.isEmpty()) {
+            tickerRepo.saveAll(toSave);
         }
 
         // 清理 DB 里已不在活跃品种集合中的旧记录（如 A2Z、ALPACA 等）
