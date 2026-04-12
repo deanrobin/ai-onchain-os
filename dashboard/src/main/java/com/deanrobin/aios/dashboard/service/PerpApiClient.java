@@ -379,6 +379,33 @@ public class PerpApiClient {
     }
 
     /**
+     * 获取 Binance 主动买/卖量比。
+     * GET /futures/data/takerlongshortRatio?symbol=BTCUSDT&period=5m&limit=1
+     * 返回 Map 含 buySellRatio（买量/卖量）/ buyVol / sellVol（均为字符串小数）。
+     * buySellRatio > 1 代表主动买入量大于主动卖出量（多头主导）。
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchBinanceTakerRatio(String binanceSymbol) {
+        try {
+            String uri = String.format(
+                    "/futures/data/takerlongshortRatio?symbol=%s&period=5m&limit=1",
+                    binanceSymbol);
+            List<?> resp = client(BINANCE_BASE)
+                    .get().uri(uri)
+                    .retrieve()
+                    .bodyToMono(List.class)
+                    .timeout(TIMEOUT)
+                    .block();
+            if (resp == null || resp.isEmpty()) return Map.of();
+            Object item = resp.get(0);
+            if (item instanceof Map<?, ?> m) return (Map<String, Object>) m;
+        } catch (Exception e) {
+            log.warn("⚠️ Binance takerRatio {} 失败: {}", binanceSymbol, e.getMessage());
+        }
+        return Map.of();
+    }
+
+    /**
      * 获取 Binance 全球账户多空比（散户视角）。
      * GET /futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=5m&limit=1
      * 返回 Map 含 longShortRatio / longAccount / shortAccount（均为字符串小数）。

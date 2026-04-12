@@ -64,6 +64,10 @@ public class PerpVolumeSnapshot {
     @Column(name = "funding_rate", precision = 20, scale = 10)
     private BigDecimal fundingRate;
 
+    /** 主动买/卖量比（Binance takerlongshortRatio.buySellRatio，>1代表主动买入量更大） */
+    @Column(name = "taker_buy_ratio", precision = 10, scale = 4)
+    private BigDecimal takerBuyRatio;
+
     /** 快照时间 */
     @Column(name = "snapped_at", nullable = false)
     private LocalDateTime snappedAt;

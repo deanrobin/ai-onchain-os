@@ -125,7 +125,8 @@ public class ContractVolumeAlertJob {
 
         // 拉取持仓快照数据
         Double   oiUsdt    = perpApiClient.fetchBinanceOIUsdt(binanceSymbol);
-        Map<String, Object> lsData = perpApiClient.fetchBinanceLSRatio(binanceSymbol);
+        Map<String, Object> lsData     = perpApiClient.fetchBinanceLSRatio(binanceSymbol);
+        Map<String, Object> takerData  = perpApiClient.fetchBinanceTakerRatio(binanceSymbol);
 
         // 资金费率（从 PerpInstrument 缓存）
         BigDecimal fundingRate = null;
@@ -149,6 +150,7 @@ public class ContractVolumeAlertJob {
             snap.setShortPct(parseBD(lsData.get("shortAccount")));
         }
         snap.setFundingRate(fundingRate);
+        snap.setTakerBuyRatio(parseBD(takerData.get("buySellRatio")));
         snap.setSnappedAt(LocalDateTime.now(CST));
         snapshotRepo.save(snap);
 
@@ -227,6 +229,7 @@ public class ContractVolumeAlertJob {
         } else {
             sb.append("资金费率: --\n");
         }
+        appendTakerLine(sb, snap.getTakerBuyRatio());
         sb.append(String.format("\n⏰ %s 快照 | 将在 24H / 48H 后跟进",
                 snap.getSnappedAt().format(FMT)));
 
@@ -239,8 +242,9 @@ public class ContractVolumeAlertJob {
         String binanceSymbol = snap.getSymbol() + "USDT";
 
         // 拉取当前数据
-        Double   currentOI   = perpApiClient.fetchBinanceOIUsdt(binanceSymbol);
-        Map<String, Object> currentLS = perpApiClient.fetchBinanceLSRatio(binanceSymbol);
+        Double   currentOI      = perpApiClient.fetchBinanceOIUsdt(binanceSymbol);
+        Map<String, Object> currentLS     = perpApiClient.fetchBinanceLSRatio(binanceSymbol);
+        Map<String, Object> currentTaker  = perpApiClient.fetchBinanceTakerRatio(binanceSymbol);
         BigDecimal currentFR = null;
         Optional<PerpInstrument> instOpt = instrumentRepo.findByExchangeAndSymbol("BINANCE", binanceSymbol);
         if (instOpt.isPresent()) currentFR = instOpt.get().getLatestFundingRate();
@@ -282,7 +286,12 @@ public class ContractVolumeAlertJob {
         if (currentFR != null) {
             double fr = currentFR.doubleValue() * 100;
             sb.append(String.format("资金费率: %+.4f%%\n", fr));
+        } else {
+            sb.append("资金费率: --\n");
         }
+
+        // 当前主动买/卖比
+        appendTakerLine(sb, parseBD(currentTaker.get("buySellRatio")));
 
         sendFeishu(sb.toString());
     }
@@ -296,6 +305,22 @@ public class ContractVolumeAlertJob {
                     shortPct.doubleValue() * 100));
         } else {
             sb.append("多空账户比: --\n");
+        }
+    }
+
+    /**
+     * 追加主动买/卖量比行。
+     * buySellRatio = buyVol / sellVol，由此推算买入占比 = ratio / (1 + ratio)。
+     */
+    private void appendTakerLine(StringBuilder sb, BigDecimal buySellRatio) {
+        if (buySellRatio != null) {
+            double r = buySellRatio.doubleValue();
+            double buyPct  = r / (1.0 + r) * 100;
+            double sellPct = 100.0 - buyPct;
+            sb.append(String.format("主动买/卖比: %.2f（买%.1f%% / 卖%.1f%%）\n",
+                    r, buyPct, sellPct));
+        } else {
+            sb.append("主动买/卖比: --\n");
         }
     }
 
