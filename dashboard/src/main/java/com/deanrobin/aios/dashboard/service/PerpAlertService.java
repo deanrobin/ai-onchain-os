@@ -50,6 +50,7 @@ public class PerpAlertService {
     private static final ZoneId CST = ZoneId.of("Asia/Shanghai");
 
     private final PerpService                      perpService;
+    private final PerpApiClient                    perpApiClient;
     private final PerpInstrumentRepository         instrumentRepo;
     private final PerpFundingRateRepository        fundingRateRepo;
     private final TickerAlertBlacklistRepository   blacklistRepo;
@@ -257,8 +258,10 @@ public class PerpAlertService {
     /**
      * Binance ticker job 每分钟调用，成交额超阈值时发飞书报警。
      * 每个品种每小时最多报一次。
+     *
+     * @param priceChangePct 24H 涨跌幅（%），如 +15.32 或 -3.21，可为 null
      */
-    public void checkVolumeAlert(String symbol, java.math.BigDecimal quoteVolume) {
+    public void checkVolumeAlert(String symbol, BigDecimal quoteVolume, BigDecimal priceChangePct) {
         if (alertUrl == null || alertUrl.isBlank()) return;
         // 黑名单过滤
         if (blacklistCache.contains(symbol)) return;
@@ -267,12 +270,39 @@ public class PerpAlertService {
         long last = volumeCooldown.getOrDefault(key, 0L);
         if (System.currentTimeMillis() - last < SPIKE_COOLDOWN_MS) return;
         volumeCooldown.put(key, System.currentTimeMillis());
+
         double vol = quoteVolume.doubleValue();
-        String text = String.format(
-                "🔥 合约成交量异动\n合约: %s\n24h成交额: %.0f USDT (%.1f亿)",
-                symbol, vol, vol / 1_0000_0000.0);
-        sendFeishu(text);
-        log.info("🔥 成交量报警 | {} | 24h成交额={} USDT", symbol, String.format("%.0f", vol));
+
+        // 拉取当前 OI（持仓量），报警时一次性获取
+        Double oiUsdt = null;
+        try {
+            oiUsdt = perpApiClient.fetchBinanceOIUsdt(symbol);
+        } catch (Exception e) {
+            log.debug("⚠️ 成交量报警拉取 OI 失败 {}: {}", symbol, e.getMessage());
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("🔥 合约成交量异动\n");
+        sb.append(String.format("合约: %s\n", symbol));
+        sb.append(String.format("24h成交额: %s\n", fmtVol(vol)));
+        if (priceChangePct != null) {
+            sb.append(String.format("24H 涨幅: %+.2f%%\n", priceChangePct.doubleValue()));
+        }
+        if (oiUsdt != null && oiUsdt > 0) {
+            sb.append(String.format("持仓量 OI: %s\n", fmtVol(oiUsdt)));
+        }
+
+        sendFeishu(sb.toString().trim());
+        log.info("🔥 成交量报警 | {} | 24h成交额={} | 涨幅={} | OI={}",
+                symbol, fmtVol(vol),
+                priceChangePct != null ? String.format("%+.2f%%", priceChangePct.doubleValue()) : "--",
+                oiUsdt != null ? fmtVol(oiUsdt) : "--");
+    }
+
+    private static String fmtVol(double usdt) {
+        if (usdt >= 1e8) return String.format("%.2f亿 USDT", usdt / 1e8);
+        if (usdt >= 1e4) return String.format("%.0f万 USDT", usdt / 1e4);
+        return String.format("%.0f USDT", usdt);
     }
 
     private void sendSpikeAlert(String exchange, String symbol, double prev, double curr) {
