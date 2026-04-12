@@ -308,3 +308,13 @@ ALTER TABLE four_meme_token
 -- 当前无索引，随数据增长全表扫描
 ALTER TABLE pump_market_cap_snapshot
     ADD INDEX IF NOT EXISTS idx_mint_checked_at (mint, checked_at);
+
+-- ════════════════════════════════════════════════════════════════
+-- 20260412-001  perp_volume_snapshot 新增主动买卖量比字段
+-- ════════════════════════════════════════════════════════════════
+
+-- 主动买/卖量比（Binance /futures/data/takerlongshortRatio buySellRatio）
+-- buyVol/sellVol > 1 代表主动买入量更大（多头主导）
+ALTER TABLE perp_volume_snapshot
+    ADD COLUMN IF NOT EXISTS taker_buy_ratio DECIMAL(10,4) COMMENT '主动买/卖量比（>1代表主动买入量更大）'
+    AFTER funding_rate;
