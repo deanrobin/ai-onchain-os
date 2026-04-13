@@ -95,7 +95,7 @@ public class BinanceTickerJob {
 
             // 成交额报警
             if (quoteVolume.compareTo(VOLUME_ALERT_THRESHOLD) >= 0) {
-                perpAlertService.checkVolumeAlert(symbol, quoteVolume, priceChangePct);
+                perpAlertService.checkVolumeAlert(symbol, quoteVolume, lastPrice, priceChangePct);
             }
         }
 
