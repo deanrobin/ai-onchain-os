@@ -47,6 +47,19 @@ sh /root/aios-dashboard/start.sh
 
 ---
 
+## 开发工作流（强制）
+
+**每次开始任务前，必须先同步最新 master：**
+
+```bash
+git fetch origin master
+git reset --hard origin/master
+```
+
+> ❌ 禁止基于旧的本地代码或过时分支直接修改——master 持续有新提交，基于旧代码修改会造成冲突和功能回退。
+
+---
+
 ## 核心约束（高优先级）
 
 1. **不要动链配置** — 当前只有 BSC(56) + SOL(501)，不加其他链
