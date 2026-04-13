@@ -259,9 +259,11 @@ public class PerpAlertService {
      * Binance ticker job 每分钟调用，成交额超阈值时发飞书报警。
      * 每个品种每小时最多报一次。
      *
+     * @param lastPrice      当前最新成交价（USDT）
      * @param priceChangePct 24H 涨跌幅（%），如 +15.32 或 -3.21，可为 null
      */
-    public void checkVolumeAlert(String symbol, BigDecimal quoteVolume, BigDecimal priceChangePct) {
+    public void checkVolumeAlert(String symbol, BigDecimal quoteVolume,
+                                 BigDecimal lastPrice, BigDecimal priceChangePct) {
         if (alertUrl == null || alertUrl.isBlank()) return;
         // 黑名单过滤
         if (blacklistCache.contains(symbol)) return;
@@ -284,6 +286,9 @@ public class PerpAlertService {
         StringBuilder sb = new StringBuilder();
         sb.append("🔥 合约成交量异动\n");
         sb.append(String.format("合约: %s\n", symbol));
+        if (lastPrice != null) {
+            sb.append(String.format("当前价格: %s USDT\n", fmtPrice(lastPrice)));
+        }
         sb.append(String.format("24h成交额: %s\n", fmtVol(vol)));
         if (priceChangePct != null) {
             sb.append(String.format("24H 涨幅: %+.2f%%\n", priceChangePct.doubleValue()));
@@ -293,10 +298,21 @@ public class PerpAlertService {
         }
 
         sendFeishu(sb.toString().trim());
-        log.info("🔥 成交量报警 | {} | 24h成交额={} | 涨幅={} | OI={}",
-                symbol, fmtVol(vol),
+        log.info("🔥 成交量报警 | {} | 价格={} | 24h成交额={} | 涨幅={} | OI={}",
+                symbol,
+                lastPrice != null ? fmtPrice(lastPrice) : "--",
+                fmtVol(vol),
                 priceChangePct != null ? String.format("%+.2f%%", priceChangePct.doubleValue()) : "--",
                 oiUsdt != null ? fmtVol(oiUsdt) : "--");
+    }
+
+    /** 价格格式化：根据数量级自动选精度，避免显示太多小数位 */
+    private static String fmtPrice(BigDecimal price) {
+        double p = price.doubleValue();
+        if (p >= 1000) return String.format("%.2f", p);
+        if (p >= 1)    return String.format("%.4f", p);
+        if (p >= 0.01) return String.format("%.6f", p);
+        return String.format("%.8f", p);
     }
 
     private static String fmtVol(double usdt) {
