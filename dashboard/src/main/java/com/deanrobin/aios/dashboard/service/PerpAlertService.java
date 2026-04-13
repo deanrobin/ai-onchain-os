@@ -188,8 +188,8 @@ public class PerpAlertService {
         // 与当前 latest_funding_rate 对比（仅 active 品种，且跳过黑名单）
         List<PerpInstrument> current = instrumentRepo.findByExchangeAndIsActiveTrue(exchange);
         for (PerpInstrument inst : current) {
+            if (blacklistCache.contains(inst.getSymbol())) continue;   // 黑名单跳过（优先）
             if (inst.getLatestFundingRate() == null) continue;
-            if (blacklistCache.contains(inst.getSymbol())) continue;   // 黑名单跳过
             BigDecimal prevBD = prev15.get(inst.getSymbol());
             if (prevBD == null) continue;
 
