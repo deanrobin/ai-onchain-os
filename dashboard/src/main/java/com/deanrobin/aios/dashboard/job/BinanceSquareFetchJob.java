@@ -25,8 +25,8 @@ import java.util.Set;
  * 每 5 分钟抓一次币安广场帖子，抽取代币并写入 DB。
  *
  * 分页策略：每页 20 条，最多翻 10 页（200 条上限），页间 sleep 1 秒避免限流。
- * 早停策略：内存缓存最近一次 Job 见到的最新 post_id（首次启动从 DB 取最近一条），
- *          滚动过程中遇到该 id 即停止本轮抓取，等下次再跑。
+ * 早停策略：整页帖子全部已存在 DB 里（existsByPostId）即认为无新内容，停止翻页。
+ *          （不用 lastSeenPostId 早停，因为 feed 可能有置顶/推荐帖打乱顺序。）
  *
  * ⚠️ 不加 @Transactional（每次 save 是独立小事务）。
  */
@@ -46,24 +46,12 @@ public class BinanceSquareFetchJob {
     private final BinanceSquarePostRepository         postRepo;
     private final BinanceSquareTokenStatRepository    statRepo;
 
-    /** 上一次 Job 见到的最新 post_id（首次为 null，从 DB 加载）。 */
-    private volatile String lastSeenPostId;
-
     @Scheduled(initialDelay = 30_000, fixedDelay = 300_000)
     public void run() {
-        if (lastSeenPostId == null) {
-            lastSeenPostId = postRepo.findFirstByOrderByIdDesc()
-                    .map(BinanceSquarePost::getPostId)
-                    .orElse(null);
-            log.info("🔖 币安广场首次启动，lastSeenPostId 初始化={}", lastSeenPostId);
-        }
-
         Set<String> whitelist = client.getWhitelist();
         int fetched = 0, saved = 0, tokensSaved = 0, skipped = 0;
-        String newestThisRun = null;
         boolean stopped = false;
 
-        outer:
         for (int page = 1; page <= MAX_PAGES; page++) {
             List<Map<String, Object>> posts = client.fetchPosts(page, PAGE_SIZE);
             if (posts.isEmpty()) {
@@ -71,18 +59,11 @@ public class BinanceSquareFetchJob {
                 break;
             }
 
+            int newInPage = 0;
             for (Map<String, Object> post : posts) {
                 fetched++;
                 String postId = strVal(post.get("id"));
                 if (postId == null) { skipped++; continue; }
-
-                if (newestThisRun == null) newestThisRun = postId;
-
-                if (postId.equals(lastSeenPostId)) {
-                    log.info("🛑 撞到 lastSeenPostId={}，page={}，停止本轮抓取", postId, page);
-                    stopped = true;
-                    break outer;
-                }
                 if (postRepo.existsByPostId(postId)) { skipped++; continue; }
 
                 BinanceTokenExtractor.Extracted ex = BinanceTokenExtractor.extract(post);
@@ -107,6 +88,7 @@ public class BinanceSquareFetchJob {
                 try {
                     postRepo.save(row);
                     saved++;
+                    newInPage++;
                 } catch (DataIntegrityViolationException e) {
                     skipped++;
                     continue;
@@ -133,22 +115,25 @@ public class BinanceSquareFetchJob {
                 }
             }
 
-            // 整页处理完后 sleep 1s，避免限流
-            if (page < MAX_PAGES && posts.size() >= PAGE_SIZE) {
+            // 整页都是旧帖 → 后面的更旧，没必要继续翻
+            if (newInPage == 0) {
+                log.info("🛑 page={} 全部已存在，停止本轮抓取", page);
+                stopped = true;
+                break;
+            }
+
+            // 最后一页（不足 PAGE_SIZE）说明没更多了
+            if (posts.size() < PAGE_SIZE) break;
+
+            // 页间 sleep 1s 避免限流
+            if (page < MAX_PAGES) {
                 try { Thread.sleep(SLEEP_MS); }
                 catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
-            } else {
-                // 最后一页（不足 PAGE_SIZE）说明没更多了
-                break;
             }
         }
 
-        if (newestThisRun != null) {
-            lastSeenPostId = newestThisRun;
-        }
-
-        log.info("📡 币安广场抓取完成 抓={} 新帖={} 代币行={} 跳过={} 早停={} lastSeen={}",
-                fetched, saved, tokensSaved, skipped, stopped, lastSeenPostId);
+        log.info("📡 币安广场抓取完成 抓={} 新帖={} 代币行={} 跳过={} 早停={}",
+                fetched, saved, tokensSaved, skipped, stopped);
     }
 
     // ─── 辅助方法 ──────────────────────────────────────────────
