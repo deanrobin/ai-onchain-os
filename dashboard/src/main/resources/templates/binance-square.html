@@ -40,6 +40,7 @@
         <table th:unless="${top.isEmpty()}" class="table" id="sq-tbl">
             <thead><tr>
                 <th style="width:60px">#</th>
+                <th style="width:80px">升/降</th>
                 <th>代币</th>
                 <th>分数</th>
                 <th>👍 点赞</th>
@@ -51,6 +52,17 @@
             <tr th:each="row,iter : ${top}"
                 th:class="${iter.index==0?'rank-1':(iter.index==1?'rank-2':(iter.index==2?'rank-3':''))}">
                 <td class="mono fw-7 t-dim" th:text="${iter.index + 1}"></td>
+                <td class="mono">
+                    <span th:if="${!row.hasSnapshot}" class="tag-gray">—</span>
+                    <span th:if="${row.hasSnapshot and row.rankDelta == null}"
+                          class="tag-up" style="background:#eaf4ff;color:#2563eb">NEW</span>
+                    <span th:if="${row.rankDelta != null and row.rankDelta &gt; 0}"
+                          class="tag-up" th:text="'▲' + ${row.rankDelta}"></span>
+                    <span th:if="${row.rankDelta != null and row.rankDelta &lt; 0}"
+                          class="tag-dn" th:text="'▼' + ${-row.rankDelta}"></span>
+                    <span th:if="${row.rankDelta != null and row.rankDelta == 0}"
+                          class="tag-gray">持平</span>
+                </td>
                 <td>
                     <span class="fw-7" style="font-size:.92rem" th:text="${row.token}"></span>
                 </td>
@@ -90,8 +102,21 @@ async function refresh() {
             const binance = d.inBinance
                 ? '<span class="tag-up">✅</span>'
                 : '<span class="tag-gray">❓</span>';
+            let delta;
+            if (!d.hasSnapshot) {
+                delta = '<span class="tag-gray">—</span>';
+            } else if (d.rankDelta == null) {
+                delta = '<span class="tag-up" style="background:#eaf4ff;color:#2563eb">NEW</span>';
+            } else if (d.rankDelta > 0) {
+                delta = `<span class="tag-up">▲${d.rankDelta}</span>`;
+            } else if (d.rankDelta < 0) {
+                delta = `<span class="tag-dn">▼${-d.rankDelta}</span>`;
+            } else {
+                delta = '<span class="tag-gray">持平</span>';
+            }
             return `<tr class="${rankCls}">
                 <td class="mono fw-7 t-dim">${i+1}</td>
+                <td class="mono">${delta}</td>
                 <td><span class="fw-7" style="font-size:.92rem">${escapeHtml(d.token)}</span></td>
                 <td class="mono fw-7 t-blue">${d.score}</td>
                 <td class="mono">${d.likes}</td>

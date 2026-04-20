@@ -25,7 +25,7 @@ public class BinanceSquareController {
         int window = hours == 24 ? 24 : 1;
         model.addAttribute("activePage", "binance-square");
         model.addAttribute("hours", window);
-        model.addAttribute("top", squareService.topTokensSince(window, 20));
+        model.addAttribute("top", squareService.topTokensWithDelta(window, 20));
         return "binance-square";
     }
 
@@ -36,6 +36,6 @@ public class BinanceSquareController {
             @RequestParam(defaultValue = "20") int limit) {
         int window = hours <= 0 ? 1 : Math.min(hours, 168);
         int n      = limit <= 0 ? 20 : Math.min(limit, 100);
-        return squareService.topTokensSince(window, n);
+        return squareService.topTokensWithDelta(window, n);
     }
 }
