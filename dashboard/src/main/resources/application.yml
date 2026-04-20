@@ -66,8 +66,8 @@ perp:
 
 # ── 币安广场代币热度 ─────────────────────────────────────────────
 binance-square:
-  # 广场 feed 端点（可覆写）；默认使用公开 square feed
-  feed-url: ${BINANCE_SQUARE_FEED_URL:https://www.binance.com/bapi/composite/v1/public/content/community/square/feed?pageIndex=1&pageSize=50&scene=square}
+  # 广场 feed 端点（POST，与 python/binance_square_fetcher.py 对齐）
+  feed-url: ${BINANCE_SQUARE_FEED_URL:https://www.binance.com/bapi/composite/v9/friendly/pgc/feed/feed-recommend/list}
   # 独立飞书 webhook（POST JSON）
   alert-url: ${BINANCE_SQUARE_ALERT_URL:https://open.feishu.cn/open-apis/bot/v2/hook/c035c556-dcf4-4145-a4e8-a7a956bbce96}
 
