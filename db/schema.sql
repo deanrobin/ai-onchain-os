@@ -356,3 +356,20 @@ CREATE TABLE IF NOT EXISTS binance_square_token_stat (
     INDEX idx_token_date (token, post_date),
     INDEX idx_post_date (post_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ════════════════════════════════════════════════════════════════
+-- 20260420-002  币安广场榜单 15min 快照（用于网页显示排名升降）
+-- ════════════════════════════════════════════════════════════════
+
+-- 每 15 分钟对 1h / 24h 榜 Top20 各拍一份快照。7 天保留。
+CREATE TABLE IF NOT EXISTS binance_square_rank_snapshot (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    snapshot_at   DATETIME    NOT NULL COMMENT '快照时间点',
+    window_hours  INT         NOT NULL COMMENT '时间窗：1 或 24',
+    rank_no       INT         NOT NULL COMMENT '当次排名（1 起）',
+    token         VARCHAR(50) NOT NULL,
+    score         INT         NOT NULL DEFAULT 0,
+    UNIQUE KEY uk_snap_token (snapshot_at, window_hours, token),
+    INDEX idx_snap_at (snapshot_at),
+    INDEX idx_window_at (window_hours, snapshot_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
