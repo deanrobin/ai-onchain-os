@@ -30,7 +30,7 @@ public class BinanceSquareAlertService {
     private final BinanceSquareService squareService;
     private final WebClient.Builder    webClientBuilder;
 
-    @Value("${binance-square.alert-url:${perp.alert-url:}}")
+    @Value("${binance-square.alert-url:}")
     private String alertUrl;
 
     public void sendHourlyReport() {
