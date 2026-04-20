@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('币安广场热度', ~{::main})}">
+<body><main>
+
+<div class="d-flex align-items-center flex-wrap gap-3 mb-3">
+    <span class="pulse-dot"></span>
+    <h5 class="fw-7 mb-0 ms-1">币安广场代币热度榜</h5>
+
+    <div class="tab-row" style="background:#f8faff">
+        <a th:href="@{/binance-square(hours=1)}"
+           class="tab-item"
+           th:classappend="${hours==1?' active':''}"
+           style="font-size:.8rem;text-decoration:none">近 1 小时</a>
+        <a th:href="@{/binance-square(hours=24)}"
+           class="tab-item"
+           th:classappend="${hours==24?' active':''}"
+           style="font-size:.8rem;text-decoration:none">近 24 小时</a>
+    </div>
+
+    <span id="auto-badge"
+          style="background:#f0f4ff;border:1px solid #c7d7fa;color:#3b82f6;
+                 border-radius:20px;padding:3px 12px;font-size:.76rem;font-weight:600;
+                 pointer-events:none;user-select:none">
+        🔄 <span id="auto-countdown">30</span>s
+    </span>
+</div>
+
+<div class="d-flex gap-2 mb-3" style="flex-wrap:wrap">
+    <span class="tag-gray">窗口 <span th:text="${hours}"></span> 小时</span>
+    <span class="tag-gray">最后更新 <span id="last-update-time">—</span></span>
+    <span class="tag-gray">✅ 币安已上架 &nbsp; ❓ 待验证</span>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div th:if="${top.isEmpty()}" class="empty-state">
+            <div class="ei">📭</div><div>暂无数据（Job 每 5 分钟抓一次，刚启动请稍等）</div>
+        </div>
+        <table th:unless="${top.isEmpty()}" class="table" id="sq-tbl">
+            <thead><tr>
+                <th style="width:60px">#</th>
+                <th>代币</th>
+                <th>分数</th>
+                <th>👍 点赞</th>
+                <th>💬 评论</th>
+                <th>帖子数</th>
+                <th>币安</th>
+            </tr></thead>
+            <tbody id="sq-tbody">
+            <tr th:each="row,iter : ${top}"
+                th:class="${iter.index==0?'rank-1':(iter.index==1?'rank-2':(iter.index==2?'rank-3':''))}">
+                <td class="mono fw-7 t-dim" th:text="${iter.index + 1}"></td>
+                <td>
+                    <span class="fw-7" style="font-size:.92rem" th:text="${row.token}"></span>
+                </td>
+                <td class="mono fw-7 t-blue" th:text="${row.score}"></td>
+                <td class="mono" th:text="${row.likes}"></td>
+                <td class="mono" th:text="${row.comments}"></td>
+                <td class="mono" th:text="${row.postCount}"></td>
+                <td>
+                    <span th:if="${row.inBinance}" class="tag-up">✅</span>
+                    <span th:unless="${row.inBinance}" class="tag-gray">❓</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const HOURS = /*[[${hours}]]*/ 1;
+
+function updateLastTime() {
+    document.getElementById('last-update-time').textContent =
+        new Date().toLocaleString('zh-CN', {
+            timeZone: 'Asia/Shanghai', hour:'2-digit', minute:'2-digit', second:'2-digit'
+        });
+}
+
+async function refresh() {
+    try {
+        const r = await fetch(`/api/binance-square/top?hours=${HOURS}&limit=20`);
+        const rows = await r.json();
+        const tbody = document.getElementById('sq-tbody');
+        if (!tbody) return;
+        if (!rows || !rows.length) return;
+        tbody.innerHTML = rows.map((d, i) => {
+            const rankCls = i===0 ? 'rank-1' : i===1 ? 'rank-2' : i===2 ? 'rank-3' : '';
+            const binance = d.inBinance
+                ? '<span class="tag-up">✅</span>'
+                : '<span class="tag-gray">❓</span>';
+            return `<tr class="${rankCls}">
+                <td class="mono fw-7 t-dim">${i+1}</td>
+                <td><span class="fw-7" style="font-size:.92rem">${escapeHtml(d.token)}</span></td>
+                <td class="mono fw-7 t-blue">${d.score}</td>
+                <td class="mono">${d.likes}</td>
+                <td class="mono">${d.comments}</td>
+                <td class="mono">${d.postCount}</td>
+                <td>${binance}</td>
+            </tr>`;
+        }).join('');
+        updateLastTime();
+    } catch(e) { console.warn('refresh binance-square', e); }
+}
+
+function escapeHtml(s) {
+    return String(s||'').replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+updateLastTime();
+let countdown = 30;
+const countEl = document.getElementById('auto-countdown');
+setInterval(() => {
+    countdown--;
+    if (countdown <= 0) { countdown = 30; refresh(); }
+    countEl.textContent = countdown;
+}, 1000);
+</script>
+
+</main></body>
+</html>

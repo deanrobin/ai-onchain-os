@@ -318,3 +318,41 @@ ALTER TABLE pump_market_cap_snapshot
 ALTER TABLE perp_volume_snapshot
     ADD COLUMN IF NOT EXISTS taker_buy_ratio DECIMAL(10,4) COMMENT '主动买/卖量比（>1代表主动买入量更大）'
     AFTER funding_rate;
+
+-- ════════════════════════════════════════════════════════════════
+-- 20260420-001  币安广场代币热度追踪（5min 抓取 + 整点/日 飞书汇报 + 7 天清理）
+-- ════════════════════════════════════════════════════════════════
+
+-- 帖子原文（去重 + 溯源）。7 天保留，BinanceSquareCleanupJob 02:30 清理。
+CREATE TABLE IF NOT EXISTS binance_square_post (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id       VARCHAR(100)  NOT NULL COMMENT '币安广场原始帖子 ID',
+    author_name   VARCHAR(200),
+    content       TEXT,
+    like_count    INT DEFAULT 0,
+    comment_count INT DEFAULT 0,
+    score         INT DEFAULT 0 COMMENT '点赞+评论',
+    tokens        VARCHAR(2000) COMMENT 'JSON 数组，已抽取到的代币',
+    post_date     DATETIME      NOT NULL COMMENT '帖子原始时间',
+    fetched_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_post_id (post_id),
+    INDEX idx_post_date (post_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 一篇帖子 × 多个代币的统计行（聚合时按 post_date 时间窗 SUM(score)）。
+CREATE TABLE IF NOT EXISTS binance_square_token_stat (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id     VARCHAR(100) NOT NULL,
+    token       VARCHAR(50)  NOT NULL,
+    in_content  TINYINT(1)   DEFAULT 0 COMMENT '是否来自正文 $XXX',
+    in_fields   TINYINT(1)   DEFAULT 0 COMMENT '是否来自作者标注字段',
+    in_binance  TINYINT(1)   DEFAULT 0 COMMENT '是否在币安上架',
+    likes       INT DEFAULT 0,
+    comments    INT DEFAULT 0,
+    score       INT DEFAULT 0,
+    post_date   DATETIME     NOT NULL,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_post_token (post_id, token),
+    INDEX idx_token_date (token, post_date),
+    INDEX idx_post_date (post_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

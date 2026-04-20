@@ -154,6 +154,8 @@ CREATE TABLE IF NOT EXISTS your_new_table (
 | `pump_market_cap_snapshot` | 新币24h市值快照 |
 | `price_ticker` | 实时价格（BNB/SOL/ETH）|
 | `my_address` | 我的钱包地址 |
+| `binance_square_post` | 币安广场帖子原文（7 天保留）|
+| `binance_square_token_stat` | 币安广场代币热度（7 天保留）|
 
 ---
 

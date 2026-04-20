@@ -4,7 +4,7 @@ spring:
   task:
     scheduling:
       pool:
-        size: 30  # 实际 @Scheduled 方法共 26 个，OKX fetchAllRates 单次阻塞 6min，需留足裕量
+        size: 33  # 实际 @Scheduled 方法共 29 个（含币安广场 3 个），OKX fetchAllRates 单次阻塞 6min，需留足裕量
   datasource:
     url: jdbc:mysql://${DB_HOST:43.134.118.142}:${DB_PORT:33066}/oc_os?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
     username: ${DB_USER:arb}
@@ -63,6 +63,13 @@ perp:
     overview-ttl-seconds: 300      # overview 缓存 5 分钟
     tx-history-ttl-seconds: 30     # tx_history 缓存 30 秒
     tx-history-limit: 50           # 每次拉取最近多少笔交易
+
+# ── 币安广场代币热度 ─────────────────────────────────────────────
+binance-square:
+  # 广场 feed 端点（可覆写）；默认使用公开 square feed
+  feed-url: ${BINANCE_SQUARE_FEED_URL:https://www.binance.com/bapi/composite/v1/public/content/community/square/feed?pageIndex=1&pageSize=50&scene=square}
+  # 独立飞书 webhook（POST JSON）
+  alert-url: ${BINANCE_SQUARE_ALERT_URL:https://open.feishu.cn/open-apis/bot/v2/hook/c035c556-dcf4-4145-a4e8-a7a956bbce96}
 
 # ── 链上持仓监控 RPC 配置 ─────────────────────────────────────────
 onchain:
