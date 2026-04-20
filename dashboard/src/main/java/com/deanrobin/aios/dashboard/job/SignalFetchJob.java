@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,6 +28,14 @@ import java.util.concurrent.TimeUnit;
 public class SignalFetchJob {
 
     private static final String SIGNAL_PATH = "/api/v6/dex/market/signal/list";
+
+    /**
+     * 内存缓存：记录已写入 DB 的钱包 key（chain:address）及写入时间戳（ms）。
+     * 避免 SignalFetchJob 每 10s 对每个 trigger_wallet 都打 existsByAddressAndChainIndex 查询。
+     * TTL = 60 分钟：钱包一旦写入 DB 就不需要再查，60 分钟后自动失效（防无限增长）。
+     */
+    private static final long WALLET_CACHE_TTL_MS = 60 * 60 * 1000L; // 60 min
+    private final Map<String, Long> walletSeenCache = new ConcurrentHashMap<>();
 
     private final OkxApiClient             okxClient;
     private final SmartMoneyJobConfig      jobConfig;
@@ -207,18 +216,32 @@ public class SignalFetchJob {
         Object raw = sig.get("triggerWalletAddress");
         if (raw == null) return;
         String[] parts = String.valueOf(raw).split(",");
+        long now = System.currentTimeMillis();
         for (String addr : parts) {
             addr = addr.strip();
             if (addr.length() >= 20) { // SOL 地址 ~44 字符, EVM ~42
                 String key = chain + ":" + addr.toLowerCase();
                 if (newWallets.add(key)) {
-                    saveWalletIfAbsent(addr, chain);
+                    saveWalletIfAbsent(addr, chain, key, now);
                 }
             }
         }
+        // 定期清理过期缓存条目（简单惰性清理：本轮处理时顺手清一次）
+        if (walletSeenCache.size() > 5000) {
+            walletSeenCache.entrySet().removeIf(e -> now - e.getValue() > WALLET_CACHE_TTL_MS);
+        }
     }
 
-    private void saveWalletIfAbsent(String address, String chain) {
+    /**
+     * 先查内存缓存，命中则跳过 DB 查询。
+     * 未命中才执行 existsByAddressAndChainIndex，确认不存在后写入并更新缓存。
+     * 每 10s 被调用，原来每次最多 40 个 DB 查询，现在热路径 0 次。
+     */
+    private void saveWalletIfAbsent(String address, String chain, String cacheKey, long nowMs) {
+        Long cachedAt = walletSeenCache.get(cacheKey);
+        if (cachedAt != null && nowMs - cachedAt < WALLET_CACHE_TTL_MS) {
+            return; // 缓存命中，跳过 DB 查询
+        }
         if (!walletRepo.existsByAddressAndChainIndex(address, chain)) {
             SmartMoneyWallet w = new SmartMoneyWallet();
             w.setAddress(address);
@@ -231,6 +254,8 @@ public class SignalFetchJob {
             w.setUpdatedAt(LocalDateTime.now());
             walletRepo.save(w);
         }
+        // 无论是否新写入，都记入缓存（已在 DB 的也不必再查）
+        walletSeenCache.put(cacheKey, nowMs);
     }
 
     private BigDecimal toBd(Object v) {

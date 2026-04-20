@@ -43,6 +43,17 @@ public class PerpInstrument {
     @Column(name = "latest_funding_updated_at")
     private LocalDateTime latestFundingUpdatedAt;
 
+    /** 最新持仓量（基础货币；Hyperliquid 为 USD） */
+    @Column(name = "latest_oi", precision = 30, scale = 4)
+    private java.math.BigDecimal latestOi;
+
+    /** 最新持仓量 USD 估算 */
+    @Column(name = "latest_oi_usd", precision = 30, scale = 4)
+    private java.math.BigDecimal latestOiUsd;
+
+    @Column(name = "latest_oi_updated_at")
+    private LocalDateTime latestOiUpdatedAt;
+
     @Column(name = "first_seen_at", nullable = false)
     private LocalDateTime firstSeenAt;
 

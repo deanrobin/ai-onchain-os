@@ -1,0 +1,399 @@
+/**
+ * apple-design.css — Apple HIG Design Tokens
+ * =============================================================================
+ * Reference file for Apple Human Interface Guidelines design properties.
+ * Source: Apple HIG (developer.apple.com/design/human-interface-guidelines)
+ * Covers iOS 17 / macOS 14 (Sonoma) system values.
+ *
+ * HOW TO USE
+ * ----------
+ * This file is the single source of truth for Apple-style tokens used in
+ * this project. Import it BEFORE any component stylesheets:
+ *
+ *   <link rel="stylesheet" href="/css/apple-design.css">
+ *
+ * Then consume variables anywhere:
+ *   .my-btn { background: var(--apple-blue); border-radius: var(--radius-control); }
+ *
+ * =============================================================================
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1. TYPOGRAPHY
+   Font family: SF Pro is a system font — no @import required on Apple devices.
+   The stack falls back gracefully on non-Apple platforms.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+    /* Display / UI text */
+    --font-sans:  -apple-system, 'SF Pro Display', 'SF Pro Text',
+                  'Helvetica Neue', 'Arial', sans-serif;
+
+    /* Monospaced (code, addresses, numbers) */
+    --font-mono:  'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+
+    /* ── Type Scale (pt → px at 1x, following Apple's Dynamic Type) ── */
+    --text-caption2:  11px;   /* Caption 2  — very small label */
+    --text-caption1:  12px;   /* Caption 1  — secondary label  */
+    --text-footnote:  13px;   /* Footnote   — supporting text  */
+    --text-subhead:   15px;   /* Subheadline                   */
+    --text-callout:   16px;   /* Callout                       */
+    --text-body:      17px;   /* Body (default reading size)   */
+    --text-headline:  17px;   /* Headline — semibold body      */
+    --text-title3:    20px;   /* Title 3                       */
+    --text-title2:    22px;   /* Title 2                       */
+    --text-title1:    28px;   /* Title 1                       */
+    --text-large-title: 34px; /* Large Title                   */
+
+    /* ── Font Weights ── */
+    --weight-ultralight: 100;
+    --weight-thin:       200;
+    --weight-light:      300;
+    --weight-regular:    400;
+    --weight-medium:     500;
+    --weight-semibold:   600;
+    --weight-bold:       700;
+    --weight-heavy:      800;
+    --weight-black:      900;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   2. SYSTEM COLORS — Light Mode
+   These match the exact sRGB values Apple uses in iOS/macOS system palettes.
+   Dark mode overrides follow below in a prefers-color-scheme media query.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+    /* ── Primary accents ── */
+    --apple-blue:    #007AFF;   /* systemBlue   — primary interactive   */
+    --apple-green:   #34C759;   /* systemGreen  — success / bullish     */
+    --apple-red:     #FF3B30;   /* systemRed    — error / bearish       */
+    --apple-orange:  #FF9500;   /* systemOrange — warning               */
+    --apple-yellow:  #FFCC00;   /* systemYellow                         */
+    --apple-purple:  #AF52DE;   /* systemPurple                         */
+    --apple-pink:    #FF2D55;   /* systemPink                           */
+    --apple-teal:    #5AC8FA;   /* systemTeal   — info                  */
+    --apple-indigo:  #5856D6;   /* systemIndigo                         */
+    --apple-mint:    #00C7BE;   /* systemMint   (iOS 15+)               */
+    --apple-cyan:    #32ADE6;   /* systemCyan   (iOS 15+)               */
+    --apple-brown:   #A2845E;   /* systemBrown                          */
+
+    /* ── Grays ── */
+    --apple-gray1:  #8E8E93;    /* systemGray   — neutral mid           */
+    --apple-gray2:  #AEAEB2;    /* systemGray2                          */
+    --apple-gray3:  #C7C7CC;    /* systemGray3                          */
+    --apple-gray4:  #D1D1D6;    /* systemGray4                          */
+    --apple-gray5:  #E5E5EA;    /* systemGray5  — thin separator        */
+    --apple-gray6:  #F2F2F7;    /* systemGray6  — secondary background  */
+
+    /* ── Text / Label Colors ── */
+    --apple-label:            rgba(0, 0, 0, 1.00);      /* Primary label     */
+    --apple-label2:           rgba(60, 60, 67, 0.60);   /* Secondary label   */
+    --apple-label3:           rgba(60, 60, 67, 0.30);   /* Tertiary label    */
+    --apple-label4:           rgba(60, 60, 67, 0.18);   /* Quaternary label  */
+    --apple-placeholder:      rgba(60, 60, 67, 0.30);   /* Placeholder text  */
+
+    /* ── Separator / Divider ── */
+    --apple-separator:        rgba(60, 60, 67, 0.29);   /* Default separator */
+    --apple-separator-opaque: #C6C6C8;                  /* Opaque separator  */
+
+    /* ── Background Fills ── */
+    --apple-fill1:  rgba(120, 120, 128, 0.20);  /* Thin fill (selected rows)  */
+    --apple-fill2:  rgba(120, 120, 128, 0.16);  /* Light fill                 */
+    --apple-fill3:  rgba(118, 118, 128, 0.12);  /* Lighter fill               */
+    --apple-fill4:  rgba(116, 116, 128, 0.08);  /* Lightest fill              */
+
+    /* ── System Backgrounds ── */
+    --apple-bg:             #FFFFFF;    /* Primary system background          */
+    --apple-bg2:            #F2F2F7;    /* Secondary system background        */
+    --apple-bg3:            #FFFFFF;    /* Tertiary system background         */
+    --apple-bg-grouped:     #F2F2F7;    /* Grouped list background            */
+    --apple-bg-grouped2:    #FFFFFF;    /* Grouped list card background       */
+    --apple-bg-grouped3:    #F2F2F7;    /* Grouped tertiary                   */
+
+    /* ── Accent Light Washes (for tags/badges) ── */
+    --apple-blue-wash:    rgba(0,   122, 255, 0.10);
+    --apple-green-wash:   rgba(52,  199,  89, 0.12);
+    --apple-red-wash:     rgba(255,  59,  48, 0.10);
+    --apple-orange-wash:  rgba(255, 149,   0, 0.10);
+    --apple-yellow-wash:  rgba(255, 204,   0, 0.12);
+    --apple-purple-wash:  rgba(175,  82, 222, 0.10);
+    --apple-teal-wash:    rgba(90,  200, 250, 0.12);
+    --apple-indigo-wash:  rgba(88,   86, 214, 0.10);
+}
+
+/* ── Dark Mode Override ── */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Accents shift slightly in dark mode */
+        --apple-blue:    #0A84FF;
+        --apple-green:   #30D158;
+        --apple-red:     #FF453A;
+        --apple-orange:  #FF9F0A;
+        --apple-yellow:  #FFD60A;
+        --apple-purple:  #BF5AF2;
+        --apple-pink:    #FF375F;
+        --apple-teal:    #64D2FF;
+        --apple-indigo:  #5E5CE6;
+        --apple-mint:    #63E6E2;
+        --apple-cyan:    #5AC8F5;
+        --apple-brown:   #AC8E68;
+
+        /* Grays */
+        --apple-gray1:  #8E8E93;
+        --apple-gray2:  #636366;
+        --apple-gray3:  #48484A;
+        --apple-gray4:  #3A3A3C;
+        --apple-gray5:  #2C2C2E;
+        --apple-gray6:  #1C1C1E;
+
+        /* Text */
+        --apple-label:            rgba(255, 255, 255, 1.00);
+        --apple-label2:           rgba(235, 235, 245, 0.60);
+        --apple-label3:           rgba(235, 235, 245, 0.30);
+        --apple-label4:           rgba(235, 235, 245, 0.18);
+        --apple-placeholder:      rgba(235, 235, 245, 0.30);
+
+        /* Separators */
+        --apple-separator:        rgba(84, 84, 88, 0.60);
+        --apple-separator-opaque: #38383A;
+
+        /* Fills */
+        --apple-fill1:  rgba(120, 120, 128, 0.36);
+        --apple-fill2:  rgba(120, 120, 128, 0.32);
+        --apple-fill3:  rgba(118, 118, 128, 0.24);
+        --apple-fill4:  rgba(116, 116, 128, 0.18);
+
+        /* Backgrounds */
+        --apple-bg:             #1C1C1E;
+        --apple-bg2:            #2C2C2E;
+        --apple-bg3:            #3A3A3C;
+        --apple-bg-grouped:     #1C1C1E;
+        --apple-bg-grouped2:    #2C2C2E;
+        --apple-bg-grouped3:    #3A3A3C;
+
+        /* Washes */
+        --apple-blue-wash:    rgba(10,  132, 255, 0.15);
+        --apple-green-wash:   rgba(48,  209,  88, 0.15);
+        --apple-red-wash:     rgba(255,  69,  58, 0.15);
+        --apple-orange-wash:  rgba(255, 159,  10, 0.15);
+        --apple-yellow-wash:  rgba(255, 214,  10, 0.15);
+        --apple-purple-wash:  rgba(191,  90, 242, 0.15);
+        --apple-teal-wash:    rgba(100, 210, 255, 0.15);
+        --apple-indigo-wash:  rgba(94,  92, 230, 0.15);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3. SPACING — 4pt base grid (Apple uses multiples of 4pt)
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+    --space-1:   4px;    /*  1×  */
+    --space-2:   8px;    /*  2×  */
+    --space-3:  12px;    /*  3×  */
+    --space-4:  16px;    /*  4×  — standard content margin */
+    --space-5:  20px;    /*  5×  — standard section padding */
+    --space-6:  24px;    /*  6×  */
+    --space-7:  28px;    /*  7×  */
+    --space-8:  32px;    /*  8×  */
+    --space-10: 40px;    /* 10×  */
+    --space-12: 48px;    /* 12×  */
+    --space-16: 64px;    /* 16×  */
+    --space-20: 80px;    /* 20×  */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. BORDER RADIUS — Apple uses continuous curves (squircle approximation)
+   The values below are CSS approximations of Apple's corner radii.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+    --radius-xs:      4px;   /* Tiny tag, badge pip                           */
+    --radius-sm:      6px;   /* Small control (toggles)                       */
+    --radius-control: 8px;   /* Standard button / text field                  */
+    --radius-md:     10px;   /* Tab bar item, picker                          */
+    --radius-card:   12px;   /* Standard card / sheet                         */
+    --radius-lg:     16px;   /* Modal sheet / large card                      */
+    --radius-xl:     20px;   /* Alert panel / action sheet                    */
+    --radius-2xl:    28px;   /* Bottom sheet, prominent container             */
+    --radius-full:  999px;   /* Pill / fully-rounded                          */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   5. ELEVATION / SHADOWS
+   Apple shadows are soft, multi-layered, and low-saturation.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+    /* Level 0 — Inset / no lift */
+    --shadow-0: none;
+
+    /* Level 1 — Subtle card lift (default card state) */
+    --shadow-1: 0 1px 3px  rgba(0, 0, 0, 0.08),
+                0 1px 2px  rgba(0, 0, 0, 0.05);
+
+    /* Level 2 — Hovered card / list separator shadow */
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.10),
+                0 2px 4px  rgba(0, 0, 0, 0.06);
+
+    /* Level 3 — Popover / dropdown */
+    --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.12),
+                0 3px 8px  rgba(0, 0, 0, 0.07);
+
+    /* Level 4 — Modal / alert (prominent) */
+    --shadow-4: 0 20px 60px rgba(0, 0, 0, 0.16),
+                0 8px  20px rgba(0, 0, 0, 0.09);
+
+    /* Colored accent shadows (used on stat cards) */
+    --shadow-blue:   0 4px 14px rgba(0, 122, 255, 0.24);
+    --shadow-green:  0 4px 14px rgba(52, 199,  89, 0.24);
+    --shadow-red:    0 4px 14px rgba(255, 59,  48, 0.24);
+    --shadow-orange: 0 4px 14px rgba(255,149,   0, 0.24);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   6. VIBRANCY / FROSTED GLASS
+   Apple's "materials" use backdrop-filter to blur and desaturate.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+    /* ── Blur amounts ── */
+    --blur-sm:     8px;    /* Thin material              */
+    --blur-md:    16px;    /* Regular material           */
+    --blur-lg:    24px;    /* Thick material (nav bars)  */
+    --blur-xl:    40px;    /* Ultra-thick (modal scrim)  */
+
+    /* ── Saturation (Apple cranks this above 100%) ── */
+    --saturate-material: 180%;   /* Standard Apple material    */
+    --saturate-vivid:    200%;   /* Vivid material             */
+
+    /* ── Pre-built material backgrounds (light mode) ── */
+    --material-thin:      rgba(255, 255, 255, 0.55);  /* Thin material      */
+    --material-regular:   rgba(255, 255, 255, 0.72);  /* Regular (nav bars) */
+    --material-thick:     rgba(255, 255, 255, 0.85);  /* Thick material     */
+    --material-chrome:    rgba(242, 242, 247, 0.90);  /* System chrome      */
+
+    /* ── Shorthand backdrop-filter values ── */
+    --backdrop-thin:    blur(var(--blur-sm))  saturate(var(--saturate-material));
+    --backdrop-regular: blur(var(--blur-lg))  saturate(var(--saturate-material));
+    --backdrop-thick:   blur(var(--blur-xl))  saturate(var(--saturate-vivid));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   7. TRANSITIONS / ANIMATION
+   Apple emphasizes physical, spring-based motion.
+   CSS approximations using ease curves.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+    /* Duration */
+    --duration-instant:  50ms;
+    --duration-fast:    150ms;   /* Button press response      */
+    --duration-normal:  250ms;   /* Most transitions           */
+    --duration-slow:    400ms;   /* Modal enter/exit           */
+    --duration-spring:  550ms;   /* Spring-like settle         */
+
+    /* Easing */
+    --ease-standard:    cubic-bezier(0.25, 0.46, 0.45, 0.94);  /* Material standard     */
+    --ease-decelerate:  cubic-bezier(0.00, 0.00, 0.20, 1.00);  /* Enter screen          */
+    --ease-accelerate:  cubic-bezier(0.40, 0.00, 1.00, 1.00);  /* Exit screen           */
+    --ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1.00);  /* Overshoot → settle    */
+    --ease-linear:      linear;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   8. BORDERS / HAIRLINES
+   Apple uses hairline (0.5px) separators on high-DPI displays via
+   CSS border + scale trick, or 1px with low opacity.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+    --border-hairline: 1px solid var(--apple-separator);        /* Thin line       */
+    --border-card:     1px solid var(--apple-separator-opaque); /* Card outline    */
+    --border-control:  1.5px solid var(--apple-gray4);          /* Input field     */
+    --border-focus:    2px solid var(--apple-blue);             /* Focus ring      */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   9. UTILITY CLASSES (optional — use if you want standalone Apple components)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Frosted glass panel */
+.apple-material {
+    background: var(--material-regular);
+    -webkit-backdrop-filter: var(--backdrop-regular);
+    backdrop-filter: var(--backdrop-regular);
+    border: var(--border-hairline);
+}
+
+/* Standard Apple card */
+.apple-card {
+    background: var(--apple-bg-grouped2);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-1);
+    overflow: hidden;
+    transition: box-shadow var(--duration-normal) var(--ease-standard),
+                transform    var(--duration-normal) var(--ease-standard);
+}
+.apple-card:hover {
+    box-shadow: var(--shadow-2);
+    transform: translateY(-2px);
+}
+
+/* Apple segmented control (tab bar) */
+.apple-segmented {
+    display: inline-flex;
+    background: var(--apple-fill3);
+    border-radius: var(--radius-md);
+    padding: 2px;
+    gap: 2px;
+}
+.apple-segment {
+    padding: 5px 16px;
+    border-radius: 8px;
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-medium);
+    color: var(--apple-label2);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-standard);
+    user-select: none;
+    white-space: nowrap;
+}
+.apple-segment:hover:not(.active) {
+    color: var(--apple-label);
+}
+.apple-segment.active {
+    background: var(--apple-bg);
+    color: var(--apple-label);
+    font-weight: var(--weight-semibold);
+    box-shadow: var(--shadow-1);
+}
+
+/* Apple pill button (filled) */
+.apple-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--apple-blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-control);
+    padding: 8px 18px;
+    font-family: var(--font-sans);
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity var(--duration-fast) var(--ease-standard),
+                transform var(--duration-fast) var(--ease-spring);
+}
+.apple-btn:hover  { opacity: 0.88; transform: scale(1.01); }
+.apple-btn:active { opacity: 0.70; transform: scale(0.97); }
+
+/* Tinted badge / tag */
+.apple-badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-caption1);
+    font-weight: var(--weight-semibold);
+}
+.apple-badge-blue   { background: var(--apple-blue-wash);   color: var(--apple-blue);   }
+.apple-badge-green  { background: var(--apple-green-wash);  color: var(--apple-green);  }
+.apple-badge-red    { background: var(--apple-red-wash);    color: var(--apple-red);    }
+.apple-badge-orange { background: var(--apple-orange-wash); color: var(--apple-orange); }
+.apple-badge-yellow { background: var(--apple-yellow-wash); color: #8B7200;             }
+.apple-badge-purple { background: var(--apple-purple-wash); color: var(--apple-purple); }
+.apple-badge-teal   { background: var(--apple-teal-wash);   color: var(--apple-teal);   }
+.apple-badge-gray   { background: var(--apple-fill3);       color: var(--apple-label2); }

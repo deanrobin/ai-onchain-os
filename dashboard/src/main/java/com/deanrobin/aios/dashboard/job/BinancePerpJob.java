@@ -17,6 +17,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.Map;
 
 /**
@@ -88,6 +90,23 @@ public class BinancePerpJob {
             log.info("🆕 Binance 新增永续合约 {} 个: {}", newCount, newSymbols);
             triggerAlert(newSymbols.size(), String.join(",", newSymbols.subList(0, Math.min(3, newSymbols.size()))));
         }
+
+        // 将本次未出现的品种标记为下线（status 不再是 TRADING）
+        Set<String> returnedSymbols = instruments.stream()
+                .map(i -> String.valueOf(i.getOrDefault("symbol", "")))
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toSet());
+        int deactivated = 0;
+        for (PerpInstrument pi : instrumentRepo.findByExchangeAndIsActiveTrue(EXCHANGE)) {
+            if (!returnedSymbols.contains(pi.getSymbol())) {
+                pi.setIsActive(false);
+                pi.setLastSeenAt(now);
+                instrumentRepo.save(pi);
+                deactivated++;
+                log.info("⬇️ Binance 合约下线: {}", pi.getSymbol());
+            }
+        }
+        if (deactivated > 0) log.info("⬇️ Binance 共下线 {} 个合约", deactivated);
     }
 
     // ═══ 全量资金费率（每 5 min，initialDelay 90s）═══════════════════

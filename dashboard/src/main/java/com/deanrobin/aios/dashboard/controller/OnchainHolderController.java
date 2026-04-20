@@ -105,7 +105,10 @@ public class OnchainHolderController {
         return watchRepo.findById(id).<ResponseEntity<Map<String, Object>>>map(w -> {
             w.setActive(!w.isActive());
             watchRepo.save(w);
-            return ResponseEntity.ok(Map.of("id", (Object) id, "isActive", w.isActive()));
+            Map<String, Object> body = new java.util.LinkedHashMap<>();
+            body.put("id", id);
+            body.put("isActive", w.isActive());
+            return ResponseEntity.ok(body);
         }).orElse(ResponseEntity.notFound().build());
     }
 

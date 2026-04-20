@@ -4,6 +4,7 @@ import com.deanrobin.aios.dashboard.model.PerpFundingRate;
 import com.deanrobin.aios.dashboard.model.PerpInstrument;
 import com.deanrobin.aios.dashboard.repository.PerpFundingRateRepository;
 import com.deanrobin.aios.dashboard.repository.PerpInstrumentRepository;
+import com.deanrobin.aios.dashboard.repository.TickerAlertBlacklistRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
  *         绝对值变化 > 0.5% 且远离 0 的方向 → 飞书报警。
  *         每个品种每小时最多报一次（JVM 内存缓存）。
  *
+ * 功能三：OI 突破 5000万 告警（含持仓量 + 24H 涨跌幅）
+ *
  * ⚠️ 不加 @Transactional
  */
 @Log4j2
@@ -46,16 +49,34 @@ public class PerpAlertService {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MM-dd HH:mm");
     private static final ZoneId CST = ZoneId.of("Asia/Shanghai");
 
-    private final PerpService               perpService;
-    private final PerpInstrumentRepository  instrumentRepo;
-    private final PerpFundingRateRepository fundingRateRepo;
-    private final WebClient.Builder         webClientBuilder;
+    private final PerpService                      perpService;
+    private final PerpApiClient                    perpApiClient;
+    private final PerpInstrumentRepository         instrumentRepo;
+    private final PerpFundingRateRepository        fundingRateRepo;
+    private final TickerAlertBlacklistRepository   blacklistRepo;
+    private final WebClient.Builder                webClientBuilder;
 
     @Value("${perp.alert-url:}")
     private String alertUrl;
 
     /** spike 报警冷却：key = "EXCHANGE:SYMBOL"，value = 上次报警时间戳 */
     private final ConcurrentHashMap<String, Long> spikeCooldown = new ConcurrentHashMap<>();
+
+    /** 成交量报警冷却：key = symbol，value = 上次报警时间戳（1H 最多一次） */
+    private final ConcurrentHashMap<String, Long> volumeCooldown = new ConcurrentHashMap<>();
+
+    /** 黑名单缓存，每 5 分钟从 DB 刷新一次 */
+    private volatile Set<String> blacklistCache = Set.of();
+
+    @Scheduled(initialDelay = 0, fixedDelay = 300_000)
+    public void refreshBlacklist() {
+        try {
+            blacklistCache = blacklistRepo.findAllSymbols();
+            log.debug("🔕 成交量报警黑名单已刷新，共 {} 个", blacklistCache.size());
+        } catch (Exception e) {
+            log.warn("⚠️ 黑名单刷新失败: {}", e.getMessage());
+        }
+    }
 
     /** 手动汇报冷却 */
     private final AtomicLong lastManualReport = new AtomicLong(0);
@@ -84,7 +105,7 @@ public class PerpAlertService {
         return true;
     }
 
-    // ─── 构建并发送 Top10 报告 ────────────────────────────────────────
+    // ─── 构建并发送 Top5 飞书报告（页面仍展示 Top10）────────────────
     private void sendReport() {
         if (alertUrl == null || alertUrl.isBlank()) {
             log.warn("⚠️ perp.alert-url 未配置，跳过飞书汇报");
@@ -102,21 +123,25 @@ public class PerpAlertService {
 
         for (String[] ex : exchanges) {
             String exch = ex[0], icon = ex[1];
-            List<PerpInstrument> high = perpService.getTop10High(exch);
-            List<PerpInstrument> low  = perpService.getTop10Low(exch);
+            List<PerpInstrument> high = top5(perpService.getTop10High(exch));
+            List<PerpInstrument> low  = top5(perpService.getTop10Low(exch));
             if (high.isEmpty() && low.isEmpty()) continue;
 
             sb.append("━━━━━━━━━━━━━━━━━━━━━━━━\n");
             sb.append(icon).append(" ").append(exch).append("\n");
 
-            sb.append("▲ Top10 最高\n");
+            sb.append("▲ Top5 最高\n");
             appendRates(sb, high);
-            sb.append("▼ Top10 最低\n");
+            sb.append("▼ Top5 最低\n");
             appendRates(sb, low);
         }
 
         sendFeishu(sb.toString());
         log.info("📤 Perps 飞书汇报已发送");
+    }
+
+    private static List<PerpInstrument> top5(List<PerpInstrument> list) {
+        return list.size() <= 5 ? list : list.subList(0, 5);
     }
 
     private void appendRates(StringBuilder sb, List<PerpInstrument> list) {
@@ -160,9 +185,10 @@ public class PerpAlertService {
                         (a, b) -> b   // 保留后一条
                 ));
 
-        // 与当前 latest_funding_rate 对比
+        // 与当前 latest_funding_rate 对比（仅 active 品种，且跳过黑名单）
         List<PerpInstrument> current = instrumentRepo.findByExchangeAndIsActiveTrue(exchange);
         for (PerpInstrument inst : current) {
+            if (blacklistCache.contains(inst.getSymbol())) continue;   // 黑名单跳过（优先）
             if (inst.getLatestFundingRate() == null) continue;
             BigDecimal prevBD = prev15.get(inst.getSymbol());
             if (prevBD == null) continue;
@@ -183,6 +209,116 @@ public class PerpAlertService {
                 }
             }
         }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // 功能三：OI 突破 5000万 告警（含持仓量 + 24H 涨跌幅）
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * 持仓量首次突破 5000万 USD 时调用，发送飞书通知。
+     * 48h 内同品种不重复（由 PerpOiJob 的 checkAndAlert 保证）。
+     *
+     * @param exchange     交易所（OKX / BINANCE）
+     * @param symbol       合约代码（如 BTC-USDT-SWAP）
+     * @param baseCurrency 基础货币（如 BTC）
+     * @param oiUsd        当前持仓量（USDT）
+     * @param change24h    24H 涨跌幅（%，如 +2.31 或 -1.45），可为 null
+     */
+    public void sendOiBreakAlert(String exchange, String symbol, String baseCurrency,
+                                 BigDecimal oiUsd, BigDecimal change24h) {
+        if (alertUrl == null || alertUrl.isBlank()) return;
+        String label = (baseCurrency != null && !baseCurrency.isBlank())
+                ? baseCurrency : symbol.split("[-/]")[0];
+        String oiFmt = formatUsd(oiUsd);
+        String changeFmt = change24h != null
+                ? String.format("%+.2f%%", change24h.doubleValue())
+                : "N/A";
+        String text = String.format(
+                "🚨 合约持仓量突破 5000万 USD\n交易所：%s\n合约：%s（%s）\n持仓量：%s\n24H 涨跌：%s\n\n" +
+                "已进入 48h 特别关注模式\n每 5 分钟快照价格 / 涨跌 / 持仓量",
+                exchange, symbol, label, oiFmt, changeFmt);
+        sendFeishu(text);
+        log.info("🚨 OI突破告警飞书已发 | {}:{} | OI={} | 24H={}", exchange, symbol, oiFmt, changeFmt);
+    }
+
+    private String formatUsd(BigDecimal v) {
+        if (v == null) return "—";
+        double d = v.doubleValue();
+        if (d >= 1e9)  return String.format("$%.2fB", d / 1e9);
+        if (d >= 1e6)  return String.format("$%.1fM", d / 1e6);
+        if (d >= 1e3)  return String.format("$%.1fK", d / 1e3);
+        return String.format("$%.0f", d);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // 功能四：合约成交量报警（> 5000w USDT）
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * Binance ticker job 每分钟调用，成交额超阈值时发飞书报警。
+     * 每个品种每小时最多报一次。
+     *
+     * @param lastPrice      当前最新成交价（USDT）
+     * @param priceChangePct 24H 涨跌幅（%），如 +15.32 或 -3.21，可为 null
+     */
+    public void checkVolumeAlert(String symbol, BigDecimal quoteVolume,
+                                 BigDecimal lastPrice, BigDecimal priceChangePct) {
+        if (alertUrl == null || alertUrl.isBlank()) return;
+        // 黑名单过滤
+        if (blacklistCache.contains(symbol)) return;
+        // 1H 冷却
+        String key = "VOL:" + symbol;
+        long last = volumeCooldown.getOrDefault(key, 0L);
+        if (System.currentTimeMillis() - last < SPIKE_COOLDOWN_MS) return;
+        volumeCooldown.put(key, System.currentTimeMillis());
+
+        double vol = quoteVolume.doubleValue();
+
+        // 拉取当前 OI（持仓量），报警时一次性获取
+        Double oiUsdt = null;
+        try {
+            oiUsdt = perpApiClient.fetchBinanceOIUsdt(symbol);
+        } catch (Exception e) {
+            log.debug("⚠️ 成交量报警拉取 OI 失败 {}: {}", symbol, e.getMessage());
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("🔥 合约成交量异动\n");
+        sb.append(String.format("合约: %s\n", symbol));
+        if (lastPrice != null) {
+            sb.append(String.format("当前价格: %s USDT\n", fmtPrice(lastPrice)));
+        }
+        sb.append(String.format("24h成交额: %s\n", fmtVol(vol)));
+        if (priceChangePct != null) {
+            sb.append(String.format("24H 涨幅: %+.2f%%\n", priceChangePct.doubleValue()));
+        }
+        if (oiUsdt != null && oiUsdt > 0) {
+            sb.append(String.format("持仓量 OI: %s\n", fmtVol(oiUsdt)));
+        }
+
+        sendFeishu(sb.toString().trim());
+        log.info("🔥 成交量报警 | {} | 价格={} | 24h成交额={} | 涨幅={} | OI={}",
+                symbol,
+                lastPrice != null ? fmtPrice(lastPrice) : "--",
+                fmtVol(vol),
+                priceChangePct != null ? String.format("%+.2f%%", priceChangePct.doubleValue()) : "--",
+                oiUsdt != null ? fmtVol(oiUsdt) : "--");
+    }
+
+    /** 价格格式化：根据数量级自动选精度，避免显示太多小数位 */
+    private static String fmtPrice(BigDecimal price) {
+        double p = price.doubleValue();
+        if (p >= 1000) return String.format("%.2f", p);
+        if (p >= 1)    return String.format("%.4f", p);
+        if (p >= 0.01) return String.format("%.6f", p);
+        return String.format("%.8f", p);
+    }
+
+    private static String fmtVol(double usdt) {
+        if (usdt >= 1e8) return String.format("%.2f亿 USDT", usdt / 1e8);
+        if (usdt >= 1e4) return String.format("%.0f万 USDT", usdt / 1e4);
+        return String.format("%.0f USDT", usdt);
     }
 
     private void sendSpikeAlert(String exchange, String symbol, double prev, double curr) {

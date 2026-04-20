@@ -8,6 +8,127 @@
 .rate-neg { color: var(--red);   font-weight: 700; font-family: 'JetBrains Mono'; }
 .rate-zero{ color: var(--t3);    font-weight: 600; font-family: 'JetBrains Mono'; }
 
+/* ── 持仓量列 ── */
+.oi-cell { font-family: 'JetBrains Mono'; font-size: .78rem; color: var(--t2); white-space: nowrap; }
+.oi-none { color: var(--t3); font-size: .72rem; }
+.btn-oi-hist {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 5px; font-size: .7rem;
+    border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--t2); cursor: pointer; transition: background .15s, color .15s;
+    vertical-align: middle; margin-left: 4px;
+}
+.btn-oi-hist:hover { background: var(--blue-l); color: var(--blue); border-color: var(--blue-b); }
+
+/* ── OI 历史 Modal ── */
+.oi-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.45); z-index: 9999;
+    align-items: center; justify-content: center;
+}
+.oi-modal-overlay.active { display: flex; }
+.oi-modal {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    width: min(680px, 94vw); max-height: 80vh;
+    display: flex; flex-direction: column; overflow: hidden;
+}
+.oi-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.oi-modal-title { font-size: .95rem; font-weight: 800; color: var(--t1); }
+.oi-modal-close {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; cursor: pointer; font-size: 1rem; color: var(--t3);
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+}
+.oi-modal-close:hover { background: var(--bg-hover); }
+.oi-period-tabs {
+    display: flex; gap: 0; padding: 12px 20px 0; flex-shrink: 0;
+    border-bottom: 2px solid var(--border);
+}
+.oi-tab {
+    padding: 7px 18px; font-size: .82rem; font-weight: 600; color: var(--t2);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+}
+.oi-tab:hover { color: var(--blue); }
+.oi-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.oi-modal-body { flex: 1; overflow-y: auto; padding: 0; }
+.oi-chg-pos { color: var(--green); font-weight: 600; }
+.oi-chg-neg { color: var(--red);   font-weight: 600; }
+.oi-chg-neu { color: var(--t3); }
+
+/* ── 特别关注区 ── */
+.watch-section {
+    margin-top: 28px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-card);
+    box-shadow: var(--sh-0);
+}
+.watch-section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, rgba(239,68,68,.06) 0%, transparent 70%);
+}
+.watch-section-title {
+    font-size: .9rem; font-weight: 800; color: var(--t1);
+    display: flex; align-items: center; gap: 8px;
+}
+.watch-badge-live {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(239,68,68,.1); color: #ef4444;
+    border: 1px solid rgba(239,68,68,.25); border-radius: 20px;
+    font-size: .68rem; font-weight: 700; padding: 1px 8px;
+}
+.watch-empty {
+    text-align: center; color: var(--t3); font-size: .82rem; padding: 22px;
+}
+.chg-pos { color: var(--green); font-weight: 600; }
+.chg-neg { color: var(--red);   font-weight: 600; }
+.chg-neu { color: var(--t3); }
+.btn-watch-snap {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 3px 10px; border-radius: 5px; font-size: .72rem; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--t2); cursor: pointer; transition: background .15s, color .15s;
+}
+.btn-watch-snap:hover { background: var(--blue-l); color: var(--blue); border-color: var(--blue-b); }
+
+/* ── 5min 快照弹窗 ── */
+.ws-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.45); z-index: 9999;
+    align-items: center; justify-content: center;
+}
+.ws-modal-overlay.active { display: flex; }
+.ws-modal {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    width: min(760px, 95vw); max-height: 82vh;
+    display: flex; flex-direction: column; overflow: hidden;
+}
+.ws-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.ws-modal-title { font-size: .95rem; font-weight: 800; color: var(--t1); }
+.ws-modal-close {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; cursor: pointer; font-size: 1rem; color: var(--t3);
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+}
+.ws-modal-close:hover { background: var(--bg-hover); }
+.ws-modal-body { flex: 1; overflow-y: auto; }
+
 /* ── 固定展示区 ── */
 .featured-grid {
     display: grid;
@@ -178,9 +299,9 @@
             <div class="card-header"><span style="color:var(--green)">▲</span> 资金费率 <span style="color:var(--green);font-weight:700">Top 10 最高</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
-                    <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
+                    <th>#</th><th>合约</th><th>资金费率</th><th>持仓量</th><th>更新</th>
                 </tr></thead>
-                <tbody id="tbl-OKX-high"><tr class="loading-row"><td colspan="4">⏳ 加载中…</td></tr></tbody>
+                <tbody id="tbl-OKX-high"><tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -188,9 +309,9 @@
             <div class="card-header"><span style="color:var(--red)">▼</span> 资金费率 <span style="color:var(--red);font-weight:700">Top 10 最低</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
-                    <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
+                    <th>#</th><th>合约</th><th>资金费率</th><th>持仓量</th><th>更新</th>
                 </tr></thead>
-                <tbody id="tbl-OKX-low"><tr class="loading-row"><td colspan="4">⏳ 加载中…</td></tr></tbody>
+                <tbody id="tbl-OKX-low"><tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -204,9 +325,9 @@
             <div class="card-header"><span style="color:var(--green)">▲</span> 资金费率 <span style="color:var(--green);font-weight:700">Top 10 最高</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
-                    <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
+                    <th>#</th><th>合约</th><th>资金费率</th><th>持仓量</th><th>更新</th>
                 </tr></thead>
-                <tbody id="tbl-BINANCE-high"><tr class="loading-row"><td colspan="4">⏳ 加载中…</td></tr></tbody>
+                <tbody id="tbl-BINANCE-high"><tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -214,9 +335,9 @@
             <div class="card-header"><span style="color:var(--red)">▼</span> 资金费率 <span style="color:var(--red);font-weight:700">Top 10 最低</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
-                    <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
+                    <th>#</th><th>合约</th><th>资金费率</th><th>持仓量</th><th>更新</th>
                 </tr></thead>
-                <tbody id="tbl-BINANCE-low"><tr class="loading-row"><td colspan="4">⏳ 加载中…</td></tr></tbody>
+                <tbody id="tbl-BINANCE-low"><tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -230,9 +351,9 @@
             <div class="card-header"><span style="color:var(--green)">▲</span> 资金费率 <span style="color:var(--green);font-weight:700">Top 10 最高</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
-                    <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
+                    <th>#</th><th>合约</th><th>资金费率</th><th>持仓量</th><th>更新</th>
                 </tr></thead>
-                <tbody id="tbl-HYPERLIQUID-high"><tr class="loading-row"><td colspan="4">⏳ 加载中…</td></tr></tbody>
+                <tbody id="tbl-HYPERLIQUID-high"><tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -240,11 +361,98 @@
             <div class="card-header"><span style="color:var(--red)">▼</span> 资金费率 <span style="color:var(--red);font-weight:700">Top 10 最低</span></div>
             <div class="card-body p-0">
                 <table class="table"><thead><tr>
-                    <th>#</th><th>合约</th><th>资金费率</th><th>更新时间</th>
+                    <th>#</th><th>合约</th><th>资金费率</th><th>持仓量</th><th>更新</th>
                 </tr></thead>
-                <tbody id="tbl-HYPERLIQUID-low"><tr class="loading-row"><td colspan="4">⏳ 加载中…</td></tr></tbody>
+                <tbody id="tbl-HYPERLIQUID-low"><tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── 特别关注区 ─────────────────────────────────────────────────── -->
+<div class="watch-section" id="watch-section" style="display:none">
+    <div class="watch-section-head">
+        <div class="watch-section-title">
+            🔔 特别关注品种
+            <span class="watch-badge-live">
+                <span class="pulse-dot" style="width:6px;height:6px;flex-shrink:0"></span>
+                48h 监控中
+            </span>
+        </div>
+        <span style="font-size:.72rem;color:var(--t3)">每 5 分钟采集价格 / 涨跌 / 持仓量</span>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="table" style="margin:0;white-space:nowrap">
+            <thead><tr>
+                <th>交易所</th><th>合约</th>
+                <th>价格(USD)</th><th>24h涨跌</th>
+                <th>持仓量</th><th>快照时间</th>
+                <th>触发OI</th><th>关注到</th>
+                <th>操作</th>
+            </tr></thead>
+            <tbody id="watch-tbody">
+                <tr class="loading-row"><td colspan="9">⏳ 加载中…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ── 5min 快照弹窗 ─────────────────────────────────────────────────── -->
+<div class="ws-modal-overlay" id="ws-modal-overlay" onclick="closeWsModal(event)">
+    <div class="ws-modal" onclick="event.stopPropagation()">
+        <div class="ws-modal-head">
+            <div>
+                <div class="ws-modal-title" id="ws-modal-title">特别关注 5min 快照</div>
+                <div style="font-size:.72rem;color:var(--t3);margin-top:2px" id="ws-modal-sub">最近 48h | 每 5 分钟采集</div>
+            </div>
+            <button class="ws-modal-close" onclick="closeWsModal()">✕</button>
+        </div>
+        <div class="ws-modal-body">
+            <table class="table" style="margin:0">
+                <thead><tr>
+                    <th>时间</th>
+                    <th>价格(USD)</th>
+                    <th>24h涨跌</th>
+                    <th>持仓量(USD)</th>
+                    <th>OI环比</th>
+                </tr></thead>
+                <tbody id="ws-snap-body">
+                    <tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── OI 历史弹窗 ─────────────────────────────────────────────────── -->
+<div class="oi-modal-overlay" id="oi-modal-overlay" onclick="closeOiModal(event)">
+    <div class="oi-modal" onclick="event.stopPropagation()">
+        <div class="oi-modal-head">
+            <div>
+                <div class="oi-modal-title" id="oi-modal-title">持仓量历史</div>
+                <div style="font-size:.72rem;color:var(--t3);margin-top:2px" id="oi-modal-sub">—</div>
+            </div>
+            <button class="oi-modal-close" onclick="closeOiModal()">✕</button>
+        </div>
+        <div class="oi-period-tabs">
+            <div class="oi-tab active" data-period="15m" onclick="switchPeriod('15m')">15min</div>
+            <div class="oi-tab"        data-period="30m" onclick="switchPeriod('30m')">30min</div>
+            <div class="oi-tab"        data-period="1h"  onclick="switchPeriod('1h')">1h</div>
+            <div class="oi-tab"        data-period="4h"  onclick="switchPeriod('4h')">4h</div>
+            <div class="oi-tab"        data-period="12h" onclick="switchPeriod('12h')">12h</div>
+        </div>
+        <div class="oi-modal-body">
+            <table class="table" style="margin:0">
+                <thead><tr>
+                    <th>时间</th>
+                    <th>持仓量(USD)</th>
+                    <th>较前次</th>
+                </tr></thead>
+                <tbody id="oi-history-body">
+                    <tr class="loading-row"><td colspan="3">⏳ 加载中…</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -288,15 +496,22 @@ function renderTable(tbodyId, rows) {
     const tbody = document.getElementById('tbl-' + tbodyId);
     if (!tbody) return;
     if (!rows.length) { renderEmpty(tbodyId); return; }
+    // tbodyId 形如 "OKX-high" → exchange = "OKX"
+    const exch = tbodyId.split('-')[0];
     tbody.innerHTML = rows.map((r, i) => {
         const rate    = parseFloat(r.rate) || 0;
         const pct     = (rate * 100).toFixed(4) + '%';
         const rateCls = rate > 0 ? 'rate-pos' : rate < 0 ? 'rate-neg' : 'rate-zero';
         const watched = r.isWatched ? '<span class="watched-badge">⭐</span>' : '';
+        const oiCell  = formatOiCell(r);
+        const sym     = escHtml(r.symbol || '');
+        const histBtn = `<button class="btn-oi-hist" title="持仓量历史"
+            onclick="openOiModal('${exch}','${sym}')">📊</button>`;
         return `<tr>
             <td class="t-dim fw-7">${i + 1}</td>
-            <td class="mono fw-7" style="font-size:.8rem">${escHtml(r.symbol || '—')}${watched}</td>
+            <td class="mono fw-7" style="font-size:.8rem">${sym}${watched}${histBtn}</td>
             <td class="${rateCls}">${pct}</td>
+            <td>${oiCell}</td>
             <td class="t-dim" style="font-size:.72rem">${escHtml(r.updatedAt || '—')}</td>
         </tr>`;
     }).join('');
@@ -304,8 +519,102 @@ function renderTable(tbodyId, rows) {
 
 function renderEmpty(tbodyId) {
     const tbody = document.getElementById('tbl-' + tbodyId);
-    if (tbody) tbody.innerHTML = '<tr class="loading-row"><td colspan="4">暂无数据，等待 Job 首次执行…</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr class="loading-row"><td colspan="5">暂无数据，等待 Job 首次执行…</td></tr>';
 }
+
+// ── 格式化持仓量单元格 ─────────────────────────────────────────
+function formatOiCell(r) {
+    if (r.latestOiUsd == null) {
+        return '<span class="oi-none">—</span>';
+    }
+    const usd = parseFloat(r.latestOiUsd);
+    let label;
+    if (usd >= 1e9)      label = '$' + (usd / 1e9).toFixed(2) + 'B';
+    else if (usd >= 1e6) label = '$' + (usd / 1e6).toFixed(1) + 'M';
+    else if (usd >= 1e3) label = '$' + (usd / 1e3).toFixed(1) + 'K';
+    else                 label = '$' + usd.toFixed(0);
+    const upd = r.oiUpdatedAt ? `<br><span style="font-size:.65rem;color:var(--t3)">${escHtml(r.oiUpdatedAt)}</span>` : '';
+    return `<span class="oi-cell">${label}${upd}</span>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// OI 历史弹窗
+// ══════════════════════════════════════════════════════════════
+let oiCurrentExch   = '';
+let oiCurrentSymbol = '';
+let oiCurrentPeriod = '15m';
+
+function openOiModal(exch, symbol) {
+    oiCurrentExch   = exch;
+    oiCurrentSymbol = symbol;
+    oiCurrentPeriod = '15m';
+
+    document.getElementById('oi-modal-title').textContent = symbol + ' 持仓量历史';
+    document.getElementById('oi-modal-sub').textContent   = exch;
+    document.querySelectorAll('.oi-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.period === '15m'));
+    document.getElementById('oi-modal-overlay').classList.add('active');
+    loadOiHistory();
+}
+
+function closeOiModal(evt) {
+    if (evt && evt.target !== document.getElementById('oi-modal-overlay')) return;
+    document.getElementById('oi-modal-overlay').classList.remove('active');
+}
+
+function switchPeriod(period) {
+    oiCurrentPeriod = period;
+    document.querySelectorAll('.oi-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.period === period));
+    loadOiHistory();
+}
+
+function loadOiHistory() {
+    const tbody = document.getElementById('oi-history-body');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="3">⏳ 加载中…</td></tr>';
+
+    const url = `/api/perps/oi/history?exchange=${encodeURIComponent(oiCurrentExch)}`
+              + `&symbol=${encodeURIComponent(oiCurrentSymbol)}`
+              + `&period=${oiCurrentPeriod}`;
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            const rows = data.rows || [];
+            if (!rows.length) {
+                tbody.innerHTML = '<tr class="loading-row"><td colspan="3">暂无数据（Job 尚未采集或该品种不支持）</td></tr>';
+                return;
+            }
+            // 倒序显示（最新在前）
+            const rev = [...rows].reverse();
+            tbody.innerHTML = rev.map(r => {
+                const oiUsd = r.oiUsd != null ? fmtUsd(parseFloat(r.oiUsd)) : '—';
+                let chgHtml = '<span class="oi-chg-neu">—</span>';
+                if (r.chgPct != null) {
+                    const c   = parseFloat(r.chgPct);
+                    const cls = c > 0 ? 'oi-chg-pos' : c < 0 ? 'oi-chg-neg' : 'oi-chg-neu';
+                    const pfx = c > 0 ? '+' : '';
+                    chgHtml   = `<span class="${cls}">${pfx}${c.toFixed(2)}%</span>`;
+                }
+                return `<tr>
+                    <td class="t-dim" style="font-size:.78rem;white-space:nowrap">${escHtml(r.time || '—')}</td>
+                    <td class="oi-cell">${oiUsd}</td>
+                    <td>${chgHtml}</td>
+                </tr>`;
+            }).join('');
+        })
+        .catch(() => {
+            tbody.innerHTML = '<tr class="loading-row"><td colspan="3">❌ 加载失败</td></tr>';
+        });
+}
+
+function fmtUsd(usd) {
+    if (usd >= 1e9)      return '$' + (usd / 1e9).toFixed(3) + 'B';
+    if (usd >= 1e6)      return '$' + (usd / 1e6).toFixed(2) + 'M';
+    if (usd >= 1e3)      return '$' + (usd / 1e3).toFixed(1) + 'K';
+    return '$' + usd.toFixed(0);
+}
+
+// (ESC key handling is at the bottom of the script block)
 
 function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -322,6 +631,7 @@ function resetCountdown() {
         if (countdownVal <= 0) {
             loadFeatured();
             loadRates(currentExch);
+            loadWatchlist();
             resetCountdown();
         }
     }, 1000);
@@ -383,9 +693,132 @@ function sendReport() {
         });
 }
 
+// ══════════════════════════════════════════════════════════════
+// 特别关注区
+// ══════════════════════════════════════════════════════════════
+function loadWatchlist() {
+    fetch('/api/perps/oi/watchlist')
+        .then(r => r.json())
+        .then(list => {
+            const section = document.getElementById('watch-section');
+            const tbody   = document.getElementById('watch-tbody');
+            if (!list || !list.length) {
+                section.style.display = 'none';
+                return;
+            }
+            section.style.display = '';
+            tbody.innerHTML = list.map(item => {
+                const exchIcon = item.exchange === 'OKX' ? '🟡'
+                    : item.exchange === 'BINANCE' ? '🟠' : '🔵';
+                const label    = item.base ? escHtml(item.base) : escHtml(item.symbol);
+                const price    = item.priceUsd != null
+                    ? '$' + parseFloat(item.priceUsd).toLocaleString(undefined, {maximumFractionDigits: 2})
+                    : '<span class="t-dim">—</span>';
+                let chgHtml = '<span class="t-dim">—</span>';
+                if (item.change24h != null) {
+                    const c   = parseFloat(item.change24h);
+                    const cls = c > 0 ? 'chg-pos' : c < 0 ? 'chg-neg' : 'chg-neu';
+                    const pfx = c > 0 ? '+' : '';
+                    chgHtml   = `<span class="${cls}">${pfx}${c.toFixed(2)}%</span>`;
+                }
+                const latestOi   = item.latestOiUsd != null ? fmtUsd(parseFloat(item.latestOiUsd)) : '<span class="t-dim">—</span>';
+                const snappedAt  = item.snappedAt   ? escHtml(item.snappedAt)  : '—';
+                const alertOi    = item.alertOiUsd  != null ? fmtUsd(parseFloat(item.alertOiUsd)) : '—';
+                const watchUntil = item.watchUntil  ? escHtml(item.watchUntil) : '—';
+                const sym        = escHtml(item.symbol || '');
+                const exch       = escHtml(item.exchange || '');
+                return `<tr>
+                    <td class="t-dim" style="font-size:.78rem">${exchIcon} ${exch}</td>
+                    <td class="mono fw-7" style="font-size:.8rem">${label}<br>
+                        <span class="t-dim" style="font-size:.67rem">${sym}</span>
+                    </td>
+                    <td class="mono" style="font-size:.82rem">${price}</td>
+                    <td>${chgHtml}</td>
+                    <td class="oi-cell">${latestOi}</td>
+                    <td class="t-dim" style="font-size:.72rem">${snappedAt}</td>
+                    <td class="oi-cell" style="font-size:.72rem">${alertOi}</td>
+                    <td class="t-dim" style="font-size:.72rem">${watchUntil}</td>
+                    <td><button class="btn-watch-snap" onclick="openWsModal('${exch}','${sym}')">📈 历史</button></td>
+                </tr>`;
+            }).join('');
+        })
+        .catch(() => {});
+}
+
+// ── 5min 快照弹窗 ─────────────────────────────────────────────
+let wsCurrentExch   = '';
+let wsCurrentSymbol = '';
+
+function openWsModal(exch, symbol) {
+    wsCurrentExch   = exch;
+    wsCurrentSymbol = symbol;
+    document.getElementById('ws-modal-title').textContent = symbol + ' 特别关注快照';
+    document.getElementById('ws-modal-overlay').classList.add('active');
+    loadWsSnap();
+}
+
+function closeWsModal(evt) {
+    if (evt && evt.target !== document.getElementById('ws-modal-overlay')) return;
+    document.getElementById('ws-modal-overlay').classList.remove('active');
+}
+
+function loadWsSnap() {
+    const tbody = document.getElementById('ws-snap-body');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="5">⏳ 加载中…</td></tr>';
+    const url = `/api/perps/oi/watchsnap?exchange=${encodeURIComponent(wsCurrentExch)}&symbol=${encodeURIComponent(wsCurrentSymbol)}`;
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            const rows = data.rows || [];
+            if (!rows.length) {
+                tbody.innerHTML = '<tr class="loading-row"><td colspan="5">暂无快照（Job 尚未采集或该品种刚进入关注期）</td></tr>';
+                return;
+            }
+            tbody.innerHTML = rows.map(r => {
+                const price = r.priceUsd != null
+                    ? '$' + parseFloat(r.priceUsd).toLocaleString(undefined, {maximumFractionDigits: 2})
+                    : '—';
+                let chgHtml = '<span class="oi-chg-neu">—</span>';
+                if (r.change24h != null) {
+                    const c   = parseFloat(r.change24h);
+                    const cls = c > 0 ? 'oi-chg-pos' : c < 0 ? 'oi-chg-neg' : 'oi-chg-neu';
+                    const pfx = c > 0 ? '+' : '';
+                    chgHtml   = `<span class="${cls}">${pfx}${c.toFixed(2)}%</span>`;
+                }
+                const oiUsd = r.oiUsd != null ? fmtUsd(parseFloat(r.oiUsd)) : '—';
+                let oiChgHtml = '<span class="oi-chg-neu">—</span>';
+                if (r.oiChgPct != null) {
+                    const c   = parseFloat(r.oiChgPct);
+                    const cls = c > 0 ? 'oi-chg-pos' : c < 0 ? 'oi-chg-neg' : 'oi-chg-neu';
+                    const pfx = c > 0 ? '+' : '';
+                    oiChgHtml = `<span class="${cls}">${pfx}${c.toFixed(2)}%</span>`;
+                }
+                return `<tr>
+                    <td class="t-dim" style="font-size:.78rem;white-space:nowrap">${escHtml(r.time || '—')}</td>
+                    <td class="mono" style="font-size:.8rem">${price}</td>
+                    <td>${chgHtml}</td>
+                    <td class="oi-cell">${oiUsd}</td>
+                    <td>${oiChgHtml}</td>
+                </tr>`;
+            }).join('');
+        })
+        .catch(() => {
+            tbody.innerHTML = '<tr class="loading-row"><td colspan="5">❌ 加载失败</td></tr>';
+        });
+}
+
+// ESC 也关闭快照弹窗
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        document.getElementById('oi-modal-overlay').classList.remove('active');
+        document.getElementById('ws-modal-overlay').classList.remove('active');
+    }
+});
+
 // ── 初始化 ───────────────────────────────────────────────────────
 loadFeatured();
 loadRates('OKX');
+loadWatchlist();
 // 其他两个交易所预加载（数据已在服务端，静默加载）
 setTimeout(() => loadRates('BINANCE'),     800);
 setTimeout(() => loadRates('HYPERLIQUID'), 1600);
