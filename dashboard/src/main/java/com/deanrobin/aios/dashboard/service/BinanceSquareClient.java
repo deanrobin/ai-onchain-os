@@ -12,31 +12,29 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * 币安广场帖子抓取 + 币安现货代币白名单（仅用于标记，不过滤）。
  *
- * - 广场帖子端点可通过 binance-square.feed-url 配置，默认使用公开 feed 接口；
- *   接口返回结构假设存在 data.vos（hot feed 常见结构）。失败时直接返回空列表，
- *   不阻塞 Job 继续运行。
- * - 现货白名单缓存 24 小时，刷新失败时沿用旧值。
+ * 对齐 python/binance_square_fetcher.py：
+ *   POST https://www.binance.com/bapi/composite/v9/friendly/pgc/feed/feed-recommend/list
+ *   body: {"pageIndex":N,"pageSize":20,"scene":"web-homepage","contentIds":[]}
+ *   Headers: clienttype/lang/bnc-uuid/bnc-time-zone/versioncode/csrftoken/referer/origin
+ *   成功判定: data.code == "000000"，列表在 data.data.vos
  */
 @Log4j2
 @Service
 public class BinanceSquareClient {
 
     private static final String DEFAULT_FEED_URL =
-            "https://www.binance.com/bapi/composite/v1/public/content/community/square/feed?pageIndex=1&pageSize=50&scene=square";
+            "https://www.binance.com/bapi/composite/v9/friendly/pgc/feed/feed-recommend/list";
     private static final String EXCHANGE_INFO =
             "https://api.binance.com/api/v3/exchangeInfo";
 
-    private static final java.util.regex.Pattern PAGE_INDEX_RE =
-            java.util.regex.Pattern.compile("([?&])pageIndex=\\d+");
-    private static final java.util.regex.Pattern PAGE_SIZE_RE  =
-            java.util.regex.Pattern.compile("([?&])pageSize=\\d+");
-
     private final WebClient client;
     private final ObjectMapper mapper = new ObjectMapper();
+    private final String bncUuid = UUID.randomUUID().toString();
 
     @Value("${binance-square.feed-url:" + DEFAULT_FEED_URL + "}")
     private String feedUrl;
@@ -47,7 +45,9 @@ public class BinanceSquareClient {
     public BinanceSquareClient(WebClient.Builder builder) {
         this.client = builder
                 .defaultHeader("User-Agent",
-                        "Mozilla/5.0 (Linux) aios-dashboard/0.1")
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        + "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        + "Chrome/120.0.0.0 Safari/537.36")
                 .defaultHeader("Accept", "application/json")
                 .build();
     }
@@ -58,20 +58,39 @@ public class BinanceSquareClient {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> fetchPosts(int pageIndex, int pageSize) {
-        String url = buildPagedUrl(feedUrl, pageIndex, pageSize);
+        Map<String, Object> payload = Map.of(
+                "pageIndex",  pageIndex,
+                "pageSize",   pageSize,
+                "scene",      "web-homepage",
+                "contentIds", List.of());
         try {
-            String body = client.get().uri(url)
+            String body = client.post().uri(feedUrl)
+                    .header("Content-Type",   "application/json")
+                    .header("clienttype",     "web")
+                    .header("lang",           "en")
+                    .header("bnc-uuid",       bncUuid)
+                    .header("bnc-time-zone",  "Asia/Shanghai")
+                    .header("versioncode",    "web")
+                    .header("csrftoken",      "d41d8cd98f00b204e9800998ecf8427e")
+                    .header("referer",        "https://www.binance.com/en/square")
+                    .header("origin",         "https://www.binance.com")
+                    .bodyValue(payload)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(15))
+                    .timeout(Duration.ofSeconds(30))
                     .block();
             if (body == null || body.isEmpty()) return Collections.emptyList();
 
             Map<String, Object> root = mapper.readValue(body, Map.class);
+            Object code = root.get("code");
+            if (code != null && !"000000".equals(String.valueOf(code))) {
+                log.warn("⚠️ 币安广场 feed 业务错误 page={} code={} msg={}",
+                        pageIndex, code, root.get("message"));
+                return Collections.emptyList();
+            }
             Object dataObj = root.get("data");
             if (!(dataObj instanceof Map<?, ?> data)) return Collections.emptyList();
 
-            // 常见结构：data.vos / data.list / data.contents
             Object vos = firstNonNull(data.get("vos"), data.get("list"), data.get("contents"));
             if (vos instanceof List<?> arr) {
                 return (List<Map<String, Object>>) (List<?>) arr;
@@ -81,22 +100,6 @@ public class BinanceSquareClient {
             log.warn("⚠️ 币安广场 feed 抓取失败 page={}: {}", pageIndex, e.getMessage());
             return Collections.emptyList();
         }
-    }
-
-    /** 替换或追加 pageIndex/pageSize 参数。 */
-    static String buildPagedUrl(String baseUrl, int pageIndex, int pageSize) {
-        String url = baseUrl;
-        if (PAGE_INDEX_RE.matcher(url).find()) {
-            url = PAGE_INDEX_RE.matcher(url).replaceFirst("$1pageIndex=" + pageIndex);
-        } else {
-            url += (url.contains("?") ? "&" : "?") + "pageIndex=" + pageIndex;
-        }
-        if (PAGE_SIZE_RE.matcher(url).find()) {
-            url = PAGE_SIZE_RE.matcher(url).replaceFirst("$1pageSize=" + pageSize);
-        } else {
-            url += "&pageSize=" + pageSize;
-        }
-        return url;
     }
 
     /** 现货白名单：仅用于标记，24h 刷新，失败沿用旧值。 */
