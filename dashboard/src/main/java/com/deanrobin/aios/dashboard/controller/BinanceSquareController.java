@@ -22,7 +22,7 @@ public class BinanceSquareController {
     public String page(
             @RequestParam(defaultValue = "1") int hours,
             Model model) {
-        int window = hours == 24 ? 24 : 1;
+        int window = (hours == 24 || hours == 8) ? hours : 1;
         model.addAttribute("activePage", "binance-square");
         model.addAttribute("hours", window);
         model.addAttribute("top", squareService.topTokensWithDelta(window, 20));

@@ -25,7 +25,7 @@ import java.util.Map;
 public class BinanceSquareSnapshotJob {
 
     private static final int SNAPSHOT_LIMIT = 20;
-    private static final int[] WINDOWS = {1, 24};
+    private static final int[] WINDOWS = {1, 8, 24};
 
     private final BinanceSquareService                squareService;
     private final BinanceSquareRankSnapshotRepository snapshotRepo;

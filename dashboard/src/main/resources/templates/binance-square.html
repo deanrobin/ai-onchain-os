@@ -12,6 +12,10 @@
            class="tab-item"
            th:classappend="${hours==1?' active':''}"
            style="font-size:.8rem;text-decoration:none">近 1 小时</a>
+        <a th:href="@{/binance-square(hours=8)}"
+           class="tab-item"
+           th:classappend="${hours==8?' active':''}"
+           style="font-size:.8rem;text-decoration:none">近 8 小时</a>
         <a th:href="@{/binance-square(hours=24)}"
            class="tab-item"
            th:classappend="${hours==24?' active':''}"
