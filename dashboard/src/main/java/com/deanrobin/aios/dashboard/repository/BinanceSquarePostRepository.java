@@ -16,6 +16,8 @@ public interface BinanceSquarePostRepository extends JpaRepository<BinanceSquare
 
     boolean existsByPostId(String postId);
 
+    Optional<BinanceSquarePost> findFirstByOrderByIdDesc();
+
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM binance_square_post WHERE post_date < :cutoff LIMIT 500",

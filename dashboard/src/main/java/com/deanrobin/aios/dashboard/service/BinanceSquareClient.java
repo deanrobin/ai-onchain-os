@@ -30,6 +30,11 @@ public class BinanceSquareClient {
     private static final String EXCHANGE_INFO =
             "https://api.binance.com/api/v3/exchangeInfo";
 
+    private static final java.util.regex.Pattern PAGE_INDEX_RE =
+            java.util.regex.Pattern.compile("([?&])pageIndex=\\d+");
+    private static final java.util.regex.Pattern PAGE_SIZE_RE  =
+            java.util.regex.Pattern.compile("([?&])pageSize=\\d+");
+
     private final WebClient client;
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -48,13 +53,14 @@ public class BinanceSquareClient {
     }
 
     /**
-     * 抓取广场帖子列表。返回每条帖子的原始 Map（包含 id/content/authorName
-     * /likeCount/commentCount/date/tradingPairs...）。失败返回空列表。
+     * 抓取广场帖子单页。pageIndex 从 1 开始；pageSize 通常 20。
+     * 失败返回空列表。
      */
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> fetchPosts() {
+    public List<Map<String, Object>> fetchPosts(int pageIndex, int pageSize) {
+        String url = buildPagedUrl(feedUrl, pageIndex, pageSize);
         try {
-            String body = client.get().uri(feedUrl)
+            String body = client.get().uri(url)
                     .retrieve()
                     .bodyToMono(String.class)
                     .timeout(Duration.ofSeconds(15))
@@ -72,9 +78,25 @@ public class BinanceSquareClient {
             }
             return Collections.emptyList();
         } catch (Exception e) {
-            log.warn("⚠️ 币安广场 feed 抓取失败: {}", e.getMessage());
+            log.warn("⚠️ 币安广场 feed 抓取失败 page={}: {}", pageIndex, e.getMessage());
             return Collections.emptyList();
         }
+    }
+
+    /** 替换或追加 pageIndex/pageSize 参数。 */
+    static String buildPagedUrl(String baseUrl, int pageIndex, int pageSize) {
+        String url = baseUrl;
+        if (PAGE_INDEX_RE.matcher(url).find()) {
+            url = PAGE_INDEX_RE.matcher(url).replaceFirst("$1pageIndex=" + pageIndex);
+        } else {
+            url += (url.contains("?") ? "&" : "?") + "pageIndex=" + pageIndex;
+        }
+        if (PAGE_SIZE_RE.matcher(url).find()) {
+            url = PAGE_SIZE_RE.matcher(url).replaceFirst("$1pageSize=" + pageSize);
+        } else {
+            url += "&pageSize=" + pageSize;
+        }
+        return url;
     }
 
     /** 现货白名单：仅用于标记，24h 刷新，失败沿用旧值。 */
