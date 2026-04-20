@@ -43,10 +43,10 @@ public class BinanceSquareClient {
     private volatile long whitelistRefreshedAt = 0L;
 
     public BinanceSquareClient(WebClient.Builder builder) {
-        // exchangeInfo 响应约 2-4 MB，默认 256 KB 装不下，调到 16 MB。
+        // exchangeInfo 响应约 2-4 MB，默认 256 KB 装不下，调到 32 MB 留足裕量。
         org.springframework.web.reactive.function.client.ExchangeStrategies strategies =
                 org.springframework.web.reactive.function.client.ExchangeStrategies.builder()
-                        .codecs(cfg -> cfg.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
+                        .codecs(cfg -> cfg.defaultCodecs().maxInMemorySize(32 * 1024 * 1024))
                         .build();
         this.client = builder
                 .exchangeStrategies(strategies)
