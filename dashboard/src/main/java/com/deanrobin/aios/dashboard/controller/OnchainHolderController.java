@@ -102,10 +102,10 @@ public class OnchainHolderController {
     @PatchMapping("/api/onchain-holder/{id}/toggle")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> toggle(@PathVariable Long id) {
-        return watchRepo.findById(id).map(w -> {
+        return watchRepo.findById(id).<ResponseEntity<Map<String, Object>>>map(w -> {
             w.setActive(!w.isActive());
             watchRepo.save(w);
-            return ResponseEntity.ok(Map.of("id", id, "isActive", w.isActive()));
+            return ResponseEntity.ok(Map.of("id", (Object) id, "isActive", w.isActive()));
         }).orElse(ResponseEntity.notFound().build());
     }
 
