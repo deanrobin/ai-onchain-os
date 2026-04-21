@@ -386,7 +386,7 @@ CREATE TABLE IF NOT EXISTS binance_square_rank_snapshot (
 -- 指标约定：
 --   ma20 / ma120        : 收盘价简单移动均线
 --   macd_dif / dea / hist: 标准 MACD(12,26,9)，hist = (dif - dea) * 2
---   rsi14               : 14 周期 RSI（已由 20260422-001 重命名为 rsi21）
+--   rsi21               : 21 周期 RSI (Wilder 平滑)
 CREATE TABLE IF NOT EXISTS btc_kline_15m (
     id           BIGINT PRIMARY KEY AUTO_INCREMENT,
     open_time    DATETIME       NOT NULL COMMENT 'K 线开盘时间（UTC+8）',
@@ -402,13 +402,13 @@ CREATE TABLE IF NOT EXISTS btc_kline_15m (
     macd_dif     DECIMAL(20,8)            COMMENT 'MACD DIF (EMA12 - EMA26)',
     macd_dea     DECIMAL(20,8)            COMMENT 'MACD DEA (DIF 的 EMA9)',
     macd_hist    DECIMAL(20,8)            COMMENT 'MACD 柱 = (DIF - DEA) * 2',
-    rsi14        DECIMAL(10,4)            COMMENT 'RSI14 — 已由 20260422-001 重命名为 rsi21',
+    rsi21        DECIMAL(10,4)            COMMENT 'RSI21 (Wilder 平滑)',
     source       VARCHAR(20)    DEFAULT 'binance' COMMENT '数据来源',
     created_at   DATETIME       DEFAULT CURRENT_TIMESTAMP,
     updated_at   DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_open_time (open_time),
     INDEX idx_open_time_desc (open_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='BTCUSDT 15m K线 + 技术指标（MA20/MA120/MACD/RSI）';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='BTCUSDT 15m K线 + 技术指标（MA20/MA120/MACD/RSI21）';
 
 -- ── BTC 做多策略信号表 ─────────────────────────────────────────────
 -- 策略识别出做多机会时写入一条记录，用于：
@@ -446,11 +446,3 @@ CREATE TABLE IF NOT EXISTS btc_long_signal (
     INDEX idx_alert_pending (alert_status, signal_time),
     INDEX idx_strategy      (strategy_name, signal_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='BTC 做多策略信号（触发→报警→跟踪）';
-
--- ════════════════════════════════════════════════════════════════
--- 20260422-001  btc_kline_15m.rsi14 → rsi21（改用 21 周期 Wilder RSI）
--- ════════════════════════════════════════════════════════════════
--- 对已有表做列重命名；新鲜库跑到 20260420-003 时列名仍是 rsi14，
--- 这个批次将其统一改为 rsi21，与 Java 实体 BtcKline15m.rsi21 对齐。
-ALTER TABLE btc_kline_15m
-    CHANGE COLUMN rsi14 rsi21 DECIMAL(10,4) COMMENT 'RSI21 (Wilder 平滑)';
