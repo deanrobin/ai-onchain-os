@@ -4,20 +4,94 @@
 <body><main>
 
 <style>
+    /* ══ 币安风 · 黑底金字主题（仅限本页） ════════════════════
+       Binance Yellow: #F0B90B   亮黄(hover): #FCD535
+       背景：#0B0E11    二级卡：#181A20   边框：#2B3139
+       涨：#0ECB81     跌：#F6465D
+    ═══════════════════════════════════════════════════════ */
+    .sq-page {
+        /* 把整页 wrap 拉成整页黑底 */
+        margin: -22px -28px;           /* 抵消 layout 的 page-wrap padding */
+        padding: 22px 28px 40px;
+        background: #0B0E11;
+        color: #EAECEF;
+        min-height: calc(100vh - 58px); /* 58 = topnav 高度 */
+    }
+    .sq-page a { color: #F0B90B; }
+    .sq-page ::selection { background: rgba(240,185,11,.28); }
+
+    /* 覆盖全局 card / table / tag 为暗黑变体 */
+    .sq-page .card {
+        background: #181A20;
+        border: 1px solid #2B3139;
+        box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    .sq-page .card:hover { box-shadow: 0 8px 22px rgba(0,0,0,.45); transform: none; }
+    .sq-page .stat-card {
+        background: #181A20;
+        border: 1px solid #2B3139;
+        color: #EAECEF;
+        box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    .sq-page .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.5); }
+    .sq-page .stat-card::before { background: #F0B90B; }
+    .sq-page .stat-card::after  { background: rgba(240,185,11,.08); }
+    .sq-page .stat-card .sc-val { color: #F0B90B; }
+    .sq-page .stat-card .sc-lbl { color: #848E9C; }
+    .sq-page .stat-card .sc-sub { color: #B7BDC6; }
+    .sq-page .stat-card.sc-green  .sc-val { color: #0ECB81; }
+    .sq-page .stat-card.sc-red    .sc-val { color: #F6465D; }
+    .sq-page .stat-card.sc-blue   .sc-val { color: #EAECEF; }
+    .sq-page .stat-card.sc-orange .sc-val { color: #F0B90B; }
+    .sq-page .stat-card.sc-green  ::before, .sq-page .stat-card.sc-green::before  { background: #0ECB81; }
+    .sq-page .stat-card.sc-red    ::before, .sq-page .stat-card.sc-red::before    { background: #F6465D; }
+
+    .sq-page .table                  { color: #EAECEF; }
+    .sq-page .table thead th {
+        background: #0B0E11;
+        color: #848E9C;
+        border-bottom: 1px solid #2B3139;
+    }
+    .sq-page .table tbody td         { border-bottom: 1px solid #2B3139; }
+    .sq-page .table tbody tr:last-child td { border-bottom: none; }
+    .sq-page .table tbody tr:hover td      { background: rgba(240,185,11,.06); }
+    .sq-page .rank-1 { background: linear-gradient(90deg, rgba(240,185,11,.12), transparent) !important; }
+    .sq-page .rank-2 { background: linear-gradient(90deg, rgba(183,189,198,.06), transparent) !important; }
+    .sq-page .rank-3 { background: linear-gradient(90deg, rgba(224,124,20,.06), transparent) !important; }
+    .sq-page .rank-1:hover td, .sq-page .rank-2:hover td, .sq-page .rank-3:hover td {
+        background: rgba(240,185,11,.10) !important;
+    }
+
+    .sq-page .info-pill {
+        background: #1E2329; color: #B7BDC6;
+        border: 1px solid #2B3139;
+    }
+    .sq-page .tab-row   { background: #1E2329 !important; border: 1px solid #2B3139; }
+    .sq-page .tab-item  { color: #848E9C; }
+    .sq-page .tab-item:hover:not(.active) { color: #EAECEF; background: rgba(240,185,11,.08); }
+    .sq-page .tab-item.active {
+        background: #F0B90B; color: #0B0E11; font-weight: 700;
+        box-shadow: 0 1px 4px rgba(240,185,11,.35);
+    }
+    .sq-page .empty-state { color: #848E9C; }
+    .sq-page .pulse-dot   { background: #F0B90B; }
+    .sq-page .pulse-dot   { animation: sqPulse 2s infinite; }
+    @keyframes sqPulse {
+        0%  { box-shadow: 0 0 0 0 rgba(240,185,11,.55); }
+        70% { box-shadow: 0 0 0 8px rgba(240,185,11,0); }
+        100%{ box-shadow: 0 0 0 0 rgba(240,185,11,0); }
+    }
+
     /* ── 页头 ─────────────────────────────────────── */
     .sq-hero {
         display: flex; align-items: center; justify-content: space-between;
         flex-wrap: wrap; gap: 14px; margin-bottom: 18px;
     }
-    .sq-title {
-        display: flex; align-items: center; gap: 10px;
-    }
-    .sq-title h5 { margin: 0; font-weight: 800; letter-spacing: -.2px; }
-    .sq-title .subtitle { color: var(--t3); font-size: .78rem; margin-top: 2px; }
+    .sq-title       { display: flex; align-items: center; gap: 10px; }
+    .sq-title h5    { margin: 0; font-weight: 800; letter-spacing: -.2px; color: #F0B90B; }
+    .sq-title .subtitle { color: #848E9C; font-size: .82rem; margin-top: 2px; }
 
-    .sq-meta {
-        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    }
+    .sq-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
     /* ── 概览卡片 ─────────────────────────────────── */
     .sq-summary {
@@ -26,87 +100,92 @@
     }
     @media (max-width: 900px) { .sq-summary { grid-template-columns: repeat(2, 1fr); } }
 
-    /* ── 表格：自定义更紧凑的行高 ──────────────────── */
-    .sq-table thead th {
-        font-size: .66rem; padding: 11px 14px;
-    }
-    .sq-table tbody td { padding: 14px; vertical-align: middle; }
+    /* ── 表格：更宽松的行高 ──────────────────────── */
+    .sq-table thead th { font-size: .7rem; padding: 12px 14px; letter-spacing: .8px; }
+    .sq-table tbody td { padding: 15px 14px; vertical-align: middle; }
 
-    /* 排名徽章：TOP3 金/银/铜，其他浅灰 */
+    /* 排名徽章：TOP3 金/银/铜，其他深灰 */
     .rank-badge {
         display: inline-flex; align-items: center; justify-content: center;
-        width: 28px; height: 28px; border-radius: 8px;
+        width: 30px; height: 30px; border-radius: 8px;
         font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
-        font-size: .82rem; font-weight: 800; color: var(--t2);
-        background: rgba(118,118,128,0.12);
+        font-size: .88rem; font-weight: 800; color: #848E9C;
+        background: #1E2329;
     }
-    .rank-badge.r1 { background: linear-gradient(135deg,#ffd54a,#ffb300); color:#8a5a00; box-shadow: 0 2px 6px rgba(255,179,0,.32); }
-    .rank-badge.r2 { background: linear-gradient(135deg,#e5e7eb,#b8bcc3); color:#43474d; box-shadow: 0 2px 6px rgba(170,170,170,.28); }
-    .rank-badge.r3 { background: linear-gradient(135deg,#e6b38c,#b07547); color:#5a3210; box-shadow: 0 2px 6px rgba(176,117,71,.30); }
+    .rank-badge.r1 { background: linear-gradient(135deg,#FCD535,#F0B90B); color:#0B0E11; box-shadow: 0 2px 8px rgba(240,185,11,.5); }
+    .rank-badge.r2 { background: linear-gradient(135deg,#D8DADC,#9CA3AF); color:#0B0E11; box-shadow: 0 2px 6px rgba(180,185,190,.3); }
+    .rank-badge.r3 { background: linear-gradient(135deg,#E8A268,#B06A2C); color:#0B0E11; box-shadow: 0 2px 6px rgba(176,106,44,.35); }
 
     /* Token avatar（颜色按首字母散列） */
-    .tk-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .tk-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .tk-avatar {
-        flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+        flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
         display: inline-flex; align-items: center; justify-content: center;
-        color: #fff; font-weight: 800; font-size: .82rem; letter-spacing: -.2px;
+        color: #0B0E11; font-weight: 800; font-size: .88rem; letter-spacing: -.2px;
         font-family: -apple-system,'SF Pro Display',sans-serif;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), 0 1px 3px rgba(0,0,0,.14);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.15), 0 1px 4px rgba(0,0,0,.4);
     }
     .tk-meta { display: flex; flex-direction: column; min-width: 0; }
-    .tk-sym  { font-weight: 700; font-size: .96rem; letter-spacing: -.2px; line-height: 1.15; }
-    .tk-sub  { font-size: .7rem; color: var(--t3); margin-top: 1px; }
+    .tk-sym  { font-weight: 700; font-size: 1.02rem; letter-spacing: -.2px; line-height: 1.15; color: #F0B90B; }
+    .tk-sub  { font-size: .72rem; color: #848E9C; margin-top: 2px; }
 
     /* 分数：数字 + 迷你进度条 */
-    .score-wrap { display: flex; flex-direction: column; gap: 6px; min-width: 90px; }
+    .score-wrap { display: flex; flex-direction: column; gap: 7px; min-width: 100px; }
     .score-num  {
         font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
-        font-size: .92rem; font-weight: 800; color: var(--blue); letter-spacing: -.2px;
+        font-size: 1.02rem; font-weight: 800; color: #F0B90B; letter-spacing: -.2px;
     }
-    .score-bar  { height: 4px; background: rgba(118,118,128,0.12); border-radius: 999px; overflow: hidden; }
+    .score-bar  { height: 5px; background: #1E2329; border-radius: 999px; overflow: hidden; }
     .score-bar-fill {
         height: 100%; border-radius: 999px;
-        background: linear-gradient(90deg, #5AC8FA, #007AFF);
+        background: linear-gradient(90deg, #F0B90B, #FCD535);
+        box-shadow: 0 0 6px rgba(240,185,11,.45);
     }
 
-    /* 互动信息组合 */
+    /* 互动信息：放大字号 */
     .eng {
-        display: inline-flex; align-items: center; gap: 10px;
+        display: inline-flex; align-items: center; gap: 16px;
         font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
-        font-size: .78rem; color: var(--t2);
+        font-size: 1rem; color: #EAECEF;
     }
-    .eng span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
-    .eng em   { font-style: normal; color: var(--t3); font-size: .9em; }
+    .eng span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .eng .eng-ic { font-size: 1.02rem; }
+    .eng em   { font-style: normal; color: #F0B90B; font-weight: 700; font-size: 1em; }
 
     /* 升降：大一号的徽章 */
     .delta {
         display: inline-flex; align-items: center; justify-content: center;
-        min-width: 46px; padding: 3px 9px; border-radius: 8px;
+        min-width: 52px; padding: 4px 10px; border-radius: 8px;
         font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
-        font-size: .78rem; font-weight: 700; white-space: nowrap;
+        font-size: .84rem; font-weight: 700; white-space: nowrap;
     }
-    .delta.up   { background: var(--green-l);  color: var(--green);  }
-    .delta.dn   { background: var(--red-l);    color: var(--red);    }
-    .delta.new  { background: var(--blue-l);   color: var(--blue);   }
-    .delta.flat { background: rgba(118,118,128,0.12); color: var(--t2); }
-    .delta.none { background: transparent; color: var(--t3); }
+    .delta.up   { background: rgba(14,203,129,.15);  color: #0ECB81; }
+    .delta.dn   { background: rgba(246,70,93,.15);   color: #F6465D; }
+    .delta.new  { background: rgba(240,185,11,.18);  color: #F0B90B; }
+    .delta.flat { background: #1E2329;               color: #848E9C; }
+    .delta.none { background: transparent;           color: #5E6673; }
 
     /* 上架徽章 */
     .listed {
         display: inline-flex; align-items: center; gap: 4px;
-        padding: 3px 10px; border-radius: 999px;
-        font-size: .72rem; font-weight: 700; letter-spacing: .2px;
+        padding: 4px 11px; border-radius: 999px;
+        font-size: .76rem; font-weight: 700; letter-spacing: .2px;
     }
-    .listed.yes { background: var(--green-l); color: var(--green); }
-    .listed.no  { background: rgba(118,118,128,0.12); color: var(--t3); font-weight: 500; }
+    .listed.yes { background: rgba(14,203,129,.15); color: #0ECB81; }
+    .listed.no  { background: #1E2329; color: #848E9C; font-weight: 500; }
+
+    /* 帖子数字号 */
+    .sq-table td.col-posts { font-size: .96rem; font-weight: 700; color: #EAECEF; }
 
     /* 移动端：隐藏次要列 */
     @media (max-width: 720px) {
         .sq-table .col-engagement,
         .sq-table .col-posts      { display: none; }
-        .score-wrap { min-width: 64px; }
+        .score-wrap { min-width: 72px; }
     }
 </style>
+
+<div class="sq-page">
 
 <!-- ── 页头 ─────────────────────────────────────────── -->
 <div class="sq-hero">
@@ -125,7 +204,7 @@
         </div>
         <span class="info-pill">📊 Top <span th:text="${top.size()}">0</span></span>
         <span class="info-pill">🕐 <span id="last-update-time">—</span></span>
-        <span class="info-pill" id="auto-badge" style="color:var(--blue);background:var(--blue-l)">🔄 <span id="auto-countdown">30</span>s</span>
+        <span class="info-pill" id="auto-badge" style="color:#0B0E11;background:#F0B90B;border-color:#F0B90B;font-weight:700">🔄 <span id="auto-countdown">30</span>s</span>
     </div>
 </div>
 
@@ -235,8 +314,8 @@ function renderRows(rows){
             </td>
             <td class="col-engagement">
                 <span class="eng">
-                    <span>👍 <em>${fmtNum(d.likes)}</em></span>
-                    <span>💬 <em>${fmtNum(d.comments)}</em></span>
+                    <span><span class="eng-ic">👍</span> <em>${fmtNum(d.likes)}</em></span>
+                    <span><span class="eng-ic">💬</span> <em>${fmtNum(d.comments)}</em></span>
                 </span>
             </td>
             <td class="col-posts mono">${fmtNum(d.postCount)}</td>
@@ -313,5 +392,6 @@ setInterval(() => {
 }, 1000);
 </script>
 
+</div><!-- /.sq-page -->
 </main></body>
 </html>
