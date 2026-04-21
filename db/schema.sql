@@ -373,3 +373,76 @@ CREATE TABLE IF NOT EXISTS binance_square_rank_snapshot (
     INDEX idx_snap_at (snapshot_at),
     INDEX idx_window_at (window_hours, snapshot_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ════════════════════════════════════════════════════════════════
+-- 20260420-003  BTC-USDT 15 分钟 K 线历史 + 策略做多信号
+-- 目的：录入近 3 年 Binance BTCUSDT 15m K 线 + MA20/MA120/MACD/RSI，
+--       训练后基于历史特征识别做多机会，触发时入 signal 表并报警 / 网页显示
+-- ════════════════════════════════════════════════════════════════
+
+-- ── BTC 15m K 线 + 技术指标历史表 ──────────────────────────────────
+-- 数据源：Binance Spot（BTCUSDT，15m），open_time 为 K 线开盘时间
+-- 预计规模：3 年 × 365 × 24 × 4 ≈ 10.5 万行，bulk import 友好
+-- 指标约定：
+--   ma20 / ma120        : 收盘价简单移动均线
+--   macd_dif / dea / hist: 标准 MACD(12,26,9)，hist = (dif - dea) * 2
+--   rsi21               : 21 周期 RSI
+CREATE TABLE IF NOT EXISTS btc_kline_15m (
+    id           BIGINT PRIMARY KEY AUTO_INCREMENT,
+    open_time    DATETIME       NOT NULL COMMENT 'K 线开盘时间（UTC+8）',
+    open_price   DECIMAL(20,8)  NOT NULL,
+    high_price   DECIMAL(20,8)  NOT NULL,
+    low_price    DECIMAL(20,8)  NOT NULL,
+    close_price  DECIMAL(20,8)  NOT NULL,
+    volume       DECIMAL(30,8)  NOT NULL COMMENT '成交量（BTC）',
+    quote_volume DECIMAL(30,4)            COMMENT '成交额（USDT）',
+    trade_count  INT                      COMMENT '成交笔数',
+    ma20         DECIMAL(20,8)            COMMENT 'MA20 收盘均线',
+    ma120        DECIMAL(20,8)            COMMENT 'MA120 收盘均线',
+    macd_dif     DECIMAL(20,8)            COMMENT 'MACD DIF (EMA12 - EMA26)',
+    macd_dea     DECIMAL(20,8)            COMMENT 'MACD DEA (DIF 的 EMA9)',
+    macd_hist    DECIMAL(20,8)            COMMENT 'MACD 柱 = (DIF - DEA) * 2',
+    rsi21        DECIMAL(10,4)            COMMENT 'RSI21',
+    source       VARCHAR(20)    DEFAULT 'binance' COMMENT '数据来源',
+    created_at   DATETIME       DEFAULT CURRENT_TIMESTAMP,
+    updated_at   DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_open_time (open_time),
+    INDEX idx_open_time_desc (open_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='BTCUSDT 15m K线 + 技术指标（MA20/MA120/MACD/RSI21）';
+
+-- ── BTC 做多策略信号表 ─────────────────────────────────────────────
+-- 策略识别出做多机会时写入一条记录，用于：
+--   1) 站内飞书报警（pending -> sent）
+--   2) 网页实时显示
+--   3) 事后跟踪止盈止损命中情况
+-- 止盈止损允许多级（take_profit_1/2、stop_loss），按 JSON 扩展
+CREATE TABLE IF NOT EXISTS btc_long_signal (
+    id                 BIGINT PRIMARY KEY AUTO_INCREMENT,
+    signal_time        DATETIME       NOT NULL COMMENT '信号触发时间（对齐 K 线开盘时间）',
+    kline_id           BIGINT                  COMMENT 'FK -> btc_kline_15m.id（触发 K 线）',
+    strategy_name      VARCHAR(50)    NOT NULL COMMENT '策略标识，如 MA_CROSS_V1 / MACD_GOLDEN_V1',
+    strategy_version   VARCHAR(20)    DEFAULT 'v1' COMMENT '策略版本，便于回测对比',
+    entry_price        DECIMAL(20,8)  NOT NULL COMMENT '建议开多价格（多为触发 K 线收盘价）',
+    take_profit_price  DECIMAL(20,8)           COMMENT '主止盈价',
+    stop_loss_price    DECIMAL(20,8)           COMMENT '主止损价',
+    take_profit_pct    DECIMAL(10,4)           COMMENT '止盈百分比（相对 entry）',
+    stop_loss_pct      DECIMAL(10,4)           COMMENT '止损百分比（相对 entry）',
+    risk_reward        DECIMAL(10,4)           COMMENT '盈亏比 = tp_pct / sl_pct',
+    confidence         DECIMAL(5,2)            COMMENT '策略置信度 0~100',
+    indicators_snapshot JSON                    COMMENT '{ma20, ma120, macd_dif, macd_dea, macd_hist, rsi21, ...}',
+    reason             VARCHAR(500)            COMMENT '触发理由文字描述',
+    status             VARCHAR(20)    NOT NULL DEFAULT 'OPEN'
+                       COMMENT 'OPEN / TP_HIT / SL_HIT / EXPIRED / CANCELLED',
+    closed_at          DATETIME                COMMENT '信号关闭时间',
+    closed_price       DECIMAL(20,8)           COMMENT '关闭时价格',
+    realized_pct       DECIMAL(10,4)           COMMENT '已实现收益率（%）',
+    alert_status       VARCHAR(20)    NOT NULL DEFAULT 'PENDING'
+                       COMMENT 'PENDING / SENT / FAILED / SKIPPED',
+    alert_sent_at      DATETIME                COMMENT '飞书报警发送时间',
+    created_at         DATETIME       DEFAULT CURRENT_TIMESTAMP,
+    updated_at         DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_signal_time   (signal_time),
+    INDEX idx_status        (status, signal_time),
+    INDEX idx_alert_pending (alert_status, signal_time),
+    INDEX idx_strategy      (strategy_name, signal_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='BTC 做多策略信号（触发→报警→跟踪）';

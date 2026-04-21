@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('BTC 做多策略', ~{::main})}">
+<body><main>
+
+<div class="d-flex align-items-center flex-wrap gap-3 mb-3">
+    <span class="pulse-dot"></span>
+    <h5 class="fw-7 mb-0 ms-1">📈 BTC 做多策略看板（Binance BTCUSDT · 15m）</h5>
+    <span id="auto-badge"
+          style="background:#f0f4ff;border:1px solid #c7d7fa;color:#3b82f6;
+                 border-radius:20px;padding:3px 12px;font-size:.76rem;font-weight:600;
+                 pointer-events:none;user-select:none">
+        🔄 <span id="auto-countdown">30</span>s
+    </span>
+</div>
+
+<!-- ══ 顶部统计卡 ══ -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3 col-6">
+        <div class="stat-card sc-blue">
+            <span class="sc-icon">🕒</span>
+            <div class="sc-val mono" th:text="${klineTotal}">0</div>
+            <div class="sc-lbl">K 线总数</div>
+            <div class="sc-sub">最新 <span th:text="${klineLatestAt != null ? #temporals.format(klineLatestAt, 'MM-dd HH:mm') : '—'}">—</span></div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card sc-cyan">
+            <span class="sc-icon">📅</span>
+            <div class="sc-val mono" th:text="${klineRecent7d}">0</div>
+            <div class="sc-lbl">近 7 天 K 线</div>
+            <div class="sc-sub">预期 672 根（7×24×4）</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card sc-green">
+            <span class="sc-icon">⚡</span>
+            <div class="sc-val mono" th:text="${signalTotal}">0</div>
+            <div class="sc-lbl">策略信号总数</div>
+            <div class="sc-sub">近 7 天 <span th:text="${signalRecent7d}">0</span></div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card sc-yellow">
+            <span class="sc-icon">🔓</span>
+            <div class="sc-val mono" th:text="${signalOpen}">0</div>
+            <div class="sc-lbl">进行中信号</div>
+            <div class="sc-sub">未触发止盈/止损</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ 策略信号表 ══ -->
+<div class="card mb-3">
+    <div class="card-header">⚡ 最近 50 条策略信号</div>
+    <div class="card-body p-0">
+        <div th:if="${signals.isEmpty()}" class="empty-state">
+            <div class="ei">🤖</div>
+            <div>暂无策略信号</div>
+            <div class="t-dim mt-2" style="font-size:.82rem">
+                K 线数据录入后，训练并部署策略即可自动产出做多信号
+            </div>
+        </div>
+        <table th:unless="${signals.isEmpty()}" class="table" id="sig-tbl">
+            <thead><tr>
+                <th style="width:140px">触发时间</th>
+                <th>策略</th>
+                <th>开多价</th>
+                <th>止盈</th>
+                <th>止损</th>
+                <th>盈亏比</th>
+                <th>置信度</th>
+                <th>状态</th>
+                <th>报警</th>
+                <th>已实现</th>
+                <th>理由</th>
+            </tr></thead>
+            <tbody id="sig-tbody">
+            <tr th:each="s : ${signals}" class="sig-row">
+                <td class="mono" th:text="${#temporals.format(s.signalTime, 'MM-dd HH:mm')}"></td>
+                <td>
+                    <span class="tag-blue" th:text="${s.strategyName}"></span>
+                    <span class="t-dim" style="font-size:.7rem" th:text="${s.strategyVersion}"></span>
+                </td>
+                <td class="mono fw-7" th:text="${'$' + #numbers.formatDecimal(s.entryPrice, 1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="mono up" th:text="${s.takeProfitPrice != null ? '$' + #numbers.formatDecimal(s.takeProfitPrice, 1, 'COMMA', 2, 'POINT') : '—'}"></td>
+                <td class="mono dn" th:text="${s.stopLossPrice   != null ? '$' + #numbers.formatDecimal(s.stopLossPrice,   1, 'COMMA', 2, 'POINT') : '—'}"></td>
+                <td class="mono" th:text="${s.riskReward  != null ? #numbers.formatDecimal(s.riskReward,  1, 1) : '—'}"></td>
+                <td class="mono" th:text="${s.confidence  != null ? #numbers.formatDecimal(s.confidence,  1, 1) + '%' : '—'}"></td>
+                <td>
+                    <span th:if="${s.status=='OPEN'}"      class="tag-blue">进行中</span>
+                    <span th:if="${s.status=='TP_HIT'}"    class="tag-up">止盈</span>
+                    <span th:if="${s.status=='SL_HIT'}"    class="tag-dn">止损</span>
+                    <span th:if="${s.status=='EXPIRED'}"   class="tag-gray">过期</span>
+                    <span th:if="${s.status=='CANCELLED'}" class="tag-gray">取消</span>
+                </td>
+                <td>
+                    <span th:if="${s.alertStatus=='SENT'}"    class="tag-up">✅</span>
+                    <span th:if="${s.alertStatus=='PENDING'}" class="tag-yellow">等待</span>
+                    <span th:if="${s.alertStatus=='FAILED'}"  class="tag-dn">失败</span>
+                    <span th:if="${s.alertStatus=='SKIPPED'}" class="tag-gray">跳过</span>
+                </td>
+                <td class="mono"
+                    th:classappend="${s.realizedPct != null and s.realizedPct.signum() >= 0 ? 'up' : 'dn'}"
+                    th:text="${s.realizedPct != null ? #numbers.formatDecimal(s.realizedPct, 1, 2) + '%' : '—'}"></td>
+                <td class="t-muted" style="max-width:340px;white-space:normal" th:text="${s.reason}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ══ 最新 K 线 ══ -->
+<div class="card">
+    <div class="card-header">🕒 最新 20 根 15m K 线 + 指标</div>
+    <div class="card-body p-0">
+        <div th:if="${klines.isEmpty()}" class="empty-state">
+            <div class="ei">📭</div>
+            <div>暂无 K 线数据</div>
+            <div class="t-dim mt-2" style="font-size:.82rem">
+                待导入 Binance BTCUSDT 近 3 年 15m 历史 K 线 + MA20/MA120/MACD/RSI21
+            </div>
+        </div>
+        <table th:unless="${klines.isEmpty()}" class="table">
+            <thead><tr>
+                <th>开盘时间</th>
+                <th>开</th><th>高</th><th>低</th><th>收</th>
+                <th>成交量</th>
+                <th>MA20</th><th>MA120</th>
+                <th>MACD DIF</th><th>DEA</th><th>HIST</th>
+                <th>RSI21</th>
+            </tr></thead>
+            <tbody>
+            <tr th:each="k : ${klines}">
+                <td class="mono" th:text="${#temporals.format(k.openTime, 'MM-dd HH:mm')}"></td>
+                <td class="mono" th:text="${#numbers.formatDecimal(k.openPrice,  1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="mono" th:text="${#numbers.formatDecimal(k.highPrice,  1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="mono" th:text="${#numbers.formatDecimal(k.lowPrice,   1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="mono fw-7" th:text="${#numbers.formatDecimal(k.closePrice, 1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="mono t-muted" th:text="${#numbers.formatDecimal(k.volume, 1, 2)}"></td>
+                <td class="mono" th:text="${k.ma20  != null ? #numbers.formatDecimal(k.ma20,  1, 'COMMA', 2, 'POINT') : '—'}"></td>
+                <td class="mono" th:text="${k.ma120 != null ? #numbers.formatDecimal(k.ma120, 1, 'COMMA', 2, 'POINT') : '—'}"></td>
+                <td class="mono"
+                    th:classappend="${k.macdDif != null and k.macdDif.signum() >= 0 ? 'up' : 'dn'}"
+                    th:text="${k.macdDif != null ? #numbers.formatDecimal(k.macdDif, 1, 4) : '—'}"></td>
+                <td class="mono"
+                    th:classappend="${k.macdDea != null and k.macdDea.signum() >= 0 ? 'up' : 'dn'}"
+                    th:text="${k.macdDea != null ? #numbers.formatDecimal(k.macdDea, 1, 4) : '—'}"></td>
+                <td class="mono"
+                    th:classappend="${k.macdHist != null and k.macdHist.signum() >= 0 ? 'up' : 'dn'}"
+                    th:text="${k.macdHist != null ? #numbers.formatDecimal(k.macdHist, 1, 4) : '—'}"></td>
+                <td class="mono"
+                    th:classappend="${k.rsi21 != null and k.rsi21.doubleValue() >= 70 ? 'dn' : (k.rsi21 != null and k.rsi21.doubleValue() &lt;= 30 ? 'up' : '')}"
+                    th:text="${k.rsi21 != null ? #numbers.formatDecimal(k.rsi21, 1, 2) : '—'}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function refreshSignals() {
+    try {
+        const r = await fetch('/api/btc-strategy/signals?limit=50');
+        const rows = await r.json();
+        const tbody = document.getElementById('sig-tbody');
+        if (!tbody || !rows || !rows.length) return;
+        tbody.innerHTML = rows.map(s => {
+            const statusTag = ({
+                'OPEN':      '<span class="tag-blue">进行中</span>',
+                'TP_HIT':    '<span class="tag-up">止盈</span>',
+                'SL_HIT':    '<span class="tag-dn">止损</span>',
+                'EXPIRED':   '<span class="tag-gray">过期</span>',
+                'CANCELLED': '<span class="tag-gray">取消</span>',
+            })[s.status] || '<span class="tag-gray">—</span>';
+            const alertTag = ({
+                'SENT':    '<span class="tag-up">✅</span>',
+                'PENDING': '<span class="tag-yellow">等待</span>',
+                'FAILED':  '<span class="tag-dn">失败</span>',
+                'SKIPPED': '<span class="tag-gray">跳过</span>',
+            })[s.alertStatus] || '<span class="tag-gray">—</span>';
+            const fmtP = v => v == null ? '—' : '$' + Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+            const fmtN = (v,d=2) => v == null ? '—' : Number(v).toFixed(d);
+            const realized = s.realizedPct == null ? '—' :
+                `<span class="mono ${Number(s.realizedPct)>=0?'up':'dn'}">${Number(s.realizedPct).toFixed(2)}%</span>`;
+            const t = new Date(s.signalTime);
+            const timeStr = `${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+            return `<tr class="sig-row">
+                <td class="mono">${timeStr}</td>
+                <td><span class="tag-blue">${escapeHtml(s.strategyName||'')}</span>
+                    <span class="t-dim" style="font-size:.7rem">${escapeHtml(s.strategyVersion||'')}</span></td>
+                <td class="mono fw-7">${fmtP(s.entryPrice)}</td>
+                <td class="mono up">${fmtP(s.takeProfitPrice)}</td>
+                <td class="mono dn">${fmtP(s.stopLossPrice)}</td>
+                <td class="mono">${fmtN(s.riskReward,1)}</td>
+                <td class="mono">${s.confidence==null?'—':Number(s.confidence).toFixed(1)+'%'}</td>
+                <td>${statusTag}</td>
+                <td>${alertTag}</td>
+                <td>${realized}</td>
+                <td class="t-muted" style="max-width:340px;white-space:normal">${escapeHtml(s.reason||'')}</td>
+            </tr>`;
+        }).join('');
+    } catch(e) { console.warn('refresh signals', e); }
+}
+
+function escapeHtml(s) {
+    return String(s||'').replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let countdown = 30;
+const countEl = document.getElementById('auto-countdown');
+setInterval(() => {
+    countdown--;
+    if (countdown <= 0) { countdown = 30; refreshSignals(); }
+    countEl.textContent = countdown;
+}, 1000);
+</script>
+
+</main></body>
+</html>
