@@ -3,150 +3,419 @@
       th:replace="~{layout :: page('币安广场热度', ~{::main})}">
 <body><main>
 
-<div class="d-flex align-items-center flex-wrap gap-3 mb-3">
-    <span class="pulse-dot"></span>
-    <h5 class="fw-7 mb-0 ms-1">币安广场代币热度榜</h5>
+<style>
+    /* ══ 币安风 · 黑底金字主题（仅限本页） ════════════════════
+       Binance Yellow: #F0B90B   亮黄(hover): #FCD535
+       背景：#0B0E11    二级卡：#181A20   边框：#2B3139
+       涨：#0ECB81     跌：#F6465D
+    ═══════════════════════════════════════════════════════ */
+    .sq-page {
+        /* 把整页 wrap 拉成整页黑底 */
+        margin: -22px -28px;           /* 抵消 layout 的 page-wrap padding */
+        padding: 22px 28px 40px;
+        background: #0B0E11;
+        color: #EAECEF;
+        min-height: calc(100vh - 58px); /* 58 = topnav 高度 */
+        font-size: 15px;                /* 整体字号上抬一档（默认 14 → 15）*/
+    }
+    .sq-page a { color: #F0B90B; }
+    .sq-page ::selection { background: rgba(240,185,11,.28); }
 
-    <div class="tab-row" style="background:#f8faff">
-        <a th:href="@{/binance-square(hours=1)}"
-           class="tab-item"
-           th:classappend="${hours==1?' active':''}"
-           style="font-size:.8rem;text-decoration:none">近 1 小时</a>
-        <a th:href="@{/binance-square(hours=8)}"
-           class="tab-item"
-           th:classappend="${hours==8?' active':''}"
-           style="font-size:.8rem;text-decoration:none">近 8 小时</a>
-        <a th:href="@{/binance-square(hours=24)}"
-           class="tab-item"
-           th:classappend="${hours==24?' active':''}"
-           style="font-size:.8rem;text-decoration:none">近 24 小时</a>
+    /* 覆盖全局 card / table / tag 为暗黑变体 */
+    .sq-page .card {
+        background: #181A20;
+        border: 1px solid #2B3139;
+        box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    .sq-page .card:hover { box-shadow: 0 8px 22px rgba(0,0,0,.45); transform: none; }
+    .sq-page .stat-card {
+        background: #181A20;
+        border: 1px solid #2B3139;
+        color: #EAECEF;
+        box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    .sq-page .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.5); }
+    .sq-page .stat-card::before { background: #F0B90B; }
+    .sq-page .stat-card::after  { background: rgba(240,185,11,.08); }
+    .sq-page .stat-card .sc-val { color: #F0B90B; }
+    .sq-page .stat-card .sc-lbl { color: #848E9C; }
+    .sq-page .stat-card .sc-sub { color: #B7BDC6; }
+    .sq-page .stat-card.sc-green  .sc-val { color: #0ECB81; }
+    .sq-page .stat-card.sc-red    .sc-val { color: #F6465D; }
+    .sq-page .stat-card.sc-blue   .sc-val { color: #EAECEF; }
+    .sq-page .stat-card.sc-orange .sc-val { color: #F0B90B; }
+    .sq-page .stat-card.sc-green  ::before, .sq-page .stat-card.sc-green::before  { background: #0ECB81; }
+    .sq-page .stat-card.sc-red    ::before, .sq-page .stat-card.sc-red::before    { background: #F6465D; }
+
+    .sq-page .table                  { color: #EAECEF; }
+    .sq-page .table thead th {
+        background: #0B0E11;
+        color: #848E9C;
+        border-bottom: 1px solid #2B3139;
+    }
+    .sq-page .table tbody td         { border-bottom: 1px solid rgba(43,49,57,.6); }
+    .sq-page .table tbody tr:last-child td { border-bottom: none; }
+
+    /* 斑马条纹：金黄 / 浅金 两种交替，暗底保留可读性 */
+    .sq-page .table tbody tr:nth-child(odd)  td { background: rgba(240,185,11,.06); }
+    .sq-page .table tbody tr:nth-child(even) td { background: rgba(240,185,11,.14); }
+    .sq-page .table tbody tr:hover td { background: rgba(240,185,11,.24) !important; }
+
+    /* TOP3 保留渐变高亮（覆盖斑马条纹） */
+    .sq-page .rank-1 td { background: linear-gradient(90deg, rgba(240,185,11,.32), rgba(240,185,11,.08)) !important; }
+    .sq-page .rank-2 td { background: linear-gradient(90deg, rgba(216,218,220,.18), rgba(240,185,11,.06)) !important; }
+    .sq-page .rank-3 td { background: linear-gradient(90deg, rgba(224,124,20,.22), rgba(240,185,11,.06)) !important; }
+    .sq-page .rank-1:hover td, .sq-page .rank-2:hover td, .sq-page .rank-3:hover td {
+        background: rgba(240,185,11,.30) !important;
+    }
+
+    .sq-page .info-pill {
+        background: #1E2329; color: #B7BDC6;
+        border: 1px solid #2B3139;
+        font-size: .82rem; padding: 4px 12px;
+    }
+    .sq-page .tab-row   {
+        background: #F0B90B !important;
+        border: 1px solid #F0B90B;
+        padding: 3px;
+    }
+    .sq-page .tab-item  {
+        color: #0B0E11; font-weight: 600;
+        background: transparent;
+        font-size: .92rem; padding: 6px 16px;
+    }
+    .sq-page .tab-item:hover:not(.active) {
+        color: #0B0E11; background: rgba(255,255,255,.22);
+    }
+    .sq-page .tab-item.active {
+        background: #FCE9A0;        /* 选中：浅金 */
+        color: #5C3A00; font-weight: 800;
+        box-shadow: 0 1px 4px rgba(0,0,0,.18);
+    }
+    .sq-page .empty-state { color: #848E9C; }
+    .sq-page .pulse-dot   { background: #F0B90B; }
+    .sq-page .pulse-dot   { animation: sqPulse 2s infinite; }
+    @keyframes sqPulse {
+        0%  { box-shadow: 0 0 0 0 rgba(240,185,11,.55); }
+        70% { box-shadow: 0 0 0 8px rgba(240,185,11,0); }
+        100%{ box-shadow: 0 0 0 0 rgba(240,185,11,0); }
+    }
+
+    /* ── 页头 ─────────────────────────────────────── */
+    .sq-hero {
+        display: flex; align-items: center; justify-content: space-between;
+        flex-wrap: wrap; gap: 14px; margin-bottom: 18px;
+    }
+    .sq-title       { display: flex; align-items: center; gap: 10px; }
+    .sq-title h5    { margin: 0; font-weight: 800; letter-spacing: -.2px; color: #F0B90B; font-size: 1.4rem; }
+    .sq-title .subtitle { color: #848E9C; font-size: .92rem; margin-top: 3px; }
+
+    .sq-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── 概览卡片 ─────────────────────────────────── */
+    .sq-summary {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+        margin-bottom: 18px;
+    }
+    @media (max-width: 900px) { .sq-summary { grid-template-columns: repeat(2, 1fr); } }
+
+    /* ── 表格：更宽松的行高 ──────────────────────── */
+    .sq-table thead th { font-size: .82rem; padding: 14px 16px; letter-spacing: .6px; font-weight: 700; }
+    .sq-table tbody td { padding: 18px 16px; vertical-align: middle; }
+
+    /* 排名徽章：TOP3 金/银/铜，其他深灰 */
+    .rank-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 34px; height: 34px; border-radius: 9px;
+        font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
+        font-size: 1rem; font-weight: 800; color: #848E9C;
+        background: #1E2329;
+    }
+    .rank-badge.r1 { background: linear-gradient(135deg,#FCD535,#F0B90B); color:#0B0E11; box-shadow: 0 2px 8px rgba(240,185,11,.5); }
+    .rank-badge.r2 { background: linear-gradient(135deg,#D8DADC,#9CA3AF); color:#0B0E11; box-shadow: 0 2px 6px rgba(180,185,190,.3); }
+    .rank-badge.r3 { background: linear-gradient(135deg,#E8A268,#B06A2C); color:#0B0E11; box-shadow: 0 2px 6px rgba(176,106,44,.35); }
+
+    /* Token avatar（颜色按首字母散列） */
+    .tk-cell { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .tk-avatar {
+        flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        color: #0B0E11; font-weight: 800; font-size: 1rem; letter-spacing: -.2px;
+        font-family: -apple-system,'SF Pro Display',sans-serif;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.15), 0 1px 4px rgba(0,0,0,.4);
+    }
+    .tk-meta { display: flex; flex-direction: column; min-width: 0; }
+    .tk-sym  { font-weight: 700; font-size: 1.18rem; letter-spacing: -.2px; line-height: 1.2; color: #F0B90B; }
+    .tk-sub  { font-size: .82rem; color: #848E9C; margin-top: 3px; }
+
+    /* 分数：数字 + 迷你进度条 */
+    .score-wrap { display: flex; flex-direction: column; gap: 8px; min-width: 112px; }
+    .score-num  {
+        font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
+        font-size: 1.18rem; font-weight: 800; color: #F0B90B; letter-spacing: -.2px;
+    }
+    .score-bar  { height: 6px; background: rgba(30,35,41,.8); border-radius: 999px; overflow: hidden; }
+    .score-bar-fill {
+        height: 100%; border-radius: 999px;
+        background: linear-gradient(90deg, #F0B90B, #FCD535);
+        box-shadow: 0 0 6px rgba(240,185,11,.45);
+    }
+
+    /* 互动信息 */
+    .eng {
+        display: inline-flex; align-items: center; gap: 20px;
+        font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
+        font-size: 1.12rem; color: #EAECEF;
+    }
+    .eng span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .eng .eng-ic { font-size: 1.1rem; }
+    .eng em   { font-style: normal; color: #F0B90B; font-weight: 700; font-size: 1em; }
+
+    /* 升降徽章 */
+    .delta {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 60px; padding: 5px 12px; border-radius: 8px;
+        font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
+        font-size: .95rem; font-weight: 700; white-space: nowrap;
+    }
+    .delta.up   { background: rgba(14,203,129,.18);  color: #0ECB81; }
+    .delta.dn   { background: rgba(246,70,93,.18);   color: #F6465D; }
+    .delta.new  { background: rgba(240,185,11,.22);  color: #F0B90B; }
+    .delta.flat { background: #1E2329;               color: #848E9C; }
+    .delta.none { background: transparent;           color: #5E6673; }
+
+    /* 上架徽章 */
+    .listed {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 5px 13px; border-radius: 999px;
+        font-size: .88rem; font-weight: 700; letter-spacing: .2px;
+    }
+    .listed.yes { background: rgba(14,203,129,.18); color: #0ECB81; }
+    .listed.no  { background: #1E2329; color: #848E9C; font-weight: 500; }
+
+    /* 帖子数字号 */
+    .sq-table td.col-posts { font-size: 1.12rem; font-weight: 700; color: #EAECEF; }
+
+    /* 概览卡片文字 */
+    .sq-page .stat-card .sc-val { font-size: 1.4rem; }
+    .sq-page .stat-card .sc-lbl { font-size: .82rem; }
+    .sq-page .stat-card .sc-sub { font-size: .88rem; }
+
+    /* 移动端：隐藏次要列 */
+    @media (max-width: 720px) {
+        .sq-table .col-engagement,
+        .sq-table .col-posts      { display: none; }
+        .score-wrap { min-width: 72px; }
+    }
+</style>
+
+<div class="sq-page">
+
+<!-- ── 页头 ─────────────────────────────────────────── -->
+<div class="sq-hero">
+    <div class="sq-title">
+        <span class="pulse-dot"></span>
+        <div>
+            <h5>🔥 币安广场代币热度榜</h5>
+            <div class="subtitle">基于广场帖子聚合，分数 = 曝光 + 👍 + 💬 的加权和</div>
+        </div>
     </div>
-
-    <span id="auto-badge"
-          style="background:#f0f4ff;border:1px solid #c7d7fa;color:#3b82f6;
-                 border-radius:20px;padding:3px 12px;font-size:.76rem;font-weight:600;
-                 pointer-events:none;user-select:none">
-        🔄 <span id="auto-countdown">30</span>s
-    </span>
+    <div class="sq-meta">
+        <div class="tab-row" style="background:rgba(118,118,128,0.12)">
+            <a th:href="@{/binance-square(hours=1)}"  class="tab-item" th:classappend="${hours==1?' active':''}"  style="text-decoration:none">近 1 小时</a>
+            <a th:href="@{/binance-square(hours=8)}"  class="tab-item" th:classappend="${hours==8?' active':''}"  style="text-decoration:none">近 8 小时</a>
+            <a th:href="@{/binance-square(hours=24)}" class="tab-item" th:classappend="${hours==24?' active':''}" style="text-decoration:none">近 24 小时</a>
+        </div>
+        <span class="info-pill">📊 Top <span th:text="${top.size()}">0</span></span>
+        <span class="info-pill">🕐 <span id="last-update-time">—</span></span>
+        <span class="info-pill" id="auto-badge" style="color:#0B0E11;background:#F0B90B;border-color:#F0B90B;font-weight:700">🔄 <span id="auto-countdown">30</span>s</span>
+    </div>
 </div>
 
-<div class="d-flex gap-2 mb-3" style="flex-wrap:wrap">
-    <span class="tag-gray">窗口 <span th:text="${hours}"></span> 小时</span>
-    <span class="tag-gray">最后更新 <span id="last-update-time">—</span></span>
-    <span class="tag-gray">✅ 币安已上架 &nbsp; ❓ 待验证</span>
-</div>
+<!-- ── 概览卡片 ─────────────────────────────────────── -->
+<div class="sq-summary" id="sq-summary"></div>
 
+<!-- ── 榜单 ─────────────────────────────────────────── -->
 <div class="card">
     <div class="card-body p-0">
         <div th:if="${top.isEmpty()}" class="empty-state">
-            <div class="ei">📭</div><div>暂无数据（Job 每 5 分钟抓一次，刚启动请稍等）</div>
+            <div class="ei">📭</div>
+            <div>暂无数据（Job 每 5 分钟抓一次，刚启动请稍等）</div>
         </div>
-        <table th:unless="${top.isEmpty()}" class="table" id="sq-tbl">
-            <thead><tr>
-                <th style="width:60px">#</th>
-                <th style="width:80px">升/降</th>
-                <th>代币</th>
-                <th>分数</th>
-                <th>👍 点赞</th>
-                <th>💬 评论</th>
-                <th>帖子数</th>
-                <th>币安</th>
-            </tr></thead>
-            <tbody id="sq-tbody">
-            <tr th:each="row,iter : ${top}"
-                th:class="${iter.index==0?'rank-1':(iter.index==1?'rank-2':(iter.index==2?'rank-3':''))}">
-                <td class="mono fw-7 t-dim" th:text="${iter.index + 1}"></td>
-                <td class="mono">
-                    <span th:if="${!row.hasSnapshot}" class="tag-gray">—</span>
-                    <span th:if="${row.hasSnapshot and row.rankDelta == null}"
-                          class="tag-up" style="background:#eaf4ff;color:#2563eb">NEW</span>
-                    <span th:if="${row.rankDelta != null and row.rankDelta &gt; 0}"
-                          class="tag-up" th:text="'▲' + ${row.rankDelta}"></span>
-                    <span th:if="${row.rankDelta != null and row.rankDelta &lt; 0}"
-                          class="tag-dn" th:text="'▼' + ${-row.rankDelta}"></span>
-                    <span th:if="${row.rankDelta != null and row.rankDelta == 0}"
-                          class="tag-gray">持平</span>
-                </td>
-                <td>
-                    <span class="fw-7" style="font-size:.92rem" th:text="${row.token}"></span>
-                </td>
-                <td class="mono fw-7 t-blue" th:text="${row.score}"></td>
-                <td class="mono" th:text="${row.likes}"></td>
-                <td class="mono" th:text="${row.comments}"></td>
-                <td class="mono" th:text="${row.postCount}"></td>
-                <td>
-                    <span th:if="${row.inBinance}" class="tag-up">✅</span>
-                    <span th:unless="${row.inBinance}" class="tag-gray">❓</span>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+        <div th:unless="${top.isEmpty()}" class="table-responsive">
+            <table class="table sq-table" id="sq-tbl">
+                <thead>
+                <tr>
+                    <th style="width:60px">#</th>
+                    <th style="width:96px">升/降</th>
+                    <th>代币</th>
+                    <th style="width:170px">热度分数</th>
+                    <th class="col-engagement">互动</th>
+                    <th class="col-posts" style="width:96px">帖子数</th>
+                    <th style="width:116px">币安</th>
+                </tr>
+                </thead>
+                <tbody id="sq-tbody"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<script>
-const HOURS = /*[[${hours}]]*/ 1;
+<script th:inline="javascript">
+const HOURS       = /*[[${hours}]]*/ 1;
+const INIT_ROWS   = /*[[${top}]]*/ [];
 
-function updateLastTime() {
-    document.getElementById('last-update-time').textContent =
-        new Date().toLocaleString('zh-CN', {
-            timeZone: 'Asia/Shanghai', hour:'2-digit', minute:'2-digit', second:'2-digit'
-        });
+/* ── 工具 ──────────────────────────────────────────── */
+function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtNum(v){
+    const n = Number(v)||0, a = Math.abs(n);
+    if (a >= 1e6) return (n/1e6).toFixed(1) + 'M';
+    if (a >= 1e3) return (n/1e3).toFixed(1) + 'K';
+    return String(n);
+}
+/* 根据首字母散列颜色（Apple 系色盘） */
+const AVATAR_COLORS = [
+    '#007AFF','#34C759','#FF9500','#AF52DE','#FF2D55',
+    '#5AC8FA','#FF3B30','#5856D6','#FF9F0A','#30B0C7'
+];
+function avatarColor(sym){
+    const s = String(sym||'?');
+    let h = 0;
+    for (let i=0; i<s.length; i++) h = (h*31 + s.charCodeAt(i)) >>> 0;
+    return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function firstChar(sym){
+    const s = String(sym||'?').trim();
+    return s ? s.charAt(0).toUpperCase() : '?';
 }
 
-async function refresh() {
+function renderDelta(d){
+    if (!d.hasSnapshot)                return '<span class="delta none">—</span>';
+    if (d.rankDelta == null)           return '<span class="delta new">NEW</span>';
+    if (d.rankDelta > 0)               return `<span class="delta up">▲ ${d.rankDelta}</span>`;
+    if (d.rankDelta < 0)               return `<span class="delta dn">▼ ${-d.rankDelta}</span>`;
+    return '<span class="delta flat">持平</span>';
+}
+function renderListed(yes){
+    return yes
+        ? '<span class="listed yes">✅ 已上架</span>'
+        : '<span class="listed no">未上架</span>';
+}
+
+function renderRows(rows){
+    const tbody = document.getElementById('sq-tbody');
+    if (!tbody) return;
+    if (!rows || !rows.length) { tbody.innerHTML = ''; return; }
+    const topScore = Math.max(1, ...rows.map(r => Number(r.score)||0));
+
+    tbody.innerHTML = rows.map((d, i) => {
+        const rank = i + 1;
+        const rankCls = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
+        const rowHi   = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+        const pct     = Math.max(4, Math.round((Number(d.score)||0) * 100 / topScore));
+        const sym     = escapeHtml(d.token);
+        const color   = avatarColor(d.token);
+
+        return `<tr class="${rowHi}">
+            <td><span class="rank-badge ${rankCls}">${rank}</span></td>
+            <td>${renderDelta(d)}</td>
+            <td>
+                <div class="tk-cell">
+                    <span class="tk-avatar" style="background:${color}">${escapeHtml(firstChar(d.token))}</span>
+                    <div class="tk-meta">
+                        <span class="tk-sym">${sym}</span>
+                        <span class="tk-sub">${d.inBinance ? '币安已上架' : '链上代币'}</span>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="score-wrap">
+                    <span class="score-num">${fmtNum(d.score)}</span>
+                    <div class="score-bar"><div class="score-bar-fill" style="width:${pct}%"></div></div>
+                </div>
+            </td>
+            <td class="col-engagement">
+                <span class="eng">
+                    <span><span class="eng-ic">👍</span> <em>${fmtNum(d.likes)}</em></span>
+                    <span><span class="eng-ic">💬</span> <em>${fmtNum(d.comments)}</em></span>
+                </span>
+            </td>
+            <td class="col-posts mono">${fmtNum(d.postCount)}</td>
+            <td>${renderListed(d.inBinance)}</td>
+        </tr>`;
+    }).join('');
+}
+
+/* ── 概览卡片 ──────────────────────────────────────── */
+function renderSummary(rows){
+    const box = document.getElementById('sq-summary');
+    if (!box) return;
+    if (!rows || !rows.length) { box.innerHTML = ''; return; }
+
+    const total     = rows.length;
+    const top1      = rows[0];
+    const listed    = rows.filter(r => r.inBinance).length;
+
+    let biggestUp = null, biggestDn = null;
+    rows.forEach((r,i) => {
+        if (r.rankDelta == null) return;
+        if (r.rankDelta > 0 && (!biggestUp || r.rankDelta > biggestUp.rankDelta)) biggestUp = {...r, currRank: i+1};
+        if (r.rankDelta < 0 && (!biggestDn || r.rankDelta < biggestDn.rankDelta)) biggestDn = {...r, currRank: i+1};
+    });
+
+    const cards = [
+        {cls:'sc-orange', icon:'🔥', val: escapeHtml(top1.token),
+         lbl:'当前榜首', sub:`分数 ${fmtNum(top1.score)} · ${top1.postCount} 帖`},
+        {cls:'sc-blue',   icon:'📊', val: total + '',
+         lbl:'上榜代币', sub:`币安已上架 ${listed} 个`},
+        {cls:'sc-green',  icon:'📈', val: biggestUp ? escapeHtml(biggestUp.token) : '—',
+         lbl:'最大升幅', sub: biggestUp ? `▲ ${biggestUp.rankDelta} 名 · 现 #${biggestUp.currRank}` : '暂无'},
+        {cls:'sc-red',    icon:'📉', val: biggestDn ? escapeHtml(biggestDn.token) : '—',
+         lbl:'最大跌幅', sub: biggestDn ? `▼ ${-biggestDn.rankDelta} 名 · 现 #${biggestDn.currRank}` : '暂无'},
+    ];
+    box.innerHTML = cards.map(c => `
+        <div class="stat-card ${c.cls}">
+            <span class="sc-icon">${c.icon}</span>
+            <div class="sc-val" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.val}</div>
+            <div class="sc-lbl">${c.lbl}</div>
+            <div class="sc-sub">${c.sub}</div>
+        </div>`).join('');
+}
+
+/* ── 刷新 ──────────────────────────────────────────── */
+function updateLastTime(){
+    document.getElementById('last-update-time').textContent =
+        new Date().toLocaleTimeString('zh-CN', {
+            timeZone:'Asia/Shanghai', hour:'2-digit', minute:'2-digit', second:'2-digit'
+        });
+}
+async function refresh(){
     try {
         const r = await fetch(`/api/binance-square/top?hours=${HOURS}&limit=20`);
         const rows = await r.json();
-        const tbody = document.getElementById('sq-tbody');
-        if (!tbody) return;
         if (!rows || !rows.length) return;
-        tbody.innerHTML = rows.map((d, i) => {
-            const rankCls = i===0 ? 'rank-1' : i===1 ? 'rank-2' : i===2 ? 'rank-3' : '';
-            const binance = d.inBinance
-                ? '<span class="tag-up">✅</span>'
-                : '<span class="tag-gray">❓</span>';
-            let delta;
-            if (!d.hasSnapshot) {
-                delta = '<span class="tag-gray">—</span>';
-            } else if (d.rankDelta == null) {
-                delta = '<span class="tag-up" style="background:#eaf4ff;color:#2563eb">NEW</span>';
-            } else if (d.rankDelta > 0) {
-                delta = `<span class="tag-up">▲${d.rankDelta}</span>`;
-            } else if (d.rankDelta < 0) {
-                delta = `<span class="tag-dn">▼${-d.rankDelta}</span>`;
-            } else {
-                delta = '<span class="tag-gray">持平</span>';
-            }
-            return `<tr class="${rankCls}">
-                <td class="mono fw-7 t-dim">${i+1}</td>
-                <td class="mono">${delta}</td>
-                <td><span class="fw-7" style="font-size:.92rem">${escapeHtml(d.token)}</span></td>
-                <td class="mono fw-7 t-blue">${d.score}</td>
-                <td class="mono">${d.likes}</td>
-                <td class="mono">${d.comments}</td>
-                <td class="mono">${d.postCount}</td>
-                <td>${binance}</td>
-            </tr>`;
-        }).join('');
+        renderRows(rows);
+        renderSummary(rows);
         updateLastTime();
     } catch(e) { console.warn('refresh binance-square', e); }
 }
 
-function escapeHtml(s) {
-    return String(s||'').replace(/[&<>"']/g, c => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
+/* 首屏：先用 SSR 数据渲染（JS 版本能做进度条 + 头像） */
+renderRows(INIT_ROWS);
+renderSummary(INIT_ROWS);
 updateLastTime();
+
 let countdown = 30;
 const countEl = document.getElementById('auto-countdown');
 setInterval(() => {
     countdown--;
     if (countdown <= 0) { countdown = 30; refresh(); }
-    countEl.textContent = countdown;
+    if (countEl) countEl.textContent = countdown;
 }, 1000);
 </script>
 
+</div><!-- /.sq-page -->
 </main></body>
 </html>

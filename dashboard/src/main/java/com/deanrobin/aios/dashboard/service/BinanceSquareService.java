@@ -5,6 +5,7 @@ import com.deanrobin.aios.dashboard.repository.BinanceSquareRankSnapshotReposito
 import com.deanrobin.aios.dashboard.repository.BinanceSquareTokenStatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -26,10 +27,20 @@ public class BinanceSquareService {
     private final BinanceSquareTokenStatRepository    tokenStatRepo;
     private final BinanceSquareRankSnapshotRepository snapshotRepo;
 
+    /**
+     * 聚合时的时间字段：
+     *   post_date   = 帖子原始发布时间（Python v5 行为）
+     *   created_at  = 我们首次抓到该帖子的时间（对推荐 feed 更实时）
+     */
+    @Value("${binance-square.aggregate-by:created_at}")
+    private String aggregateBy;
+
     /** 最近 N 小时 TopN 热度榜。 */
     public List<Map<String, Object>> topTokensSince(int hours, int limit) {
         LocalDateTime since = LocalDateTime.now().minusHours(hours);
-        List<Object[]> rows = tokenStatRepo.aggregateSince(since, limit);
+        List<Object[]> rows = "post_date".equalsIgnoreCase(aggregateBy)
+                ? tokenStatRepo.aggregateSince(since, limit)
+                : tokenStatRepo.aggregateSinceByCreatedAt(since, limit);
         List<Map<String, Object>> out = new ArrayList<>(rows.size());
         for (Object[] r : rows) {
             Map<String, Object> m = new LinkedHashMap<>();
