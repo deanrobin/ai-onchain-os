@@ -16,6 +16,7 @@
         background: #0B0E11;
         color: #EAECEF;
         min-height: calc(100vh - 58px); /* 58 = topnav 高度 */
+        font-size: 15px;                /* 整体字号上抬一档（默认 14 → 15）*/
     }
     .sq-page a { color: #F0B90B; }
     .sq-page ::selection { background: rgba(240,185,11,.28); }
@@ -52,19 +53,26 @@
         color: #848E9C;
         border-bottom: 1px solid #2B3139;
     }
-    .sq-page .table tbody td         { border-bottom: 1px solid #2B3139; }
+    .sq-page .table tbody td         { border-bottom: 1px solid rgba(43,49,57,.6); }
     .sq-page .table tbody tr:last-child td { border-bottom: none; }
-    .sq-page .table tbody tr:hover td      { background: rgba(240,185,11,.06); }
-    .sq-page .rank-1 { background: linear-gradient(90deg, rgba(240,185,11,.12), transparent) !important; }
-    .sq-page .rank-2 { background: linear-gradient(90deg, rgba(183,189,198,.06), transparent) !important; }
-    .sq-page .rank-3 { background: linear-gradient(90deg, rgba(224,124,20,.06), transparent) !important; }
+
+    /* 斑马条纹：金黄 / 浅金 两种交替，暗底保留可读性 */
+    .sq-page .table tbody tr:nth-child(odd)  td { background: rgba(240,185,11,.06); }
+    .sq-page .table tbody tr:nth-child(even) td { background: rgba(240,185,11,.14); }
+    .sq-page .table tbody tr:hover td { background: rgba(240,185,11,.24) !important; }
+
+    /* TOP3 保留渐变高亮（覆盖斑马条纹） */
+    .sq-page .rank-1 td { background: linear-gradient(90deg, rgba(240,185,11,.32), rgba(240,185,11,.08)) !important; }
+    .sq-page .rank-2 td { background: linear-gradient(90deg, rgba(216,218,220,.18), rgba(240,185,11,.06)) !important; }
+    .sq-page .rank-3 td { background: linear-gradient(90deg, rgba(224,124,20,.22), rgba(240,185,11,.06)) !important; }
     .sq-page .rank-1:hover td, .sq-page .rank-2:hover td, .sq-page .rank-3:hover td {
-        background: rgba(240,185,11,.10) !important;
+        background: rgba(240,185,11,.30) !important;
     }
 
     .sq-page .info-pill {
         background: #1E2329; color: #B7BDC6;
         border: 1px solid #2B3139;
+        font-size: .82rem; padding: 4px 12px;
     }
     .sq-page .tab-row   {
         background: #F0B90B !important;
@@ -74,6 +82,7 @@
     .sq-page .tab-item  {
         color: #0B0E11; font-weight: 600;
         background: transparent;
+        font-size: .92rem; padding: 6px 16px;
     }
     .sq-page .tab-item:hover:not(.active) {
         color: #0B0E11; background: rgba(255,255,255,.22);
@@ -98,8 +107,8 @@
         flex-wrap: wrap; gap: 14px; margin-bottom: 18px;
     }
     .sq-title       { display: flex; align-items: center; gap: 10px; }
-    .sq-title h5    { margin: 0; font-weight: 800; letter-spacing: -.2px; color: #F0B90B; }
-    .sq-title .subtitle { color: #848E9C; font-size: .82rem; margin-top: 2px; }
+    .sq-title h5    { margin: 0; font-weight: 800; letter-spacing: -.2px; color: #F0B90B; font-size: 1.4rem; }
+    .sq-title .subtitle { color: #848E9C; font-size: .92rem; margin-top: 3px; }
 
     .sq-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -111,15 +120,15 @@
     @media (max-width: 900px) { .sq-summary { grid-template-columns: repeat(2, 1fr); } }
 
     /* ── 表格：更宽松的行高 ──────────────────────── */
-    .sq-table thead th { font-size: .7rem; padding: 12px 14px; letter-spacing: .8px; }
-    .sq-table tbody td { padding: 15px 14px; vertical-align: middle; }
+    .sq-table thead th { font-size: .82rem; padding: 14px 16px; letter-spacing: .6px; font-weight: 700; }
+    .sq-table tbody td { padding: 18px 16px; vertical-align: middle; }
 
     /* 排名徽章：TOP3 金/银/铜，其他深灰 */
     .rank-badge {
         display: inline-flex; align-items: center; justify-content: center;
-        width: 30px; height: 30px; border-radius: 8px;
+        width: 34px; height: 34px; border-radius: 9px;
         font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
-        font-size: .88rem; font-weight: 800; color: #848E9C;
+        font-size: 1rem; font-weight: 800; color: #848E9C;
         background: #1E2329;
     }
     .rank-badge.r1 { background: linear-gradient(135deg,#FCD535,#F0B90B); color:#0B0E11; box-shadow: 0 2px 8px rgba(240,185,11,.5); }
@@ -127,65 +136,70 @@
     .rank-badge.r3 { background: linear-gradient(135deg,#E8A268,#B06A2C); color:#0B0E11; box-shadow: 0 2px 6px rgba(176,106,44,.35); }
 
     /* Token avatar（颜色按首字母散列） */
-    .tk-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .tk-cell { display: flex; align-items: center; gap: 14px; min-width: 0; }
     .tk-avatar {
-        flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
+        flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
         display: inline-flex; align-items: center; justify-content: center;
-        color: #0B0E11; font-weight: 800; font-size: .88rem; letter-spacing: -.2px;
+        color: #0B0E11; font-weight: 800; font-size: 1rem; letter-spacing: -.2px;
         font-family: -apple-system,'SF Pro Display',sans-serif;
         box-shadow: inset 0 0 0 1px rgba(255,255,255,.15), 0 1px 4px rgba(0,0,0,.4);
     }
     .tk-meta { display: flex; flex-direction: column; min-width: 0; }
-    .tk-sym  { font-weight: 700; font-size: 1.02rem; letter-spacing: -.2px; line-height: 1.15; color: #F0B90B; }
-    .tk-sub  { font-size: .72rem; color: #848E9C; margin-top: 2px; }
+    .tk-sym  { font-weight: 700; font-size: 1.18rem; letter-spacing: -.2px; line-height: 1.2; color: #F0B90B; }
+    .tk-sub  { font-size: .82rem; color: #848E9C; margin-top: 3px; }
 
     /* 分数：数字 + 迷你进度条 */
-    .score-wrap { display: flex; flex-direction: column; gap: 7px; min-width: 100px; }
+    .score-wrap { display: flex; flex-direction: column; gap: 8px; min-width: 112px; }
     .score-num  {
         font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
-        font-size: 1.02rem; font-weight: 800; color: #F0B90B; letter-spacing: -.2px;
+        font-size: 1.18rem; font-weight: 800; color: #F0B90B; letter-spacing: -.2px;
     }
-    .score-bar  { height: 5px; background: #1E2329; border-radius: 999px; overflow: hidden; }
+    .score-bar  { height: 6px; background: rgba(30,35,41,.8); border-radius: 999px; overflow: hidden; }
     .score-bar-fill {
         height: 100%; border-radius: 999px;
         background: linear-gradient(90deg, #F0B90B, #FCD535);
         box-shadow: 0 0 6px rgba(240,185,11,.45);
     }
 
-    /* 互动信息：放大字号 */
+    /* 互动信息 */
     .eng {
-        display: inline-flex; align-items: center; gap: 16px;
+        display: inline-flex; align-items: center; gap: 20px;
         font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
-        font-size: 1rem; color: #EAECEF;
+        font-size: 1.12rem; color: #EAECEF;
     }
-    .eng span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-    .eng .eng-ic { font-size: 1.02rem; }
+    .eng span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .eng .eng-ic { font-size: 1.1rem; }
     .eng em   { font-style: normal; color: #F0B90B; font-weight: 700; font-size: 1em; }
 
-    /* 升降：大一号的徽章 */
+    /* 升降徽章 */
     .delta {
         display: inline-flex; align-items: center; justify-content: center;
-        min-width: 52px; padding: 4px 10px; border-radius: 8px;
+        min-width: 60px; padding: 5px 12px; border-radius: 8px;
         font-family: 'SF Mono','Menlo','Monaco','Courier New',monospace;
-        font-size: .84rem; font-weight: 700; white-space: nowrap;
+        font-size: .95rem; font-weight: 700; white-space: nowrap;
     }
-    .delta.up   { background: rgba(14,203,129,.15);  color: #0ECB81; }
-    .delta.dn   { background: rgba(246,70,93,.15);   color: #F6465D; }
-    .delta.new  { background: rgba(240,185,11,.18);  color: #F0B90B; }
+    .delta.up   { background: rgba(14,203,129,.18);  color: #0ECB81; }
+    .delta.dn   { background: rgba(246,70,93,.18);   color: #F6465D; }
+    .delta.new  { background: rgba(240,185,11,.22);  color: #F0B90B; }
     .delta.flat { background: #1E2329;               color: #848E9C; }
     .delta.none { background: transparent;           color: #5E6673; }
 
     /* 上架徽章 */
     .listed {
-        display: inline-flex; align-items: center; gap: 4px;
-        padding: 4px 11px; border-radius: 999px;
-        font-size: .76rem; font-weight: 700; letter-spacing: .2px;
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 5px 13px; border-radius: 999px;
+        font-size: .88rem; font-weight: 700; letter-spacing: .2px;
     }
-    .listed.yes { background: rgba(14,203,129,.15); color: #0ECB81; }
+    .listed.yes { background: rgba(14,203,129,.18); color: #0ECB81; }
     .listed.no  { background: #1E2329; color: #848E9C; font-weight: 500; }
 
     /* 帖子数字号 */
-    .sq-table td.col-posts { font-size: .96rem; font-weight: 700; color: #EAECEF; }
+    .sq-table td.col-posts { font-size: 1.12rem; font-weight: 700; color: #EAECEF; }
+
+    /* 概览卡片文字 */
+    .sq-page .stat-card .sc-val { font-size: 1.4rem; }
+    .sq-page .stat-card .sc-lbl { font-size: .82rem; }
+    .sq-page .stat-card .sc-sub { font-size: .88rem; }
 
     /* 移动端：隐藏次要列 */
     @media (max-width: 720px) {
@@ -232,13 +246,13 @@
             <table class="table sq-table" id="sq-tbl">
                 <thead>
                 <tr>
-                    <th style="width:52px">#</th>
-                    <th style="width:78px">升/降</th>
+                    <th style="width:60px">#</th>
+                    <th style="width:96px">升/降</th>
                     <th>代币</th>
-                    <th style="width:150px">热度分数</th>
+                    <th style="width:170px">热度分数</th>
                     <th class="col-engagement">互动</th>
-                    <th class="col-posts" style="width:80px">帖子数</th>
-                    <th style="width:96px">币安</th>
+                    <th class="col-posts" style="width:96px">帖子数</th>
+                    <th style="width:116px">币安</th>
                 </tr>
                 </thead>
                 <tbody id="sq-tbody"></tbody>
@@ -364,7 +378,7 @@ function renderSummary(rows){
     box.innerHTML = cards.map(c => `
         <div class="stat-card ${c.cls}">
             <span class="sc-icon">${c.icon}</span>
-            <div class="sc-val" style="font-size:1.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.val}</div>
+            <div class="sc-val" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.val}</div>
             <div class="sc-lbl">${c.lbl}</div>
             <div class="sc-sub">${c.sub}</div>
         </div>`).join('');
