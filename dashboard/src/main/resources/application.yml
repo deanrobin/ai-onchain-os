@@ -77,3 +77,14 @@ binance-square:
 onchain:
   eth-rpc: https://eth.llamarpc.com
   bsc-rpc: https://bsc-dataseed.binance.org/
+
+# ── BTC 15m K 线历史导入（Binance BTCUSDT）────────────────────────
+# 用法：填写 start/end、把 enabled 改成 true，重启服务即会一次性拉取 + 计算 MA20/MA120/MACD/RSI14 写库
+# 去重：默认从 DB max(open_time)+15min 开始增量拉；force-reload=true 时忽略
+btc-kline:
+  loader:
+    enabled:       ${BTC_KLINE_LOADER_ENABLED:false}
+    start-time:    ${BTC_KLINE_LOADER_START:2023-04-21T00:00:00}
+    end-time:      ${BTC_KLINE_LOADER_END:2026-04-21T00:00:00}
+    force-reload:  ${BTC_KLINE_LOADER_FORCE:false}
+    rate-limit-ms: 300
