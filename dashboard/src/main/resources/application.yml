@@ -70,6 +70,8 @@ binance-square:
   feed-url: ${BINANCE_SQUARE_FEED_URL:https://www.binance.com/bapi/composite/v9/friendly/pgc/feed/feed-recommend/list}
   # 独立飞书 webhook（POST JSON）
   alert-url: ${BINANCE_SQUARE_ALERT_URL:https://open.feishu.cn/open-apis/bot/v2/hook/c035c556-dcf4-4145-a4e8-a7a956bbce96}
+  # 聚合时间字段：created_at=发现时间（推荐 feed 更实时，默认）；post_date=帖子原始发布时间（与 Python v5 对齐）
+  aggregate-by: ${BINANCE_SQUARE_AGGREGATE_BY:created_at}
 
 # ── 链上持仓监控 RPC 配置 ─────────────────────────────────────────
 onchain:
