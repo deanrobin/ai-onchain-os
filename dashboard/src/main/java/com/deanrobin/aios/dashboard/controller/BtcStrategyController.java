@@ -95,7 +95,7 @@ public class BtcStrategyController {
             m.put("macdDif",     k.getMacdDif());
             m.put("macdDea",     k.getMacdDea());
             m.put("macdHist",    k.getMacdHist());
-            m.put("rsi14",       k.getRsi14());
+            m.put("rsi21",       k.getRsi21());
             out.add(m);
         }
         return out;

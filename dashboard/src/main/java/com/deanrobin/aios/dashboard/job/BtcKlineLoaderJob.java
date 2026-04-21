@@ -27,7 +27,7 @@ import java.util.List;
  *   1) 取 cfg.start-time / cfg.end-time 作为目标窗口
  *   2) 去重：读 DB max(openTime)，取 max(cfg.start, maxOpenTime + 15min) 作为实际起点
  *      （force-reload=true 时忽略 max，回到 cfg.start）
- *   3) 为了计算 MA120 / MACD(12,26,9) / RSI14，从实际起点再往前多拉 200 根 warmup
+ *   3) 为了计算 MA120 / MACD(12,26,9) / RSI21，从实际起点再往前多拉 200 根 warmup
  *   4) 分页拉取（Binance /api/v3/klines limit=1000），每批间隔 cfg.rate-limit-ms
  *   5) 基于完整序列计算指标，然后 INSERT IGNORE 批量写入（靠 uk_open_time 保证幂等）
  *
@@ -200,7 +200,7 @@ public class BtcKlineLoaderJob {
     }
 
     // ──────────────────────────────────────────────────────────────
-    // 技术指标：MA20, MA120, MACD(12,26,9), RSI14 (Wilder 平滑)
+    // 技术指标：MA20, MA120, MACD(12,26,9), RSI21 (Wilder 平滑)
     // ──────────────────────────────────────────────────────────────
     private void computeIndicators(List<Kline> bars) {
         int n = bars.size();
@@ -238,23 +238,24 @@ public class BtcKlineLoaderJob {
             }
         }
 
-        // RSI14 — Wilder 平滑
-        if (n > 14) {
+        // RSI21 — Wilder 平滑
+        final int rsiN = 21;
+        if (n > rsiN) {
             double avgGain = 0, avgLoss = 0;
-            for (int i = 1; i <= 14; i++) {
+            for (int i = 1; i <= rsiN; i++) {
                 double d = close[i] - close[i - 1];
                 if (d >= 0) avgGain += d; else avgLoss += -d;
             }
-            avgGain /= 14.0;
-            avgLoss /= 14.0;
-            bars.get(14).rsi14 = rsiFrom(avgGain, avgLoss);
-            for (int i = 15; i < n; i++) {
+            avgGain /= rsiN;
+            avgLoss /= rsiN;
+            bars.get(rsiN).rsi21 = rsiFrom(avgGain, avgLoss);
+            for (int i = rsiN + 1; i < n; i++) {
                 double d = close[i] - close[i - 1];
                 double g = d >= 0 ? d : 0;
                 double l = d <  0 ? -d : 0;
-                avgGain = (avgGain * 13 + g) / 14.0;
-                avgLoss = (avgLoss * 13 + l) / 14.0;
-                bars.get(i).rsi14 = rsiFrom(avgGain, avgLoss);
+                avgGain = (avgGain * (rsiN - 1) + g) / rsiN;
+                avgLoss = (avgLoss * (rsiN - 1) + l) / rsiN;
+                bars.get(i).rsi21 = rsiFrom(avgGain, avgLoss);
             }
         }
     }
@@ -278,7 +279,7 @@ public class BtcKlineLoaderJob {
         String sql =
                 "INSERT IGNORE INTO btc_kline_15m " +
                 "(open_time, open_price, high_price, low_price, close_price, volume, " +
-                " quote_volume, trade_count, ma20, ma120, macd_dif, macd_dea, macd_hist, rsi14, source) " +
+                " quote_volume, trade_count, ma20, ma120, macd_dif, macd_dea, macd_hist, rsi21, source) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'binance')";
 
         List<Object[]> batch = new ArrayList<>(INSERT_BATCH);
@@ -290,7 +291,7 @@ public class BtcKlineLoaderJob {
             batch.add(new Object[]{
                     openTime, k.open, k.high, k.low, k.close, k.volume,
                     k.quoteVolume, k.tradeCount,
-                    k.ma20, k.ma120, k.macdDif, k.macdDea, k.macdHist, k.rsi14
+                    k.ma20, k.ma120, k.macdDif, k.macdDea, k.macdHist, k.rsi21
             });
             if (batch.size() >= INSERT_BATCH) {
                 inserted += countAffected(jdbc.batchUpdate(sql, batch));
@@ -319,6 +320,6 @@ public class BtcKlineLoaderJob {
         long openTimeMs;
         BigDecimal open, high, low, close, volume, quoteVolume;
         Integer tradeCount;
-        BigDecimal ma20, ma120, macdDif, macdDea, macdHist, rsi14;
+        BigDecimal ma20, ma120, macdDif, macdDea, macdHist, rsi21;
     }
 }

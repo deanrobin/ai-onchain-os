@@ -118,7 +118,7 @@
             <div class="ei">📭</div>
             <div>暂无 K 线数据</div>
             <div class="t-dim mt-2" style="font-size:.82rem">
-                待导入 Binance BTCUSDT 近 3 年 15m 历史 K 线 + MA20/MA120/MACD/RSI14
+                待导入 Binance BTCUSDT 近 3 年 15m 历史 K 线 + MA20/MA120/MACD/RSI21
             </div>
         </div>
         <table th:unless="${klines.isEmpty()}" class="table">
@@ -128,7 +128,7 @@
                 <th>成交量</th>
                 <th>MA20</th><th>MA120</th>
                 <th>MACD DIF</th><th>DEA</th><th>HIST</th>
-                <th>RSI14</th>
+                <th>RSI21</th>
             </tr></thead>
             <tbody>
             <tr th:each="k : ${klines}">
@@ -150,8 +150,8 @@
                     th:classappend="${k.macdHist != null and k.macdHist.signum() >= 0 ? 'up' : 'dn'}"
                     th:text="${k.macdHist != null ? #numbers.formatDecimal(k.macdHist, 1, 4) : '—'}"></td>
                 <td class="mono"
-                    th:classappend="${k.rsi14 != null and k.rsi14.doubleValue() >= 70 ? 'dn' : (k.rsi14 != null and k.rsi14.doubleValue() &lt;= 30 ? 'up' : '')}"
-                    th:text="${k.rsi14 != null ? #numbers.formatDecimal(k.rsi14, 1, 2) : '—'}"></td>
+                    th:classappend="${k.rsi21 != null and k.rsi21.doubleValue() >= 70 ? 'dn' : (k.rsi21 != null and k.rsi21.doubleValue() &lt;= 30 ? 'up' : '')}"
+                    th:text="${k.rsi21 != null ? #numbers.formatDecimal(k.rsi21, 1, 2) : '—'}"></td>
             </tr>
             </tbody>
         </table>

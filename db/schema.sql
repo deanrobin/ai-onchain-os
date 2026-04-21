@@ -386,7 +386,7 @@ CREATE TABLE IF NOT EXISTS binance_square_rank_snapshot (
 -- 指标约定：
 --   ma20 / ma120        : 收盘价简单移动均线
 --   macd_dif / dea / hist: 标准 MACD(12,26,9)，hist = (dif - dea) * 2
---   rsi14               : 14 周期 RSI
+--   rsi21               : 21 周期 RSI
 CREATE TABLE IF NOT EXISTS btc_kline_15m (
     id           BIGINT PRIMARY KEY AUTO_INCREMENT,
     open_time    DATETIME       NOT NULL COMMENT 'K 线开盘时间（UTC+8）',
@@ -402,13 +402,13 @@ CREATE TABLE IF NOT EXISTS btc_kline_15m (
     macd_dif     DECIMAL(20,8)            COMMENT 'MACD DIF (EMA12 - EMA26)',
     macd_dea     DECIMAL(20,8)            COMMENT 'MACD DEA (DIF 的 EMA9)',
     macd_hist    DECIMAL(20,8)            COMMENT 'MACD 柱 = (DIF - DEA) * 2',
-    rsi14        DECIMAL(10,4)            COMMENT 'RSI14',
+    rsi21        DECIMAL(10,4)            COMMENT 'RSI21',
     source       VARCHAR(20)    DEFAULT 'binance' COMMENT '数据来源',
     created_at   DATETIME       DEFAULT CURRENT_TIMESTAMP,
     updated_at   DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_open_time (open_time),
     INDEX idx_open_time_desc (open_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='BTCUSDT 15m K线 + 技术指标（MA20/MA120/MACD/RSI14）';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='BTCUSDT 15m K线 + 技术指标（MA20/MA120/MACD/RSI21）';
 
 -- ── BTC 做多策略信号表 ─────────────────────────────────────────────
 -- 策略识别出做多机会时写入一条记录，用于：
@@ -429,7 +429,7 @@ CREATE TABLE IF NOT EXISTS btc_long_signal (
     stop_loss_pct      DECIMAL(10,4)           COMMENT '止损百分比（相对 entry）',
     risk_reward        DECIMAL(10,4)           COMMENT '盈亏比 = tp_pct / sl_pct',
     confidence         DECIMAL(5,2)            COMMENT '策略置信度 0~100',
-    indicators_snapshot JSON                    COMMENT '{ma20, ma120, macd_dif, macd_dea, macd_hist, rsi14, ...}',
+    indicators_snapshot JSON                    COMMENT '{ma20, ma120, macd_dif, macd_dea, macd_hist, rsi21, ...}',
     reason             VARCHAR(500)            COMMENT '触发理由文字描述',
     status             VARCHAR(20)    NOT NULL DEFAULT 'OPEN'
                        COMMENT 'OPEN / TP_HIT / SL_HIT / EXPIRED / CANCELLED',

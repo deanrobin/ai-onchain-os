@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * BTCUSDT 15m K线 + 技术指标历史（MA20 / MA120 / MACD / RSI14）。
+ * BTCUSDT 15m K线 + 技术指标历史（MA20 / MA120 / MACD / RSI21）。
  * open_time 为 K 线开盘时间，UNIQUE，便于 upsert。
  */
 @Data
@@ -60,7 +60,7 @@ public class BtcKline15m {
     private BigDecimal macdHist;
 
     @Column(precision = 10, scale = 4)
-    private BigDecimal rsi14;
+    private BigDecimal rsi21;
 
     @Column(length = 20)
     private String source;
