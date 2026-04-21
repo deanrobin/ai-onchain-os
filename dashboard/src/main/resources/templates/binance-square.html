@@ -66,12 +66,22 @@
         background: #1E2329; color: #B7BDC6;
         border: 1px solid #2B3139;
     }
-    .sq-page .tab-row   { background: #1E2329 !important; border: 1px solid #2B3139; }
-    .sq-page .tab-item  { color: #848E9C; }
-    .sq-page .tab-item:hover:not(.active) { color: #EAECEF; background: rgba(240,185,11,.08); }
+    .sq-page .tab-row   {
+        background: #F0B90B !important;
+        border: 1px solid #F0B90B;
+        padding: 3px;
+    }
+    .sq-page .tab-item  {
+        color: #0B0E11; font-weight: 600;
+        background: transparent;
+    }
+    .sq-page .tab-item:hover:not(.active) {
+        color: #0B0E11; background: rgba(255,255,255,.22);
+    }
     .sq-page .tab-item.active {
-        background: #F0B90B; color: #0B0E11; font-weight: 700;
-        box-shadow: 0 1px 4px rgba(240,185,11,.35);
+        background: #FCE9A0;        /* 选中：浅金 */
+        color: #5C3A00; font-weight: 800;
+        box-shadow: 0 1px 4px rgba(0,0,0,.18);
     }
     .sq-page .empty-state { color: #848E9C; }
     .sq-page .pulse-dot   { background: #F0B90B; }
