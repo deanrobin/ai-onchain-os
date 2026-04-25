@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: crypto-qmt
+  task:
+    scheduling:
+      pool:
+        size: 2
+  datasource:
+    url: jdbc:mysql://${DB_HOST:43.134.118.142}:${DB_PORT:33066}/btc_kline_os?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: ${DB_USER:arb}
+    password: ${DB_PASS:arb123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+  jackson:
+    time-zone: Asia/Shanghai
+  thymeleaf:
+    cache: false
+    encoding: UTF-8
+
+server:
+  port: 9900
+
+logging:
+  config: classpath:log4j2.xml
+
+# ── BTC 15m K 线历史导入(Binance BTCUSDT)────────────────────────
+# 用法:把 enabled 改 true 重启,启动后一次性增量拉取 + 计算 MA20/MA120/MACD/RSI21
+# 去重:基于 uk_open_time + DB max(open_time) 增量,force-reload=true 时回到 start-time
+btc-kline:
+  loader:
+    enabled:       ${BTC_KLINE_LOADER_ENABLED:false}
+    start-time:    ${BTC_KLINE_LOADER_START:2024-01-01T00:00:00}
+    end-time:      ${BTC_KLINE_LOADER_END:2026-04-25T00:00:00}
+    force-reload:  ${BTC_KLINE_LOADER_FORCE:false}
+    rate-limit-ms: ${BTC_KLINE_LOADER_RATE_MS:300}

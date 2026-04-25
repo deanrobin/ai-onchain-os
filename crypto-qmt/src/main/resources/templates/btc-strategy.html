@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: page('BTC K线', ~{::main})}">
+<body><main>
+
+<div class="d-flex align-items-center flex-wrap gap-3 mb-3">
+    <span class="pulse-dot"></span>
+    <h5 class="fw-7 mb-0 ms-1 t-gold">📈 BTC K 线看板（Binance BTCUSDT · 15m）</h5>
+    <span id="auto-badge"
+          style="background:var(--gold-l);border:1px solid var(--gold-dim);color:var(--gold);
+                 border-radius:20px;padding:3px 12px;font-size:.76rem;font-weight:600;
+                 pointer-events:none;user-select:none">
+        🔄 <span id="auto-countdown">30</span>s
+    </span>
+</div>
+
+<!-- ══ 顶部统计卡 ══ -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3 col-6">
+        <div class="stat-card sc-gold">
+            <span class="sc-icon">🕒</span>
+            <div class="sc-val mono" th:text="${klineTotal}">0</div>
+            <div class="sc-lbl">K 线总数</div>
+            <div class="sc-sub">最新 <span th:text="${klineLatestAt != null ? #temporals.format(klineLatestAt, 'MM-dd HH:mm') : '—'}">—</span></div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card sc-cyan">
+            <span class="sc-icon">📅</span>
+            <div class="sc-val mono" th:text="${klineRecent7d}">0</div>
+            <div class="sc-lbl">近 7 天</div>
+            <div class="sc-sub">预期 672 根（7×24×4）</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card sc-up">
+            <span class="sc-icon">⏱</span>
+            <div class="sc-val mono" style="font-size:1rem;line-height:1.4"
+                 th:text="${klineLatestAt != null ? #temporals.format(klineLatestAt, 'yyyy-MM-dd HH:mm') : '—'}">—</div>
+            <div class="sc-lbl">最新 K 线时间</div>
+            <div class="sc-sub">数据库最大 open_time</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card sc-dn">
+            <span class="sc-icon">📐</span>
+            <div class="sc-val mono" style="font-size:1rem;line-height:1.4"
+                 th:text="${klineEarliestAt != null ? #temporals.format(klineEarliestAt, 'yyyy-MM-dd HH:mm') : '—'}">—</div>
+            <div class="sc-lbl">最早 K 线时间</div>
+            <div class="sc-sub">数据库最小 open_time</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ 最新 K 线 ══ -->
+<div class="card">
+    <div class="card-header">🕒 最新 20 根 15m K 线 + 指标</div>
+    <div class="card-body p-0">
+        <div th:if="${klines.isEmpty()}" class="empty-state">
+            <div class="ei">📭</div>
+            <div>暂无 K 线数据</div>
+            <div class="t-dim mt-2" style="font-size:.82rem">
+                设置环境变量 <span class="mono t-gold">BTC_KLINE_LOADER_ENABLED=true</span> 重启服务,
+                即会从 Binance 拉取 BTCUSDT 15m 历史 K 线 + 计算 MA20/MA120/MACD/RSI21
+            </div>
+        </div>
+        <table th:unless="${klines.isEmpty()}" class="table" id="kline-tbl">
+            <thead><tr>
+                <th>开盘时间</th>
+                <th>开</th><th>高</th><th>低</th><th>收</th>
+                <th>成交量</th>
+                <th>MA20</th><th>MA120</th>
+                <th>MACD DIF</th><th>DEA</th><th>HIST</th>
+                <th>RSI21</th>
+            </tr></thead>
+            <tbody id="kline-tbody">
+            <tr th:each="k : ${klines}">
+                <td class="mono" th:text="${#temporals.format(k.openTime, 'MM-dd HH:mm')}"></td>
+                <td class="mono" th:text="${#numbers.formatDecimal(k.openPrice,  1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="mono" th:text="${#numbers.formatDecimal(k.highPrice,  1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="mono" th:text="${#numbers.formatDecimal(k.lowPrice,   1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="mono fw-7"
+                    th:classappend="${k.closePrice != null and k.openPrice != null and k.closePrice.compareTo(k.openPrice) >= 0 ? ' up' : ' dn'}"
+                    th:text="${#numbers.formatDecimal(k.closePrice, 1, 'COMMA', 2, 'POINT')}"></td>
+                <td class="mono t-muted" th:text="${#numbers.formatDecimal(k.volume, 1, 2)}"></td>
+                <td class="mono" th:text="${k.ma20  != null ? #numbers.formatDecimal(k.ma20,  1, 'COMMA', 2, 'POINT') : '—'}"></td>
+                <td class="mono" th:text="${k.ma120 != null ? #numbers.formatDecimal(k.ma120, 1, 'COMMA', 2, 'POINT') : '—'}"></td>
+                <td class="mono"
+                    th:classappend="${k.macdDif != null and k.macdDif.signum() >= 0 ? ' up' : ' dn'}"
+                    th:text="${k.macdDif != null ? #numbers.formatDecimal(k.macdDif, 1, 4) : '—'}"></td>
+                <td class="mono"
+                    th:classappend="${k.macdDea != null and k.macdDea.signum() >= 0 ? ' up' : ' dn'}"
+                    th:text="${k.macdDea != null ? #numbers.formatDecimal(k.macdDea, 1, 4) : '—'}"></td>
+                <td class="mono"
+                    th:classappend="${k.macdHist != null and k.macdHist.signum() >= 0 ? ' up' : ' dn'}"
+                    th:text="${k.macdHist != null ? #numbers.formatDecimal(k.macdHist, 1, 4) : '—'}"></td>
+                <td class="mono"
+                    th:classappend="${k.rsi21 != null and k.rsi21.doubleValue() >= 70 ? ' dn' : (k.rsi21 != null and k.rsi21.doubleValue() &lt;= 30 ? ' up' : '')}"
+                    th:text="${k.rsi21 != null ? #numbers.formatDecimal(k.rsi21, 1, 2) : '—'}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function refreshKlines() {
+    try {
+        const r = await fetch('/api/btc-strategy/klines?limit=20');
+        const rows = await r.json();
+        const tbody = document.getElementById('kline-tbody');
+        if (!tbody || !rows || !rows.length) return;
+
+        const fmtP = (v, d = 2) => v == null ? '—'
+            : Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+        const fmtN = (v, d = 4) => v == null ? '—' : Number(v).toFixed(d);
+        const sgnCls = v => v == null ? '' : (Number(v) >= 0 ? 'up' : 'dn');
+        const rsiCls = v => v == null ? '' : (Number(v) >= 70 ? 'dn' : (Number(v) <= 30 ? 'up' : ''));
+        const closeCls = (close, open) => (close == null || open == null) ? '' : (Number(close) >= Number(open) ? 'up' : 'dn');
+
+        tbody.innerHTML = rows.map(k => {
+            const t = new Date(k.openTime);
+            const tStr = `${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+            return `<tr>
+                <td class="mono">${tStr}</td>
+                <td class="mono">${fmtP(k.openPrice)}</td>
+                <td class="mono">${fmtP(k.highPrice)}</td>
+                <td class="mono">${fmtP(k.lowPrice)}</td>
+                <td class="mono fw-7 ${closeCls(k.closePrice, k.openPrice)}">${fmtP(k.closePrice)}</td>
+                <td class="mono t-muted">${k.volume == null ? '—' : Number(k.volume).toFixed(2)}</td>
+                <td class="mono">${k.ma20  == null ? '—' : fmtP(k.ma20)}</td>
+                <td class="mono">${k.ma120 == null ? '—' : fmtP(k.ma120)}</td>
+                <td class="mono ${sgnCls(k.macdDif)}">${fmtN(k.macdDif)}</td>
+                <td class="mono ${sgnCls(k.macdDea)}">${fmtN(k.macdDea)}</td>
+                <td class="mono ${sgnCls(k.macdHist)}">${fmtN(k.macdHist)}</td>
+                <td class="mono ${rsiCls(k.rsi21)}">${k.rsi21 == null ? '—' : Number(k.rsi21).toFixed(2)}</td>
+            </tr>`;
+        }).join('');
+    } catch (e) { console.warn('refresh klines', e); }
+}
+
+let countdown = 30;
+const countEl = document.getElementById('auto-countdown');
+setInterval(() => {
+    countdown--;
+    if (countdown <= 0) { countdown = 30; refreshKlines(); }
+    if (countEl) countEl.textContent = countdown;
+}, 1000);
+</script>
+
+</main></body>
+</html>
